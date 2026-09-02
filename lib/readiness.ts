@@ -160,12 +160,16 @@ export async function runReadiness(
           `/athlete/${runtime.INTERVALS_ATHLETE_ID}/events?oldest=${today}&newest=${today}&category=WORKOUT&resolve=true`,
         ),
       ]);
-    const sleeps: Json[] = (sleepBody.sleep || sleepBody.sleeps || []).sort(
-      (a: Json, b: Json) => String(a.date).localeCompare(String(b.date)),
-    );
-    const recharges: Json[] = (rechargeBody.recharges || []).sort(
-      (a: Json, b: Json) => String(a.date).localeCompare(String(b.date)),
-    );
+    const sleeps: Json[] = (
+      Array.isArray(sleepBody)
+        ? sleepBody
+        : sleepBody.nights || sleepBody.sleep || sleepBody.sleeps || []
+    ).sort((a: Json, b: Json) => String(a.date).localeCompare(String(b.date)));
+    const recharges: Json[] = (
+      Array.isArray(rechargeBody)
+        ? rechargeBody
+        : rechargeBody.recharges || rechargeBody.nights || []
+    ).sort((a: Json, b: Json) => String(a.date).localeCompare(String(b.date)));
     const latestSleep = [...sleeps].reverse().find((s) => s.date <= today),
       latestRecharge = [...recharges].reverse().find((r) => r.date <= today);
     const workout =
