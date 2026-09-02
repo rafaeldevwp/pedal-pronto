@@ -15,6 +15,7 @@ export type ReadinessResult = {
     durationMinutes?: number;
     load?: number;
     action: string;
+    structure?: string[];
   } | null;
   metrics: {
     sleepHours?: number;
@@ -348,6 +349,7 @@ export async function runReadiness(
             ? 'Ajuste moderado recomendado.'
             : 'Substituição conservadora recomendada.';
     let finalName = workout?.name || 'Nenhum treino planejado';
+    let structure = workout ? workoutStructure(workout.description) : [];
     let duration = num(workout?.moving_time, workout?.duration);
     let load = num(workout?.icu_training_load, workout?.load);
     const weekday = new Intl.DateTimeFormat('en-US', {
@@ -365,6 +367,7 @@ export async function runReadiness(
         changed = true;
         action = adapted.action;
         finalName = adapted.updated.name;
+        structure = workoutStructure(adapted.updated.description);
         duration = adapted.durationMinutes
           ? adapted.durationMinutes * 60
           : duration;
@@ -397,6 +400,7 @@ export async function runReadiness(
         durationMinutes: duration ? Math.round(duration / 60) : undefined,
         load: load ? Math.round(load) : undefined,
         action,
+        structure,
       },
       metrics: {
         sleepHours: +sleepHours.toFixed(1),
@@ -437,6 +441,13 @@ export async function runReadiness(
       null,
     );
   }
+}
+function workoutStructure(description: unknown) {
+  return String(description || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'))
+    .slice(0, 24);
 }
 function unavailable(warning: string, workout: Json | null): ReadinessResult {
   return {

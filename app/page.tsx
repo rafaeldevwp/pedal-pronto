@@ -37,6 +37,7 @@ type Result = {
     durationMinutes?: number;
     load?: number;
     action: string;
+    structure?: string[];
   } | null;
   metrics: {
     sleepHours?: number;
@@ -251,7 +252,12 @@ export default function Home() {
                 </Badge>
               )}
             </div>
-            <Card className="workout-card">
+            <Card
+              className="workout-card"
+              onClick={() => setDetails(!details)}
+              role="button"
+              tabIndex={0}
+            >
               <CardHeader className="workout-summary">
                 <div className="workout-icon">
                   <Activity />
@@ -286,7 +292,10 @@ export default function Home() {
                 </div>
                 <Button
                   className="primary-action"
-                  onClick={() => loadReadiness(true)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    loadReadiness(true);
+                  }}
                   disabled={loading || !polarConnected}
                 >
                   {loading ? (
@@ -300,13 +309,29 @@ export default function Home() {
                 <Button
                   variant="ghost"
                   className="details-action"
-                  onClick={() => setDetails(!details)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setDetails(!details);
+                  }}
                 >
                   Dados que sustentam a decisão{' '}
                   {details ? <ChevronDown /> : <ChevronRight />}
                 </Button>
                 {details && (
                   <div className="steps">
+                    {result?.workout?.structure?.length ? (
+                      <>
+                        <strong>Estrutura do treino</strong>
+                        {result.workout.structure.map((step, i) => (
+                          <p key={`step-${i}`}>{step}</p>
+                        ))}
+                      </>
+                    ) : (
+                      <p>
+                        Estrutura detalhada não disponível para este treino.
+                      </p>
+                    )}
+                    <strong>Dados da decisão</strong>
                     {result?.evidence.map((e, i) => (
                       <p key={i}>• {e}</p>
                     ))}
