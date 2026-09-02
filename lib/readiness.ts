@@ -50,6 +50,23 @@ const num = (...v: any[]) => {
   for (const x of v) if (typeof x === 'number' && Number.isFinite(x)) return x;
   return undefined;
 };
+const durationSeconds = (...values: any[]) => {
+  for (const value of values) {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+      const match = value.match(
+        /^PT(?:(\d+(?:\.\d+)?)H)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)S)?$/i,
+      );
+      if (match)
+        return (
+          Number(match[1] || 0) * 3600 +
+          Number(match[2] || 0) * 60 +
+          Number(match[3] || 0)
+        );
+    }
+  }
+  return 0;
+};
 const polarGet = async (path: string, token: string) => {
   const r = await fetch(`https://www.polaraccesslink.com${path}`, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
@@ -188,7 +205,7 @@ export async function runReadiness(
         .filter((r) => r.date < latestRecharge.date)
         .slice(-14);
     const sleepSecs =
-      num(
+      durationSeconds(
         latestSleep.sleep_time,
         latestSleep.total_sleep,
         latestSleep.sleep_duration,
@@ -203,7 +220,8 @@ export async function runReadiness(
     const sleepBase = median(
         priorSleeps.map(
           (s) =>
-            (num(s.sleep_time, s.total_sleep, s.sleep_duration) || 0) / 3600,
+            durationSeconds(s.sleep_time, s.total_sleep, s.sleep_duration) /
+            3600,
         ),
       ),
       scoreBase = median(priorSleeps.map((s) => num(s.sleep_score) as number)),
