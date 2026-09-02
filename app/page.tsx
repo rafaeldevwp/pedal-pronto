@@ -411,11 +411,8 @@ export default function Home() {
               {result?.changed ? 'Alterado hoje' : 'Sem alteração'}
             </Badge>
           </div>
-          <Card className="day-card">
-            <div
-              className={`day-dot ${status === 'verde' ? 'green' : status === 'amarela' ? 'yellow' : 'rest'}`}
-            />
-            <div>
+          <Card className="structure-card">
+            <div className="structure-body">
               <small>Hoje</small>
               <strong>{result?.workout?.name || 'Nenhum treino'}</strong>
               <span>
@@ -423,8 +420,22 @@ export default function Home() {
                   ? `${result.workout.durationMinutes} min`
                   : result?.summary}
               </span>
+              {result?.workout?.load && (
+                <span>Carga {result.workout.load}</span>
+              )}
+              {result?.workout?.structure?.length ? (
+                <ol className="workout-structure">
+                  {result.workout.structure.map((step, index) => (
+                    <li key={index}>
+                      <b>{index + 1}</b>
+                      <span>{step.replace(/^[-*]\s*/, '')}</span>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <span>Estrutura indisponível</span>
+              )}
             </div>
-            <ChevronRight />
           </Card>
         </section>
       )}
