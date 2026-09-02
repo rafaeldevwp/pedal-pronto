@@ -24,46 +24,77 @@ type InstallPrompt = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: string }>;
 };
-const metrics = [
-  { icon: Moon, label: 'Sono', value: '9h15', note: 'Qualidade 81' },
-  { icon: Waves, label: 'HRV', value: '138 ms', note: 'Faixa habitual' },
-  {
-    icon: HeartPulse,
-    label: 'FC noturna',
-    value: '53 bpm',
-    note: 'Acima da base',
-  },
-];
+type Result = {
+  classification: 'verde' | 'amarela' | 'vermelha' | 'indisponível';
+  score: number;
+  changed: boolean;
+  title: string;
+  summary: string;
+  evidence: string[];
+  recovery: string;
+  workout: {
+    name: string;
+    durationMinutes?: number;
+    load?: number;
+    action: string;
+  } | null;
+  metrics: {
+    sleepHours?: number;
+    sleepScore?: number;
+    hrv?: number;
+    restingHr?: number;
+    ansCharge?: number;
+    nightlyStatus?: number;
+    ctl?: number;
+    atl?: number;
+    form?: number;
+    ramp?: number;
+  };
+  updatedAt: string;
+  warning?: string;
+};
 
 export default function Home() {
-  const [tab, setTab] = useState<Tab>('hoje');
-  const [details, setDetails] = useState(false);
-  const [installPrompt, setInstallPrompt] = useState<InstallPrompt | null>(
-    null,
-  );
-  const [saved, setSaved] = useState(false);
-  const [polarConnected, setPolarConnected] = useState<boolean | null>(null);
-  const [checkin, setCheckin] = useState({ fadiga: 4, dor: 1, estresse: 3 });
+  const [tab, setTab] = useState<Tab>('hoje'),
+    [details, setDetails] = useState(false),
+    [installPrompt, setInstallPrompt] = useState<InstallPrompt | null>(null),
+    [saved, setSaved] = useState(false),
+    [polarConnected, setPolarConnected] = useState<boolean | null>(null),
+    [result, setResult] = useState<Result | null>(null),
+    [loading, setLoading] = useState(false),
+    [checkin, setCheckin] = useState({ fadiga: 4, dor: 1, estresse: 3 });
   useEffect(() => {
     if ('serviceWorker' in navigator)
       navigator.serviceWorker.register('/sw.js');
-    const handler = (event: Event) => {
-      event.preventDefault();
-      setInstallPrompt(event as InstallPrompt);
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e as InstallPrompt);
     };
     window.addEventListener('beforeinstallprompt', handler);
     const stored = localStorage.getItem('pedal-pronto-checkin');
     if (stored) setCheckin(JSON.parse(stored));
     fetch('/api/polar/status')
       .then((r) => (r.ok ? r.json() : { connected: false }))
-      .then((r) => setPolarConnected(r.connected))
+      .then((r) => {
+        setPolarConnected(r.connected);
+        if (r.connected) loadReadiness(false);
+      })
       .catch(() => setPolarConnected(false));
-    if (new URLSearchParams(location.search).get('polar') === 'connected') {
-      setPolarConnected(true);
-      history.replaceState({}, '', '/');
-    }
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
+  async function loadReadiness(apply: boolean) {
+    setLoading(true);
+    try {
+      const r = await fetch('/api/readiness', {
+        method: apply ? 'POST' : 'GET',
+        headers: apply ? { 'Content-Type': 'application/json' } : undefined,
+        body: apply ? JSON.stringify({ checkin }) : undefined,
+      });
+      if (r.ok) setResult(await r.json());
+    } finally {
+      setLoading(false);
+    }
+  }
   async function install() {
     if (!installPrompt) return;
     await installPrompt.prompt();
@@ -75,6 +106,39 @@ export default function Home() {
     setSaved(true);
     setTimeout(() => setSaved(false), 2200);
   }
+  const status = result?.classification || 'indisponível';
+  const metrics = [
+    {
+      icon: Moon,
+      label: 'Sono',
+      value: result?.metrics.sleepHours
+        ? `${result.metrics.sleepHours} h`
+        : '—',
+      note: result?.metrics.sleepScore
+        ? `Qualidade ${result.metrics.sleepScore}`
+        : 'Aguardando dados',
+    },
+    {
+      icon: Waves,
+      label: 'HRV',
+      value: result?.metrics.hrv ? `${Math.round(result.metrics.hrv)} ms` : '—',
+      note:
+        result?.metrics.ansCharge !== undefined
+          ? `ANS ${result.metrics.ansCharge.toFixed(1)}`
+          : 'Linha de base',
+    },
+    {
+      icon: HeartPulse,
+      label: 'FC noturna',
+      value: result?.metrics.restingHr
+        ? `${result.metrics.restingHr} bpm`
+        : '—',
+      note:
+        result?.metrics.form !== undefined
+          ? `Forma ${result.metrics.form.toFixed(0)}`
+          : 'Tendência',
+    },
+  ];
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -101,8 +165,14 @@ export default function Home() {
             <Download />
           </Button>
         ) : (
-          <Button variant="ghost" size="icon" aria-label="Sincronizar dados">
-            <RefreshCw />
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Sincronizar dados"
+            onClick={() => loadReadiness(false)}
+            disabled={loading}
+          >
+            <RefreshCw className={loading ? 'spin' : ''} />
           </Button>
         )}
       </header>
@@ -110,28 +180,51 @@ export default function Home() {
         <section className="connection-strip">
           <div>
             <Link2 size={18} />
-            <span><strong>Polar Flow</strong><small>{polarConnected === null ? 'Verificando conexão…' : polarConnected ? 'Conectado com segurança' : 'Conecte para usar seus dados reais'}</small></span>
+            <span>
+              <strong>Polar Flow + Intervals.icu</strong>
+              <small>
+                {polarConnected === null
+                  ? 'Verificando conexões…'
+                  : polarConnected
+                    ? 'Conectados com segurança'
+                    : 'Polar precisa ser conectado'}
+              </small>
+            </span>
           </div>
-          {polarConnected === false && <Button asChild size="sm"><a href="/api/polar/connect">Conectar</a></Button>}
-          {polarConnected && <Badge variant="outline"><Check size={14} /> Ativo</Badge>}
+          {polarConnected === false ? (
+            <Button asChild size="sm">
+              <a href="/api/polar/connect">Conectar</a>
+            </Button>
+          ) : (
+            <Badge variant="outline">
+              <Check size={14} /> Ativos
+            </Badge>
+          )}
         </section>
       )}
       {tab === 'hoje' && (
         <>
-          <section className="readiness-card">
+          <section className={`readiness-card status-${status}`}>
             <div className="readiness-topline">
-              <Badge className="status-badge">PRONTIDÃO AMARELA</Badge>
-              <span>Atualizado às 06:15</span>
+              <Badge className="status-badge">
+                PRONTIDÃO {status.toUpperCase()}
+              </Badge>
+              <span>
+                {result
+                  ? `Atualizado ${new Date(result.updatedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                  : 'Carregando dados reais'}
+              </span>
             </div>
             <div className="score-row">
               <div className="score-ring">
-                <span>2</span>
+                <span>{result?.score ?? '—'}</span>
                 <small>/ 5</small>
               </div>
               <div>
-                <h2>Recuperação incompleta</h2>
+                <h2>{result?.title || 'Avaliando recuperação'}</h2>
                 <p>
-                  Sono suficiente, mas o sistema autonômico ainda pede cautela.
+                  {result?.summary ||
+                    'Cruzando sono, tendência e carga recente.'}
                 </p>
               </div>
             </div>
@@ -150,9 +243,13 @@ export default function Home() {
             <div className="section-heading">
               <div>
                 <p className="eyebrow">TREINO DE HOJE</p>
-                <h2>VO₂ 5×3 a 305 W</h2>
+                <h2>{result?.workout?.name || 'Nenhum treino carregado'}</h2>
               </div>
-              <Badge variant="outline">60 min</Badge>
+              {result?.workout?.durationMinutes && (
+                <Badge variant="outline">
+                  {result.workout.durationMinutes} min
+                </Badge>
+              )}
             </div>
             <Card className="workout-card">
               <CardHeader className="workout-summary">
@@ -160,32 +257,63 @@ export default function Home() {
                   <Activity />
                 </div>
                 <div>
-                  <strong>C1W2D2 · Indoor</strong>
-                  <span>Carga prevista 76 · Intensidade 87%</span>
+                  <strong>
+                    {result?.changed
+                      ? 'TREINO ALTERADO — alteração aplicada'
+                      : 'Plano protegido'}
+                  </strong>
+                  <span>
+                    {result?.workout?.load
+                      ? `Nova carga prevista ${result.workout.load}`
+                      : 'Carga será preservada quando os dados forem insuficientes'}
+                  </span>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="change-note">
                   <ShieldCheck size={18} />
                   <p>
-                    <strong>Ajuste seguro aplicado</strong>
+                    <strong>
+                      {result?.changed
+                        ? 'Mudança concluída no Intervals.icu'
+                        : 'Decisão conservadora'}
+                    </strong>
                     <br />
-                    Uma repetição a menos; potência e recuperações preservadas.
+                    {result?.workout?.action ||
+                      result?.summary ||
+                      'Nenhuma alteração sem dados completos.'}
                   </p>
                 </div>
                 <Button
                   className="primary-action"
+                  onClick={() => loadReadiness(true)}
+                  disabled={loading || !polarConnected}
+                >
+                  {loading ? (
+                    <>
+                      <RefreshCw className="spin" /> Atualizando…
+                    </>
+                  ) : (
+                    'Atualizar treino agora'
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="details-action"
                   onClick={() => setDetails(!details)}
                 >
-                  Detalhes do treino{' '}
+                  Dados que sustentam a decisão{' '}
                   {details ? <ChevronDown /> : <ChevronRight />}
                 </Button>
                 {details && (
-                  <ol className="steps">
-                    <li>10 min aquecimento progressivo</li>
-                    <li>5 × 3 min a 305 W / 3 min leves</li>
-                    <li>10 min desaquecimento</li>
-                  </ol>
+                  <div className="steps">
+                    {result?.evidence.map((e, i) => (
+                      <p key={i}>• {e}</p>
+                    ))}
+                    <p>
+                      <strong>Recuperação:</strong> {result?.recovery}
+                    </p>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -199,8 +327,8 @@ export default function Home() {
               <p className="eyebrow">CHECK-IN RÁPIDO</p>
               <h2>Como você está agora?</h2>
               <p className="muted-copy">
-                Use a escala de 0 a 10. Dor forte ou sintomas sempre prevalecem
-                sobre o relógio.
+                Dor e sintomas prevalecem sobre o relógio. O check-in será
+                considerado na atualização manual.
               </p>
             </CardHeader>
             <CardContent className="slider-list">
@@ -232,49 +360,47 @@ export default function Home() {
               </Button>
             </CardContent>
           </Card>
-          <div className="trend-card">
-            <p className="eyebrow">TENDÊNCIA DE 7 DIAS</p>
-            <div className="bars">
-              <i style={{ height: '58%' }} />
-              <i style={{ height: '72%' }} />
-              <i style={{ height: '82%' }} />
-              <i style={{ height: '68%' }} />
-              <i style={{ height: '43%' }} />
-              <i style={{ height: '55%' }} />
-              <i className="today" style={{ height: '38%' }} />
+          {result && (
+            <div className="trend-card">
+              <p className="eyebrow">CARGA E FORMA</p>
+              <h2>
+                Fitness {result.metrics.ctl?.toFixed(0) ?? '—'} · Fadiga{' '}
+                {result.metrics.atl?.toFixed(0) ?? '—'}
+              </h2>
+              <p className="muted-copy">
+                Forma {result.metrics.form?.toFixed(0) ?? '—'} · Rampa{' '}
+                {result.metrics.ramp?.toFixed(1) ?? '—'}
+              </p>
             </div>
-            <div className="trend-labels">
-              <span>26 ago.</span>
-              <span>Hoje</span>
-            </div>
-          </div>
+          )}
         </section>
       )}
       {tab === 'treinos' && (
         <section className="panel-stack">
           <div className="week-summary">
             <div>
-              <p className="eyebrow">SEMANA 36</p>
-              <h2>6h22 · Carga 429</h2>
+              <p className="eyebrow">TREINO ATUAL</p>
+              <h2>{result?.workout?.name || 'Aguardando calendário'}</h2>
             </div>
-            <Badge variant="outline">Dentro do plano</Badge>
+            <Badge variant="outline">
+              {result?.changed ? 'Alterado hoje' : 'Sem alteração'}
+            </Badge>
           </div>
-          {[
-            ['Hoje', 'VO₂ 5×3 a 305 W', '60 min · 76', 'yellow'],
-            ['Quarta', 'Descanso', 'Recuperação', 'rest'],
-            ['Quinta', 'Threshold 3×12', '1h16 · 88', 'green'],
-            ['Sábado', 'Outdoor Endurance', '4h00 · 265', 'green'],
-          ].map(([day, name, meta, color]) => (
-            <Card className="day-card" key={day}>
-              <div className={`day-dot ${color}`} />
-              <div>
-                <small>{day}</small>
-                <strong>{name}</strong>
-                <span>{meta}</span>
-              </div>
-              <ChevronRight />
-            </Card>
-          ))}
+          <Card className="day-card">
+            <div
+              className={`day-dot ${status === 'verde' ? 'green' : status === 'amarela' ? 'yellow' : 'rest'}`}
+            />
+            <div>
+              <small>Hoje</small>
+              <strong>{result?.workout?.name || 'Nenhum treino'}</strong>
+              <span>
+                {result?.workout?.durationMinutes
+                  ? `${result.workout.durationMinutes} min`
+                  : result?.summary}
+              </span>
+            </div>
+            <ChevronRight />
+          </Card>
         </section>
       )}
       {installPrompt && (
@@ -282,7 +408,7 @@ export default function Home() {
           <Download size={18} />
           <span>
             <strong>Instalar Pedal Pronto</strong>
-            <small>Use como app no celular, inclusive offline</small>
+            <small>Use como app no celular</small>
           </span>
           <ChevronRight size={18} />
         </button>
