@@ -54,6 +54,22 @@ type Result = {
   updatedAt: string;
   warning?: string;
 };
+type WeekWorkout = {
+  id: number;
+  date: string;
+  name: string;
+  durationMinutes?: number;
+  load?: number;
+  structure: string[];
+};
+type Week = {
+  today: string;
+  monday: string;
+  sunday: string;
+  events: WeekWorkout[];
+  suggestion: null | Omit<WeekWorkout, 'id' | 'date'> & { reason: string };
+  suggestionStatus?: string;
+};
 
 export default function Home() {
   const [tab, setTab] = useState<Tab>('hoje'),
@@ -62,7 +78,10 @@ export default function Home() {
     [saved, setSaved] = useState(false),
     [polarConnected, setPolarConnected] = useState<boolean | null>(null),
     [result, setResult] = useState<Result | null>(null),
+    [week, setWeek] = useState<Week | null>(null),
     [loading, setLoading] = useState(false),
+    [creatingSuggestion, setCreatingSuggestion] = useState(false),
+    [weekMessage, setWeekMessage] = useState(''),
     [checkin, setCheckin] = useState({ fadiga: 4, dor: 1, estresse: 3 });
   useEffect(() => {
     if ('serviceWorker' in navigator)
@@ -78,7 +97,10 @@ export default function Home() {
       .then((r) => (r.ok ? r.json() : { connected: false }))
       .then((r) => {
         setPolarConnected(r.connected);
-        if (r.connected) loadReadiness(false);
+        if (r.connected) {
+          loadReadiness(false);
+          loadWeek();
+        }
       })
       .catch(() => setPolarConnected(false));
     return () => window.removeEventListener('beforeinstallprompt', handler);
@@ -91,11 +113,48 @@ export default function Home() {
         headers: apply ? { 'Content-Type': 'application/json' } : undefined,
         body: apply ? JSON.stringify({ checkin }) : undefined,
       });
-      if (r.ok) setResult(await r.json());
+      if (r.ok) {
+        setResult(await r.json());
+        if (apply) loadWeek();
+      }
     } finally {
       setLoading(false);
     }
   }
+  async function loadWeek() {
+    const response = await fetch('/api/week');
+    if (response.ok) setWeek(await response.json());
+  }
+  async function createSuggestion() {
+    if (
+      !week?.suggestion ||
+      !window.confirm(
+        `Adicionar “${week.suggestion.name}” ao Intervals.icu hoje?`,
+      )
+    )
+      return;
+    setCreatingSuggestion(true);
+    setWeekMessage('');
+    try {
+      const response = await fetch('/api/week', { method: 'POST' });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || 'Não foi possível criar.');
+      setWeek(body.week);
+      setWeekMessage('Treino adicionado ao Intervals.icu.');
+      await loadReadiness(false);
+    } catch (error) {
+      setWeekMessage(error instanceof Error ? error.message : 'Falha ao criar treino.');
+    } finally {
+      setCreatingSuggestion(false);
+    }
+  }
+  const formatDay = (date: string) =>
+    new Intl.DateTimeFormat('pt-BR', {
+      weekday: 'short',
+      day: '2-digit',
+      month: '2-digit',
+      timeZone: 'UTC',
+    }).format(new Date(`${date}T12:00:00Z`));
   async function install() {
     if (!installPrompt) return;
     await installPrompt.prompt();
@@ -404,39 +463,76 @@ export default function Home() {
         <section className="panel-stack">
           <div className="week-summary">
             <div>
-              <p className="eyebrow">TREINO ATUAL</p>
-              <h2>{result?.workout?.name || 'Aguardando calendário'}</h2>
+              <p className="eyebrow">SEMANA ATUAL</p>
+              <h2>Treinos no Intervals.icu</h2>
             </div>
-            <Badge variant="outline">
-              {result?.changed ? 'Alterado hoje' : 'Sem alteração'}
-            </Badge>
+            <Badge variant="outline">{week?.events.length ?? 0} sessões</Badge>
           </div>
-          <Card className="structure-card">
-            <div className="structure-body">
-              <small>Hoje</small>
-              <strong>{result?.workout?.name || 'Nenhum treino'}</strong>
-              <span>
-                {result?.workout?.durationMinutes
-                  ? `${result.workout.durationMinutes} min`
-                  : result?.summary}
-              </span>
-              {result?.workout?.load && (
-                <span>Carga {result.workout.load}</span>
-              )}
-              {result?.workout?.structure?.length ? (
-                <ol className="workout-structure">
-                  {result.workout.structure.map((step, index) => (
-                    <li key={index}>
-                      <b>{index + 1}</b>
-                      <span>{step.replace(/^[-*]\s*/, '')}</span>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <span>Estrutura indisponível</span>
-              )}
-            </div>
-          </Card>
+          <div className="week-list">
+            {week?.events.map((workout) => (
+              <details className="week-workout" key={workout.id}>
+                <summary>
+                  <span className="day-dot green" />
+                  <span className="week-workout-title">
+                    <small>{formatDay(workout.date)}</small>
+                    <strong>{workout.name}</strong>
+                    <span>
+                      {workout.durationMinutes ? `${workout.durationMinutes} min` : 'Duração —'}
+                      {workout.load ? ` · Carga ${workout.load}` : ''}
+                    </span>
+                  </span>
+                  <ChevronDown size={18} />
+                </summary>
+                {workout.structure.length ? (
+                  <ol className="workout-structure">
+                    {workout.structure.map((step, index) => (
+                      <li key={index}>
+                        <b>{index + 1}</b>
+                        <span>{step.replace(/^[-*]\s*/, '')}</span>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="muted-copy">Estrutura em blocos não informada neste treino.</p>
+                )}
+              </details>
+            ))}
+            {week && !week.events.length && (
+              <Card className="structure-card">
+                <p className="muted-copy">Nenhum treino encontrado nesta semana.</p>
+              </Card>
+            )}
+          </div>
+          {week?.suggestion ? (
+            <Card className="suggestion-card">
+              <div className="suggestion-heading">
+                <div>
+                  <p className="eyebrow">OPÇÃO PARA O DESCANSO</p>
+                  <h2>{week.suggestion.name}</h2>
+                </div>
+                <Badge variant="outline">Opcional</Badge>
+              </div>
+              <p className="muted-copy">{week.suggestion.reason}</p>
+              <ol className="workout-structure">
+                {week.suggestion.structure.map((step, index) => (
+                  <li key={index}>
+                    <b>{index + 1}</b>
+                    <span>{step.replace(/^[-*]\s*/, '')}</span>
+                  </li>
+                ))}
+              </ol>
+              <p className="suggestion-meta">
+                {week.suggestion.durationMinutes} min · Carga prevista {week.suggestion.load}
+              </p>
+              <Button className="primary-action" onClick={createSuggestion} disabled={creatingSuggestion}>
+                {creatingSuggestion ? <RefreshCw className="spin" /> : <Bike />}
+                Fazer este treino
+              </Button>
+            </Card>
+          ) : week?.suggestionStatus ? (
+            <p className="suggestion-status">{week.suggestionStatus}</p>
+          ) : null}
+          {weekMessage && <p className="week-message">{weekMessage}</p>}
         </section>
       )}
       {installPrompt && (
