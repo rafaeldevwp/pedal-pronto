@@ -52,7 +52,51 @@ const normalize = (event: Json) => ({
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => /^[-*]/.test(line)),
+  status: 'planejado' as const,
 });
+const activityDate = (activity: Json) =>
+  String(activity.start_date_local || activity.start_date || '').slice(0, 10);
+const activityMinutes = (activity: Json) =>
+  Math.round(Number(activity.moving_time || activity.elapsed_time || 0) / 60) ||
+  undefined;
+const completedWorkout = (activity: Json, planned?: ReturnType<typeof normalize>) => {
+  const actualLoad = Number(activity.icu_training_load || activity.load || 0);
+  const plannedLoad = Number(planned?.load || 0);
+  const ratio = plannedLoad && actualLoad ? actualLoad / plannedLoad : undefined;
+  const rpe = Number(activity.perceived_exertion || activity.rpe || 0);
+  let headline = 'Treino concluído';
+  let message = 'Atividade registrada. Observe como seu corpo responde nas próximas horas.';
+  let nextStep = 'Hidrate-se e siga a recuperação prevista no plano.';
+  if ((ratio && ratio > 1.2) || rpe >= 8) {
+    headline = 'Foi mais puxado que o esperado';
+    message = 'Seu corpo recebeu um esforço maior. Isso não é necessariamente ruim, mas pede atenção à recuperação.';
+    nextStep = 'Priorize alimentação, hidratação e uma boa noite de sono.';
+  } else if (ratio && ratio < 0.8) {
+    headline = 'Saiu mais leve que o planejado';
+    message = 'Você fez menos esforço que o previsto. Não é preciso compensar aumentando o próximo treino.';
+    nextStep = 'Mantenha o plano e deixe a prontidão do dia seguinte orientar qualquer ajuste.';
+  } else if (ratio) {
+    headline = 'Treino na medida';
+    message = 'O esforço realizado ficou próximo do que estava planejado.';
+    nextStep = 'Faça a recuperação habitual e mantenha o próximo treino como programado.';
+  }
+  return {
+    id: activity.id,
+    date: activityDate(activity),
+    name: activity.name || planned?.name || 'Treino realizado',
+    durationMinutes: activityMinutes(activity),
+    load: actualLoad || undefined,
+    structure: planned?.structure || [],
+    status: 'realizado' as const,
+    feedback: { headline, message, nextStep },
+    details: {
+      power: activity.average_watts || activity.weighted_average_watts,
+      heartRate: activity.average_heartrate || activity.average_hr,
+      cadence: activity.average_cadence,
+      rpe: rpe || undefined,
+    },
+  };
+};
 const suggestion = {
   name: 'Giro regenerativo opcional',
   durationMinutes: 30,
@@ -67,15 +111,34 @@ async function context(owner: string) {
   const weekday = dayNumber(today);
   const monday = addDays(today, weekday === 0 ? -6 : 1 - weekday);
   const sunday = addDays(monday, 6);
-  const [readiness, body] = await Promise.all([
+  const [readiness, body, activityBody] = await Promise.all([
     runReadiness(owner, false),
     intervals(
       `/athlete/${runtime.INTERVALS_ATHLETE_ID}/events?oldest=${monday}&newest=${sunday}&category=WORKOUT&resolve=true`,
     ),
+    intervals(
+      `/athlete/${runtime.INTERVALS_ATHLETE_ID}/activities?oldest=${monday}&newest=${sunday}&limit=50`,
+    ),
   ]);
-  const events = (Array.isArray(body) ? body : body?.events || [])
+  const planned = (Array.isArray(body) ? body : body?.events || [])
     .filter((event: Json) => event.category === 'WORKOUT')
-    .map(normalize)
+    .map(normalize);
+  const activities = (Array.isArray(activityBody)
+    ? activityBody
+    : activityBody?.activities || []
+  ).filter((activity: Json) =>
+    ['Ride', 'VirtualRide', 'EBikeRide', 'MountainBikeRide'].includes(
+      activity.type || activity.icu_type,
+    ),
+  );
+  const completedDates = new Set(activities.map(activityDate));
+  const completed = activities.map((activity: Json) =>
+    completedWorkout(
+      activity,
+      planned.find((event: ReturnType<typeof normalize>) => event.date === activityDate(activity)),
+    ),
+  );
+  const events = [...planned.filter((event) => !completedDates.has(event.date)), ...completed]
     .sort((a: Json, b: Json) => a.date.localeCompare(b.date));
   const restDay = [0, 3, 5].includes(weekday);
   const hasToday = events.some((event: Json) => event.date === today);

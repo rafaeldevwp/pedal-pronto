@@ -61,13 +61,22 @@ type WeekWorkout = {
   durationMinutes?: number;
   load?: number;
   structure: string[];
+  status: 'planejado' | 'realizado';
+  feedback?: { headline: string; message: string; nextStep: string };
+  details?: { power?: number; heartRate?: number; cadence?: number; rpe?: number };
 };
 type Week = {
   today: string;
   monday: string;
   sunday: string;
   events: WeekWorkout[];
-  suggestion: null | Omit<WeekWorkout, 'id' | 'date'> & { reason: string };
+  suggestion: null | {
+    name: string;
+    durationMinutes: number;
+    load: number;
+    structure: string[];
+    reason: string;
+  };
   suggestionStatus?: string;
 };
 
@@ -470,11 +479,13 @@ export default function Home() {
           </div>
           <div className="week-list">
             {week?.events.map((workout) => (
-              <details className="week-workout" key={workout.id}>
+              <details className={`week-workout ${workout.status}`} key={`${workout.status}-${workout.id}`}>
                 <summary>
-                  <span className="day-dot green" />
+                  <span className={`day-dot ${workout.status === 'realizado' ? 'done' : 'green'}`} />
                   <span className="week-workout-title">
-                    <small>{formatDay(workout.date)}</small>
+                    <small>
+                      {formatDay(workout.date)} · {workout.status === 'realizado' ? 'Realizado' : 'Planejado'}
+                    </small>
                     <strong>{workout.name}</strong>
                     <span>
                       {workout.durationMinutes ? `${workout.durationMinutes} min` : 'Duração —'}
@@ -483,6 +494,13 @@ export default function Home() {
                   </span>
                   <ChevronDown size={18} />
                 </summary>
+                {workout.feedback && (
+                  <div className="simple-feedback">
+                    <strong>{workout.feedback.headline}</strong>
+                    <p>{workout.feedback.message}</p>
+                    <small>{workout.feedback.nextStep}</small>
+                  </div>
+                )}
                 {workout.structure.length ? (
                   <ol className="workout-structure">
                     {workout.structure.map((step, index) => (
@@ -493,7 +511,20 @@ export default function Home() {
                     ))}
                   </ol>
                 ) : (
-                  <p className="muted-copy">Estrutura em blocos não informada neste treino.</p>
+                  !workout.feedback && (
+                    <p className="muted-copy">Estrutura em blocos não informada neste treino.</p>
+                  )
+                )}
+                {workout.status === 'realizado' && workout.details && (
+                  <div className="training-details">
+                    <small>Detalhes do Intervals</small>
+                    <span>
+                      {workout.details.power ? `Potência ${Math.round(workout.details.power)} W` : ''}
+                      {workout.details.heartRate ? ` · FC ${Math.round(workout.details.heartRate)} bpm` : ''}
+                      {workout.details.cadence ? ` · Cadência ${Math.round(workout.details.cadence)} rpm` : ''}
+                      {workout.details.rpe ? ` · Sensação ${workout.details.rpe}/10` : ''}
+                    </span>
+                  </div>
                 )}
               </details>
             ))}
