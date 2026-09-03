@@ -13,6 +13,7 @@ import {
   Moon,
   RefreshCw,
   ShieldCheck,
+  Sparkles,
   TrendingUp,
   Zap,
   Waves,
@@ -113,6 +114,42 @@ type Performance = {
   efficiencyChange?: number;
   cardioHeadline: string;
 };
+
+function evolutionInsight(performance: Performance | null, result: Result | null, weeklySessions: number) {
+  if (!performance || !result) return {
+    key: 'insuficiente', title: 'Reunindo seus dados', text: 'Ainda estamos cruzando recuperação e histórico para produzir uma leitura confiável.',
+    evidence: ['A análise será atualizada após a próxima sincronização.'], confidence: 'limitada',
+  };
+  const comparable = performance.powerViews?.season?.filter((point) => point.change !== undefined) || [];
+  const powerChange = comparable.length ? comparable.reduce((sum, point) => sum + point.change!, 0) / comparable.length : undefined;
+  const efficiency = performance.efficiencyChange;
+  const positive = Number((powerChange || 0) > 2) + Number((efficiency || 0) > 3);
+  const negative = Number((powerChange || 0) < -3) + Number((efficiency || 0) < -4);
+  const evidence: string[] = [];
+  if (powerChange !== undefined) evidence.push(`Potências da temporada ${powerChange >= 0 ? 'subiram' : 'caíram'} em média ${Math.abs(powerChange).toFixed(1)}%.`);
+  if (efficiency !== undefined) evidence.push(efficiency >= 0 ? 'Você produz mais potência para esforço cardíaco semelhante.' : 'A relação entre potência e esforço cardíaco ficou menos favorável recentemente.');
+  evidence.push(`${weeklySessions} ${weeklySessions === 1 ? 'treino realizado' : 'treinos realizados'} nesta semana; frequência isolada não define perda de forma.`);
+  if (comparable.length < 3 || performance.activityCount < 4) return {
+    key: 'insuficiente', title: 'Ainda não há evidência suficiente',
+    text: 'Existem dados recentes, mas faltam sessões comparáveis para afirmar evolução ou regressão.', evidence, confidence: 'limitada',
+  };
+  if (negative >= 2) return {
+    key: 'atencao', title: 'Há uma tendência que merece atenção',
+    text: 'Potência e eficiência recuaram juntas. Vamos observar se isso persiste antes de chamar de regressão.', evidence, confidence: 'boa',
+  };
+  if (result.classification === 'vermelha' || result.classification === 'amarela') return {
+    key: 'recuperando', title: 'Você parece estar absorvendo os treinos',
+    text: 'A recuperação de hoje está abaixo do ideal, mas seu histórico não mostra perda consistente de capacidade.', evidence, confidence: positive ? 'boa' : 'moderada',
+  };
+  if (positive >= 2) return {
+    key: 'evoluindo', title: 'Você está evoluindo',
+    text: 'Potência e eficiência cardíaca avançaram juntas, com recuperação suficiente para sustentar a adaptação.', evidence, confidence: 'boa',
+  };
+  return {
+    key: 'mantendo', title: 'Sua forma parece preservada',
+    text: `Mesmo com ${weeklySessions} sessões nesta semana, não há sinais combinados de regressão. Seu corpo parece manter a capacidade atual.`, evidence, confidence: 'moderada',
+  };
+}
 
 function WorkoutBlocks({ steps }: { steps: string[] }) {
   const blocks = steps.map((step, index) => {
@@ -292,6 +329,7 @@ export default function Home() {
                 : item,
   );
   const activePower = performance?.powerViews?.[powerRange] || performance?.power || [];
+  const dailyEvolution = evolutionInsight(performance, result, week?.events.filter((event) => event.status === 'realizado').length || 0);
   const metrics = [
     {
       icon: Moon,
@@ -735,6 +773,26 @@ export default function Home() {
       )}
       {tab === 'evolucao' && (
         <section className="panel-stack">
+          <Card className={`daily-evolution ${dailyEvolution.key}`}>
+            <div className="daily-evolution-heading">
+              <span className="insight-icon"><Sparkles /></span>
+              <div>
+                <p className="eyebrow">LEITURA DIÁRIA DA EVOLUÇÃO</p>
+                <h2>{dailyEvolution.title}</h2>
+              </div>
+              <Badge variant="outline">Confiança {dailyEvolution.confidence}</Badge>
+            </div>
+            <p className="insight-text">{dailyEvolution.text}</p>
+            <div className="insight-evidence">
+              {dailyEvolution.evidence.slice(0, 3).map((item, index) => <p key={index}>• {item}</p>)}
+            </div>
+            <details className="science-note">
+              <summary>Como esta leitura é feita</summary>
+              <p>Comparamos sua linha de base, prontidão do dia, potência da temporada, eficiência cardíaca e sessões semelhantes. Um treino isolado não determina regressão.</p>
+              <span>Referências: estudos de treinamento orientado por HRV e variação diária do desempenho.</span>
+            </details>
+            <small className="insight-updated">Atualiza ao sincronizar o Polar ou concluir um treino no Intervals.icu.</small>
+          </Card>
           <Card className="profile-card">
             <div className="profile-icon"><TrendingUp /></div>
             <div>
