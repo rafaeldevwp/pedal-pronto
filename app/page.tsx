@@ -12,6 +12,8 @@ import {
   Moon,
   RefreshCw,
   ShieldCheck,
+  TrendingUp,
+  Zap,
   Waves,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -19,9 +21,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Scatter, ScatterChart, XAxis, YAxis } from 'recharts';
 
-type Tab = 'hoje' | 'recuperacao' | 'treinos';
+type Tab = 'hoje' | 'recuperacao' | 'treinos' | 'evolucao';
 type InstallPrompt = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: string }>;
@@ -96,6 +98,17 @@ type Week = {
   };
   suggestionStatus?: string;
 };
+type Performance = {
+  updatedAt: string;
+  activityCount: number;
+  profile: string;
+  profileMessage: string;
+  warning?: string;
+  power: Array<{ seconds: number; label: string; current?: number; previous?: number; change?: number }>;
+  cardio: Array<{ date: string; watts: number; heartRate: number; efficiency: number; decoupling?: number }>;
+  efficiencyChange?: number;
+  cardioHeadline: string;
+};
 
 function WorkoutBlocks({ steps }: { steps: string[] }) {
   const blocks = steps.map((step, index) => {
@@ -133,6 +146,7 @@ export default function Home() {
     [polarConnected, setPolarConnected] = useState<boolean | null>(null),
     [result, setResult] = useState<Result | null>(null),
     [week, setWeek] = useState<Week | null>(null),
+    [performance, setPerformance] = useState<Performance | null>(null),
     [loading, setLoading] = useState(false),
     [creatingSuggestion, setCreatingSuggestion] = useState(false),
     [weekMessage, setWeekMessage] = useState(''),
@@ -154,6 +168,7 @@ export default function Home() {
         if (r.connected) {
           loadReadiness(false);
           loadWeek();
+          loadPerformance();
         }
       })
       .catch(() => setPolarConnected(false));
@@ -164,6 +179,7 @@ export default function Home() {
       if (document.visibilityState === 'visible' && polarConnected) {
         loadReadiness(false);
         loadWeek();
+        loadPerformance();
       }
     };
     document.addEventListener('visibilitychange', refreshAfterSync);
@@ -192,6 +208,10 @@ export default function Home() {
   async function loadWeek() {
     const response = await fetch('/api/week');
     if (response.ok) setWeek(await response.json());
+  }
+  async function loadPerformance() {
+    const response = await fetch('/api/performance');
+    if (response.ok) setPerformance(await response.json());
   }
   async function createSuggestion() {
     if (
@@ -235,6 +255,22 @@ export default function Home() {
     setTimeout(() => setSaved(false), 2200);
   }
   const status = result?.classification || 'indisponível';
+  const recoveryCopy = status === 'verde'
+    ? { title: 'Seu corpo está respondendo bem', action: 'Pode seguir o treino planejado. Não é necessário aumentar a sessão.' }
+    : status === 'amarela'
+      ? { title: 'Você recuperou apenas em parte', action: 'Comece com calma e reavalie as sensações durante o aquecimento.' }
+      : status === 'vermelha'
+        ? { title: 'Hoje o corpo pede recuperação', action: 'Priorize descanso ou atividade muito leve. Dor ou sintomas exigem cautela.' }
+        : { title: 'Ainda não há dados suficientes', action: 'Sincronize o relógio antes de usar esta avaliação para decidir o treino.' };
+  const simpleEvidence = (result?.evidence || []).map((item) =>
+    item.startsWith('HRV') ? 'Sua recuperação interna ficou abaixo do seu padrão'
+      : item.startsWith('FC noturna') ? 'Seu coração trabalhou mais que o habitual durante o repouso'
+        : item.startsWith('Sono') ? 'Você dormiu menos que o seu habitual'
+          : item.startsWith('Interrupções') ? 'Seu sono teve mais interrupções que o normal'
+            : item.startsWith('Forma') ? 'Existe fadiga acumulada dos últimos treinos'
+              : item.includes('dentro da tendência') ? 'Sono, recuperação e carga estão próximos do seu padrão'
+                : item,
+  );
   const metrics = [
     {
       icon: Moon,
@@ -280,7 +316,9 @@ export default function Home() {
               ? 'Bom dia, Rafael'
               : tab === 'recuperacao'
                 ? 'Sua recuperação'
-                : 'Plano de treinos'}
+                : tab === 'treinos'
+                  ? 'Plano de treinos'
+                  : 'Sua evolução'}
           </h1>
         </div>
         {installPrompt ? (
@@ -297,7 +335,7 @@ export default function Home() {
             variant="ghost"
             size="icon"
             aria-label="Sincronizar dados"
-            onClick={() => loadReadiness(false)}
+            onClick={() => { loadReadiness(false); loadWeek(); loadPerformance(); }}
             disabled={loading}
           >
             <RefreshCw className={loading ? 'spin' : ''} />
@@ -480,17 +518,21 @@ export default function Home() {
               <div className="recovery-title">
                 <div>
                   <p className="eyebrow">RECUPERAÇÃO DE HOJE</p>
-                  <h2>{result.title}</h2>
+                  <h2>{recoveryCopy.title}</h2>
                 </div>
                 <Badge className="status-badge">{status.toUpperCase()}</Badge>
               </div>
-              <p>{result.recovery}</p>
+              <p className="recovery-action"><strong>O que fazer:</strong> {recoveryCopy.action}</p>
+              <div className="recovery-why">
+                <small>O que mais pesou nesta leitura</small>
+                <p>{simpleEvidence.slice(0, 2).join(' · ')}</p>
+              </div>
               <div className="recovery-signals">
                 <span><small>Sono</small><strong>{result.metrics.sleepHours ? `${result.metrics.sleepHours} h` : '—'}</strong></span>
                 <span><small>HRV</small><strong>{result.metrics.hrv ? `${Math.round(result.metrics.hrv)} ms` : '—'}</strong></span>
                 <span><small>FC repouso</small><strong>{result.metrics.restingHr ? `${Math.round(result.metrics.restingHr)} bpm` : '—'}</strong></span>
               </div>
-              <Button variant="outline" className="recovery-refresh" onClick={() => { loadReadiness(false); loadWeek(); }} disabled={loading}>
+              <Button variant="outline" className="recovery-refresh" onClick={() => { loadReadiness(false); loadWeek(); loadPerformance(); }} disabled={loading}>
                 <RefreshCw className={loading ? 'spin' : ''} /> Atualizar após sincronizar
               </Button>
             </Card>
@@ -668,6 +710,77 @@ export default function Home() {
           {weekMessage && <p className="week-message">{weekMessage}</p>}
         </section>
       )}
+      {tab === 'evolucao' && (
+        <section className="panel-stack">
+          <Card className="profile-card">
+            <div className="profile-icon"><TrendingUp /></div>
+            <div>
+              <p className="eyebrow">SEU PERFIL NOS ÚLTIMOS 42 DIAS</p>
+              <h2>{performance?.profile || 'Analisando seu histórico'}</h2>
+              <p className="muted-copy">{performance?.profileMessage || 'Comparando com os 42 dias anteriores.'}</p>
+              {performance?.warning && <small className="data-warning">{performance.warning}</small>}
+            </div>
+          </Card>
+          <Card className="performance-card">
+            <p className="eyebrow">MELHORES POTÊNCIAS</p>
+            <h2>Onde você está evoluindo</h2>
+            {performance?.power.some((point) => point.current) ? (
+              <>
+                <ChartContainer className="power-chart" config={{ current: { label: 'Últimos 42 dias', color: '#165c45' }, previous: { label: '42 dias anteriores', color: '#b9c6bd' } }}>
+                  <BarChart data={performance.power} margin={{ left: -20, right: 4, top: 8 }}>
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey="label" tickLine={false} axisLine={false} />
+                    <YAxis tickLine={false} axisLine={false} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="previous" fill="var(--color-previous)" radius={[5, 5, 0, 0]} />
+                    <Bar dataKey="current" fill="var(--color-current)" radius={[5, 5, 0, 0]} />
+                  </BarChart>
+                </ChartContainer>
+                <div className="power-list">
+                  {performance.power.map((point) => (
+                    <span key={point.seconds}>
+                      <small>{point.label}</small>
+                      <strong>{point.current ? `${Math.round(point.current)} W` : '—'}</strong>
+                      <em className={(point.change || 0) >= 0 ? 'up' : 'down'}>
+                        {point.change !== undefined ? `${point.change >= 0 ? '+' : ''}${point.change.toFixed(1)}%` : 'sem comparação'}
+                      </em>
+                    </span>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="empty-insight">O Intervals ainda não devolveu potências máximas suficientes para montar sua curva.</p>
+            )}
+          </Card>
+          <Card className="performance-card">
+            <p className="eyebrow">CORAÇÃO × POTÊNCIA</p>
+            <h2>{performance?.cardioHeadline || 'Analisando eficiência'}</h2>
+            <p className="muted-copy">
+              Cada ponto é um treino: mais alto e mais à esquerda significa mais potência com menor esforço cardíaco.
+            </p>
+            {performance && performance.cardio.length >= 2 ? (
+              <ChartContainer className="cardio-chart" config={{ watts: { label: 'Potência', color: '#165c45' } }}>
+                <ScatterChart margin={{ left: -12, right: 8, top: 12, bottom: 4 }}>
+                  <CartesianGrid />
+                  <XAxis type="number" dataKey="heartRate" name="Frequência cardíaca" unit=" bpm" tickLine={false} />
+                  <YAxis type="number" dataKey="watts" name="Potência" unit=" W" tickLine={false} />
+                  <ChartTooltip cursor={{ strokeDasharray: '3 3' }} content={<ChartTooltipContent />} />
+                  <Scatter data={performance.cardio} fill="var(--color-watts)" />
+                </ScatterChart>
+              </ChartContainer>
+            ) : (
+              <p className="empty-insight">Precisamos de ao menos dois pedais com potência e frequência cardíaca.</p>
+            )}
+            {performance?.efficiencyChange !== undefined && (
+              <div className="efficiency-note">
+                <Zap size={17} />
+                <span><strong>{performance.efficiencyChange >= 0 ? '+' : ''}{performance.efficiencyChange.toFixed(1)}%</strong> de mudança na relação potência–coração dentro do período.</span>
+              </div>
+            )}
+          </Card>
+          <p className="analysis-note">Tendências comparam períodos, não diagnosticam saúde e não substituem sua percepção durante o treino.</p>
+        </section>
+      )}
       {installPrompt && (
         <button className="install-banner" onClick={install}>
           <Download size={18} />
@@ -699,6 +812,13 @@ export default function Home() {
         >
           <Bike />
           <span>Treinos</span>
+        </button>
+        <button
+          className={tab === 'evolucao' ? 'active' : ''}
+          onClick={() => setTab('evolucao')}
+        >
+          <TrendingUp />
+          <span>Evolução</span>
         </button>
       </nav>
     </main>
