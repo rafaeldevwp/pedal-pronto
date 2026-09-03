@@ -15,6 +15,9 @@ const get = async (path: string) => {
   if (!response.ok) throw new Error(`INTERVALS_${response.status}`);
   return response.json();
 };
+const getOptional = async (path: string) => {
+  try { return await get(path); } catch { return null; }
+};
 const periods = [5, 60, 300, 1200, 2400];
 const labels: Record<number, string> = { 5: '5 s', 60: '1 min', 300: '5 min', 1200: '20 min', 2400: '40 min' };
 
@@ -41,11 +44,49 @@ function spikePower(activity: Json, seconds: number) {
   return undefined;
 }
 
+function curvePower(payload: any, seconds: number): number | undefined {
+  if (!payload) return undefined;
+  if (Array.isArray(payload)) {
+    for (const point of payload) {
+      if (Array.isArray(point) && Number(point[0]) === seconds && Number.isFinite(Number(point[1]))) return Number(point[1]);
+      if (point && typeof point === 'object') {
+        const duration = Number(point.seconds ?? point.secs ?? point.duration ?? point.x);
+        const watts = Number(point.watts ?? point.power ?? point.value ?? point.y);
+        if (duration === seconds && Number.isFinite(watts)) return watts;
+      }
+    }
+    for (const value of payload) {
+      const found = curvePower(value, seconds);
+      if (found) return found;
+    }
+  } else if (typeof payload === 'object') {
+    const secs = payload.secs || payload.seconds || payload.durations;
+    const watts = payload.watts || payload.power || payload.values;
+    if (Array.isArray(secs) && Array.isArray(watts)) {
+      const index = secs.findIndex((value: any) => Number(value) === seconds);
+      if (index >= 0 && Number.isFinite(Number(watts[index]))) return Number(watts[index]);
+    }
+    const direct = payload[seconds] ?? payload[String(seconds)];
+    if (Number.isFinite(Number(direct))) return Number(direct);
+    for (const value of Object.values(payload)) {
+      const found = curvePower(value, seconds);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
 export async function GET(request: Request) {
   if (!ownerId(request)) return Response.json({ error: 'Não autorizado' }, { status: 401 });
   const now = new Date(), today = isoDate(now), oldest = isoDate(addDays(now, -83));
   try {
-    const body = await get(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/activities?oldest=${oldest}&newest=${today}&limit=500`);
+    const [body, season0, season1, days42, allTime] = await Promise.all([
+      get(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/activities?oldest=${oldest}&newest=${today}&limit=500`),
+      getOptional(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/power-curves?curves=s0&type=Ride&now=${today}`),
+      getOptional(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/power-curves?curves=s1&type=Ride&now=${today}`),
+      getOptional(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/power-curves?curves=42d&type=Ride&now=${today}`),
+      getOptional(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/power-curves?curves=all&type=Ride&now=${today}`),
+    ]);
     const activities: Json[] = (Array.isArray(body) ? body : body.activities || []).filter((activity: Json) =>
       ['Ride', 'VirtualRide', 'EBikeRide', 'MountainBikeRide'].includes(activity.type || activity.icu_type),
     );
@@ -57,13 +98,19 @@ export async function GET(request: Request) {
       const values = list.map((activity) => spikePower(activity, seconds)).filter((value): value is number => Boolean(value));
       return values.length ? Math.max(...values) : undefined;
     };
-    const power = periods.map((seconds) => {
+    const rollingPower = periods.map((seconds) => {
       const current = best(recent, seconds), prior = best(previous, seconds);
       return {
         seconds, label: labels[seconds], current, previous: prior,
         change: current && prior ? ((current - prior) / prior) * 100 : undefined,
       };
     });
+    const seasonPower = periods.map((seconds) => {
+      const current = curvePower(season0, seconds), prior = curvePower(season1, seconds);
+      return { seconds, label: labels[seconds], current, previous: prior, change: current && prior ? ((current - prior) / prior) * 100 : undefined };
+    });
+    const curveSet = (payload: any) => periods.map((seconds) => ({ seconds, label: labels[seconds], current: curvePower(payload, seconds) }));
+    const power = seasonPower.some((point) => point.current) ? seasonPower : rollingPower;
     const changes = power.filter((point) => point.change !== undefined);
     const sprint = changes.filter((point) => point.seconds <= 60).map((point) => point.change!);
     const endurance = changes.filter((point) => point.seconds >= 300).map((point) => point.change!);
@@ -107,6 +154,12 @@ export async function GET(request: Request) {
           : 'Eficiência estável';
     return Response.json({
       updatedAt: new Date().toISOString(), activityCount: recent.length, profile, profileMessage, power,
+      powerViews: {
+        season: power,
+        recent: curveSet(days42).some((point) => point.current) ? curveSet(days42) : rollingPower,
+        all: curveSet(allTime),
+      },
+      powerSource: seasonPower.some((point) => point.current) ? 'Curvas oficiais do Intervals.icu' : 'Atividades disponíveis no Intervals.icu',
       cardio: cardioList, efficiencyChange, cardioHeadline,
       warning: recent.length < 4 ? 'Poucas atividades recentes: interprete as tendências com cautela.' : undefined,
     });

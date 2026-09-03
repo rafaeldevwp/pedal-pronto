@@ -107,6 +107,8 @@ type Performance = {
   profileMessage: string;
   warning?: string;
   power: Array<{ seconds: number; label: string; current?: number; previous?: number; change?: number }>;
+  powerViews: Record<'season' | 'recent' | 'all', Array<{ seconds: number; label: string; current?: number; previous?: number; change?: number }>>;
+  powerSource: string;
   cardio: Array<{ date: string; watts: number; heartRate: number; efficiency: number; decoupling?: number }>;
   efficiencyChange?: number;
   cardioHeadline: string;
@@ -164,6 +166,7 @@ export default function Home() {
     [result, setResult] = useState<Result | null>(null),
     [week, setWeek] = useState<Week | null>(null),
     [performance, setPerformance] = useState<Performance | null>(null),
+    [powerRange, setPowerRange] = useState<'season' | 'recent' | 'all'>('season'),
     [loading, setLoading] = useState(false),
     [creatingSuggestion, setCreatingSuggestion] = useState(false),
     [weekMessage, setWeekMessage] = useState(''),
@@ -288,6 +291,7 @@ export default function Home() {
               : item.includes('dentro da tendência') ? 'Sono, recuperação e carga estão próximos do seu padrão'
                 : item,
   );
+  const activePower = performance?.powerViews?.[powerRange] || performance?.power || [];
   const metrics = [
     {
       icon: Moon,
@@ -743,21 +747,27 @@ export default function Home() {
           </Card>
           <Card className="performance-card">
             <p className="eyebrow">MELHORES POTÊNCIAS</p>
-            <h2>Onde você está evoluindo</h2>
-            {performance?.power.some((point) => point.current) ? (
+            <h2>{powerRange === 'season' ? 'Temporada atual × anterior' : powerRange === 'recent' ? 'Últimos 42 dias' : 'Melhores do histórico'}</h2>
+            <div className="range-switch" role="group" aria-label="Período da curva de potência">
+              <button className={powerRange === 'season' ? 'active' : ''} onClick={() => setPowerRange('season')}>Temporada</button>
+              <button className={powerRange === 'recent' ? 'active' : ''} onClick={() => setPowerRange('recent')}>42 dias</button>
+              <button className={powerRange === 'all' ? 'active' : ''} onClick={() => setPowerRange('all')}>Histórico</button>
+            </div>
+            <span className="data-source"><Link2 size={12} /> {performance?.powerSource || 'Dados do Intervals.icu'}</span>
+            {activePower.some((point) => point.current) ? (
               <>
-                <ChartContainer className="power-chart" config={{ current: { label: 'Últimos 42 dias', color: '#165c45' }, previous: { label: '42 dias anteriores', color: '#b9c6bd' } }}>
-                  <BarChart data={performance.power} margin={{ left: -20, right: 4, top: 8 }}>
+                <ChartContainer className="power-chart" config={{ current: { label: powerRange === 'season' ? 'Temporada atual' : powerRange === 'recent' ? 'Últimos 42 dias' : 'Melhor histórico', color: '#165c45' }, previous: { label: 'Temporada anterior', color: '#b9c6bd' } }}>
+                  <BarChart data={activePower} margin={{ left: -20, right: 4, top: 8 }}>
                     <CartesianGrid vertical={false} />
                     <XAxis dataKey="label" tickLine={false} axisLine={false} />
                     <YAxis tickLine={false} axisLine={false} />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="previous" fill="var(--color-previous)" radius={[5, 5, 0, 0]} />
+                    {powerRange === 'season' && <Bar dataKey="previous" fill="var(--color-previous)" radius={[5, 5, 0, 0]} />}
                     <Bar dataKey="current" fill="var(--color-current)" radius={[5, 5, 0, 0]} />
                   </BarChart>
                 </ChartContainer>
                 <div className="power-list">
-                  {performance.power.map((point) => (
+                  {activePower.map((point) => (
                     <span key={point.seconds}>
                       <small>{point.label}</small>
                       <strong>{point.current ? `${Math.round(point.current)} W` : '—'}</strong>
