@@ -64,21 +64,52 @@ const completedWorkout = (activity: Json, planned?: ReturnType<typeof normalize>
   const plannedLoad = Number(planned?.load || 0);
   const ratio = plannedLoad && actualLoad ? actualLoad / plannedLoad : undefined;
   const rpe = Number(activity.perceived_exertion || activity.rpe || 0);
+  const rawIntensity = Number(activity.icu_intensity || activity.intensity || 0);
+  const intensity = rawIntensity > 2 ? rawIntensity / 100 : rawIntensity;
+  const decoupling = Math.abs(Number(activity.decoupling || activity.aerobic_decoupling || 0));
+  const durationHours = Number(activity.moving_time || 0) / 3600;
+  const loadPerHour = durationHours && actualLoad ? actualLoad / durationHours : 0;
+  const signals: string[] = [];
+  let difficulty = 0;
+  if (rpe) {
+    signals.push(`sensação ${rpe}/10`);
+    difficulty += rpe >= 8 ? 2 : rpe >= 6 ? 1 : 0;
+  }
+  if (intensity) {
+    signals.push(`intensidade ${Math.round(intensity * 100)}%`);
+    difficulty += intensity >= 0.9 ? 2 : intensity >= 0.75 ? 1 : 0;
+  }
+  if (loadPerHour) {
+    signals.push(`carga por hora ${Math.round(loadPerHour)}`);
+    difficulty += loadPerHour >= 80 ? 2 : loadPerHour >= 55 ? 1 : 0;
+  }
+  if (decoupling) {
+    signals.push(`variação cardíaca ${decoupling.toFixed(1)}%`);
+    difficulty += decoupling >= 8 ? 2 : decoupling >= 5 ? 1 : 0;
+  }
+  if (ratio) {
+    signals.push(`carga ${Math.round(ratio * 100)}% do previsto`);
+    difficulty += ratio > 1.2 ? 1 : 0;
+  }
   let headline = 'Treino concluído';
-  let message = 'Atividade registrada. Observe como seu corpo responde nas próximas horas.';
+  let message = 'Os dados disponíveis não bastam para dizer com segurança se foi fácil ou difícil.';
   let nextStep = 'Hidrate-se e siga a recuperação prevista no plano.';
-  if ((ratio && ratio > 1.2) || rpe >= 8) {
-    headline = 'Foi mais puxado que o esperado';
-    message = 'Seu corpo recebeu um esforço maior. Isso não é necessariamente ruim, mas pede atenção à recuperação.';
+  if (signals.length >= 2 && difficulty >= 4) {
+    headline = 'Treino exigente';
+    message = 'Mais de um sinal indica esforço alto. Considere esta sessão pesada, mesmo que um número isolado pareça normal.';
     nextStep = 'Priorize alimentação, hidratação e uma boa noite de sono.';
+  } else if (signals.length >= 2 && difficulty === 0) {
+    headline = 'Treino leve';
+    message = 'Os sinais disponíveis apontam um esforço controlado e confortável.';
+    nextStep = 'Recupere normalmente e não aumente o próximo treino por causa disso.';
+  } else if (signals.length >= 2) {
+    headline = 'Treino moderado';
+    message = 'O conjunto dos sinais mostra esforço relevante, mas sem evidência suficiente de uma sessão muito pesada.';
+    nextStep = 'Observe pernas, sono e disposição antes da próxima sessão.';
   } else if (ratio && ratio < 0.8) {
-    headline = 'Saiu mais leve que o planejado';
-    message = 'Você fez menos esforço que o previsto. Não é preciso compensar aumentando o próximo treino.';
+    headline = 'Menor que o planejado';
+    message = 'A carga ficou abaixo da previsão, mas faltam outros sinais para classificar a dificuldade.';
     nextStep = 'Mantenha o plano e deixe a prontidão do dia seguinte orientar qualquer ajuste.';
-  } else if (ratio) {
-    headline = 'Treino na medida';
-    message = 'O esforço realizado ficou próximo do que estava planejado.';
-    nextStep = 'Faça a recuperação habitual e mantenha o próximo treino como programado.';
   }
   return {
     id: activity.id,
@@ -88,12 +119,21 @@ const completedWorkout = (activity: Json, planned?: ReturnType<typeof normalize>
     load: actualLoad || undefined,
     structure: planned?.structure || [],
     status: 'realizado' as const,
-    feedback: { headline, message, nextStep },
+    feedback: {
+      headline,
+      message,
+      nextStep,
+      confidence: signals.length >= 3 ? 'boa' : signals.length === 2 ? 'moderada' : 'limitada',
+      signals,
+    },
     details: {
       power: activity.average_watts || activity.weighted_average_watts,
       heartRate: activity.average_heartrate || activity.average_hr,
       cadence: activity.average_cadence,
       rpe: rpe || undefined,
+      intensity: intensity || undefined,
+      decoupling: decoupling || undefined,
+      efficiency: activity.efficiency_factor || activity.power_hr_ratio,
     },
   };
 };

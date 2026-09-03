@@ -18,6 +18,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts';
 
 type Tab = 'hoje' | 'recuperacao' | 'treinos';
 type InstallPrompt = Event & {
@@ -32,6 +34,7 @@ type Result = {
   summary: string;
   evidence: string[];
   recovery: string;
+  loadTrend: Array<{ date: string; fitness?: number; fatigue?: number }>;
   workout: {
     name: string;
     durationMinutes?: number;
@@ -62,8 +65,22 @@ type WeekWorkout = {
   load?: number;
   structure: string[];
   status: 'planejado' | 'realizado';
-  feedback?: { headline: string; message: string; nextStep: string };
-  details?: { power?: number; heartRate?: number; cadence?: number; rpe?: number };
+  feedback?: {
+    headline: string;
+    message: string;
+    nextStep: string;
+    confidence: string;
+    signals: string[];
+  };
+  details?: {
+    power?: number;
+    heartRate?: number;
+    cadence?: number;
+    rpe?: number;
+    intensity?: number;
+    decoupling?: number;
+    efficiency?: number;
+  };
 };
 type Week = {
   today: string;
@@ -79,6 +96,34 @@ type Week = {
   };
   suggestionStatus?: string;
 };
+
+function WorkoutBlocks({ steps }: { steps: string[] }) {
+  const blocks = steps.map((step, index) => {
+    const repetition = step.match(/(\d+)\s*x\s*(\d+(?:\.\d+)?)\s*([hms])/i);
+    const duration = step.match(/(\d+(?:\.\d+)?)\s*([hms])/i);
+    const amount = Number(repetition?.[2] || duration?.[1] || 1);
+    const unit = repetition?.[3] || duration?.[2] || 'm';
+    const multiplier = unit.toLowerCase() === 'h' ? 60 : unit.toLowerCase() === 's' ? 1 / 60 : 1;
+    const repeat = Number(repetition?.[1] || 1);
+    const intensity = Number(step.match(/(\d+)\s*%/)?.[1] || 50);
+    return { step, minutes: Math.max(1, amount * multiplier * repeat), intensity, index };
+  });
+  const total = blocks.reduce((sum, block) => sum + block.minutes, 0) || 1;
+  return (
+    <div className="block-chart" aria-label="Gráfico dos blocos do treino">
+      {blocks.map((block) => (
+        <div
+          className={`block-segment intensity-${block.intensity >= 95 ? 'high' : block.intensity >= 70 ? 'mid' : 'low'}`}
+          key={`${block.index}-${block.step}`}
+          style={{ flexGrow: Math.max(8, (block.minutes / total) * 100) }}
+          title={block.step.replace(/^[-*]\s*/, '')}
+        >
+          <span>{block.minutes >= 5 ? `${Math.round(block.minutes)}m` : ''}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function Home() {
   const [tab, setTab] = useState<Tab>('hoje'),
@@ -114,6 +159,20 @@ export default function Home() {
       .catch(() => setPolarConnected(false));
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
+  useEffect(() => {
+    const refreshAfterSync = () => {
+      if (document.visibilityState === 'visible' && polarConnected) {
+        loadReadiness(false);
+        loadWeek();
+      }
+    };
+    document.addEventListener('visibilitychange', refreshAfterSync);
+    const timer = window.setInterval(refreshAfterSync, 3 * 60 * 1000);
+    return () => {
+      document.removeEventListener('visibilitychange', refreshAfterSync);
+      window.clearInterval(timer);
+    };
+  }, [polarConnected]);
   async function loadReadiness(apply: boolean) {
     setLoading(true);
     try {
@@ -390,6 +449,7 @@ export default function Home() {
                     {result?.workout?.structure?.length ? (
                       <>
                         <strong>Estrutura do treino</strong>
+                        <WorkoutBlocks steps={result.workout.structure} />
                         {result.workout.structure.map((step, i) => (
                           <p key={`step-${i}`}>{step}</p>
                         ))}
@@ -415,6 +475,26 @@ export default function Home() {
       )}
       {tab === 'recuperacao' && (
         <section className="panel-stack">
+          {result && (
+            <Card className={`recovery-overview status-${status}`}>
+              <div className="recovery-title">
+                <div>
+                  <p className="eyebrow">RECUPERAÇÃO DE HOJE</p>
+                  <h2>{result.title}</h2>
+                </div>
+                <Badge className="status-badge">{status.toUpperCase()}</Badge>
+              </div>
+              <p>{result.recovery}</p>
+              <div className="recovery-signals">
+                <span><small>Sono</small><strong>{result.metrics.sleepHours ? `${result.metrics.sleepHours} h` : '—'}</strong></span>
+                <span><small>HRV</small><strong>{result.metrics.hrv ? `${Math.round(result.metrics.hrv)} ms` : '—'}</strong></span>
+                <span><small>FC repouso</small><strong>{result.metrics.restingHr ? `${Math.round(result.metrics.restingHr)} bpm` : '—'}</strong></span>
+              </div>
+              <Button variant="outline" className="recovery-refresh" onClick={() => { loadReadiness(false); loadWeek(); }} disabled={loading}>
+                <RefreshCw className={loading ? 'spin' : ''} /> Atualizar após sincronizar
+              </Button>
+            </Card>
+          )}
           <Card className="checkin-card">
             <CardHeader>
               <p className="eyebrow">CHECK-IN RÁPIDO</p>
@@ -455,15 +535,28 @@ export default function Home() {
           </Card>
           {result && (
             <div className="trend-card">
-              <p className="eyebrow">CARGA E FORMA</p>
-              <h2>
-                Fitness {result.metrics.ctl?.toFixed(0) ?? '—'} · Fadiga{' '}
-                {result.metrics.atl?.toFixed(0) ?? '—'}
-              </h2>
-              <p className="muted-copy">
-                Forma {result.metrics.form?.toFixed(0) ?? '—'} · Rampa{' '}
-                {result.metrics.ramp?.toFixed(1) ?? '—'}
-              </p>
+              <p className="eyebrow">EVOLUÇÃO DOS ÚLTIMOS 7 DIAS</p>
+              <h2>Carga crônica e fadiga</h2>
+              {result.loadTrend.length ? (
+                <ChartContainer
+                  className="load-chart"
+                  config={{ fitness: { label: 'Carga crônica', color: '#165c45' }, fatigue: { label: 'Fadiga', color: '#edc961' } }}
+                >
+                  <AreaChart data={result.loadTrend} margin={{ left: 0, right: 4, top: 10, bottom: 0 }}>
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickFormatter={(value) => value.slice(8, 10)} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Area type="monotone" dataKey="fatigue" stroke="var(--color-fatigue)" fill="var(--color-fatigue)" fillOpacity={0.13} />
+                    <Area type="monotone" dataKey="fitness" stroke="var(--color-fitness)" fill="var(--color-fitness)" fillOpacity={0.2} />
+                  </AreaChart>
+                </ChartContainer>
+              ) : (
+                <p className="muted-copy">Aguardando histórico suficiente do Intervals.icu.</p>
+              )}
+              <div className="chart-legend">
+                <span><i className="fitness" />Carga crônica {result.metrics.ctl?.toFixed(0) ?? '—'}</span>
+                <span><i className="fatigue" />Fadiga {result.metrics.atl?.toFixed(0) ?? '—'}</span>
+              </div>
             </div>
           )}
         </section>
@@ -499,17 +592,23 @@ export default function Home() {
                     <strong>{workout.feedback.headline}</strong>
                     <p>{workout.feedback.message}</p>
                     <small>{workout.feedback.nextStep}</small>
+                    <small className="confidence-note">
+                      Confiança {workout.feedback.confidence} · {workout.feedback.signals.length} sinais combinados
+                    </small>
                   </div>
                 )}
                 {workout.structure.length ? (
-                  <ol className="workout-structure">
-                    {workout.structure.map((step, index) => (
-                      <li key={index}>
-                        <b>{index + 1}</b>
-                        <span>{step.replace(/^[-*]\s*/, '')}</span>
-                      </li>
-                    ))}
-                  </ol>
+                  <div className="workout-expanded">
+                    <WorkoutBlocks steps={workout.structure} />
+                    <ol className="workout-structure">
+                      {workout.structure.map((step, index) => (
+                        <li key={index}>
+                          <b>{index + 1}</b>
+                          <span>{step.replace(/^[-*]\s*/, '')}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
                 ) : (
                   !workout.feedback && (
                     <p className="muted-copy">Estrutura em blocos não informada neste treino.</p>
@@ -523,6 +622,8 @@ export default function Home() {
                       {workout.details.heartRate ? ` · FC ${Math.round(workout.details.heartRate)} bpm` : ''}
                       {workout.details.cadence ? ` · Cadência ${Math.round(workout.details.cadence)} rpm` : ''}
                       {workout.details.rpe ? ` · Sensação ${workout.details.rpe}/10` : ''}
+                      {workout.details.intensity ? ` · Intensidade ${Math.round(workout.details.intensity * 100)}%` : ''}
+                      {workout.details.decoupling ? ` · Variação cardíaca ${workout.details.decoupling.toFixed(1)}%` : ''}
                     </span>
                   </div>
                 )}
@@ -544,6 +645,7 @@ export default function Home() {
                 <Badge variant="outline">Opcional</Badge>
               </div>
               <p className="muted-copy">{week.suggestion.reason}</p>
+              <WorkoutBlocks steps={week.suggestion.structure} />
               <ol className="workout-structure">
                 {week.suggestion.structure.map((step, index) => (
                   <li key={index}>

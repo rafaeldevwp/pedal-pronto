@@ -9,6 +9,7 @@ export type ReadinessResult = {
   summary: string;
   evidence: string[];
   recovery: string;
+  loadTrend: Array<{ date: string; fitness?: number; fatigue?: number }>;
   workout: {
     id?: number;
     name: string;
@@ -244,6 +245,11 @@ export async function runReadiness(
       atl = num(todayWell.atl, todayWell.icu_atl),
       ramp = num(todayWell.rampRate, todayWell.ramp_rate),
       form = ctl !== undefined && atl !== undefined ? ctl - atl : undefined;
+    const loadTrend = wList.slice(-7).map((day) => ({
+      date: String(day.id || day.date || ''),
+      fitness: num(day.ctl, day.icu_ctl),
+      fatigue: num(day.atl, day.icu_atl),
+    }));
     const acts: Json[] = Array.isArray(activities)
       ? activities
       : activities.activities || [];
@@ -394,6 +400,7 @@ export async function runReadiness(
           : classification === 'amarela'
             ? 'Priorize alimentação, hidratação e sono; reavalie sensações no aquecimento.'
             : 'Priorize descanso; dor ou sintomas de doença justificam avaliação profissional.',
+      loadTrend,
       workout: {
         id: workout?.id,
         name: finalName,
@@ -458,6 +465,7 @@ function unavailable(warning: string, workout: Json | null): ReadinessResult {
     summary: 'Treino não modificado.',
     evidence: [warning],
     recovery: 'Sincronize o relógio e tente novamente mais tarde.',
+    loadTrend: [],
     workout: workout
       ? {
           id: workout.id,
