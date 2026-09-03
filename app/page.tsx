@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Download,
   HeartPulse,
+  Info,
   Link2,
   Moon,
   RefreshCw,
@@ -20,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Scatter, ScatterChart, XAxis, YAxis } from 'recharts';
 
@@ -135,6 +137,21 @@ function WorkoutBlocks({ steps }: { steps: string[] }) {
         </div>
       ))}
     </div>
+  );
+}
+
+function RecoveryMetric({ label, value, explanation }: { label: string; value: string; explanation: string }) {
+  return (
+    <span>
+      <small className="metric-label">
+        {label}
+        <Tooltip>
+          <TooltipTrigger render={<button className="info-trigger" aria-label={`O que significa ${label}`}><Info /></button>} />
+          <TooltipContent side="bottom">{explanation}</TooltipContent>
+        </Tooltip>
+      </small>
+      <strong>{value}</strong>
+    </span>
   );
 }
 
@@ -527,11 +544,13 @@ export default function Home() {
                 <small>O que mais pesou nesta leitura</small>
                 <p>{simpleEvidence.slice(0, 2).join(' · ')}</p>
               </div>
-              <div className="recovery-signals">
-                <span><small>Sono</small><strong>{result.metrics.sleepHours ? `${result.metrics.sleepHours} h` : '—'}</strong></span>
-                <span><small>HRV</small><strong>{result.metrics.hrv ? `${Math.round(result.metrics.hrv)} ms` : '—'}</strong></span>
-                <span><small>FC repouso</small><strong>{result.metrics.restingHr ? `${Math.round(result.metrics.restingHr)} bpm` : '—'}</strong></span>
-              </div>
+              <TooltipProvider>
+                <div className="recovery-signals">
+                  <RecoveryMetric label="Sono" value={result.metrics.sleepHours ? `${result.metrics.sleepHours} h` : '—'} explanation="Tempo total dormido. O aplicativo compara esta noite principalmente com o seu próprio padrão." />
+                  <RecoveryMetric label="HRV" value={result.metrics.hrv ? `${Math.round(result.metrics.hrv)} ms` : '—'} explanation="Variação entre os batimentos. Mudanças persistentes em relação ao seu padrão ajudam a indicar recuperação ou estresse." />
+                  <RecoveryMetric label="FC repouso" value={result.metrics.restingHr ? `${Math.round(result.metrics.restingHr)} bpm` : '—'} explanation="Batimentos durante o repouso noturno. Um aumento fora do habitual pode acompanhar fadiga, estresse ou recuperação incompleta." />
+                </div>
+              </TooltipProvider>
               <Button variant="outline" className="recovery-refresh" onClick={() => { loadReadiness(false); loadWeek(); loadPerformance(); }} disabled={loading}>
                 <RefreshCw className={loading ? 'spin' : ''} /> Atualizar após sincronizar
               </Button>
@@ -718,6 +737,7 @@ export default function Home() {
               <p className="eyebrow">SEU PERFIL NOS ÚLTIMOS 42 DIAS</p>
               <h2>{performance?.profile || 'Analisando seu histórico'}</h2>
               <p className="muted-copy">{performance?.profileMessage || 'Comparando com os 42 dias anteriores.'}</p>
+              <span className="data-source"><Link2 size={12} /> Dados do Intervals.icu</span>
               {performance?.warning && <small className="data-warning">{performance.warning}</small>}
             </div>
           </Card>
