@@ -39,14 +39,19 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 - Objetivo da temporada persistido.
 - Proposta de replanejamento futuro com comparação e confirmação.
 - Comparação pós-treino com até oito sessões pessoais semelhantes dos últimos 120 dias, amostra mínima, evidências e confiança.
+- Aprendizado individual com amostra mínima e limites explícitos.
+- Check-in ampliado e bloqueios conservadores para dor e sintomas.
+- Previsão do impacto sobre o próximo treino-chave.
+- Histórico imutável de decisões e resultados posteriores.
+- Alertas de risco futuro no PWA e no celular, sem mudanças automáticas.
 
 ## Estado exato de retomada
 
-`NEXT`: revisar e publicar o lote T03–T07 somente quando o atleta ordenar.
+`NEXT`: definir um novo ciclo de SPECs após observar o uso real do lote T03–T07.
 
-A T03 até a T07 estão implementadas e validadas apenas localmente. A T07 mostra um alerta no app somente quando há risco moderado/alto e uma proposta revisável, nunca com dados incompletos. O atleta pode ativar notificação do PWA no celular; o mesmo alerta não é repetido e abre diretamente a proposta, que continua exigindo confirmação.
+A T03 até a T07 foram integradas, validadas e publicadas em um único lote após autorização do atleta.
 
-A versão online permanece na T02. Não publicar o lote T03–T07 até solicitação explícita do atleta.
+A versão online contém as SPECs T01–T07.
 
 O repositório privado `rafaeldevwp/pedal-pronto` foi criado e a integração recebeu acesso somente a ele. O envio inicial do conteúdo foi interrompido e deve ser retomado separadamente; não confundir isso com a publicação do PWA pelo Sites.
 

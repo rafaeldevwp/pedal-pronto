@@ -18,7 +18,7 @@ Aceite: mostrar grupo de comparação, diferença relevante, confiança e limite
 
 ## SPEC-03 — Aprendizado individual
 
-Status: concluída localmente; aguardando publicação
+Status: concluída
 
 Aprender associações recorrentes entre sono, HRV, FC, carga e desempenho, sem diagnóstico e sem afirmar causalidade com pouca evidência.
 
@@ -26,24 +26,24 @@ Aceite: exigir amostra mínima, mostrar confiança e permitir que dados insufici
 
 ## SPEC-04 — Check-in ampliado
 
-Status: concluída localmente; aguardando publicação
+Status: concluída
 
 Adicionar pernas, motivação, sintomas e tempo disponível aos campos existentes. Sintomas ou dor relevante devem bloquear intensificação e favorecer recomendação conservadora.
 
 ## SPEC-05 — Previsão dos próximos dias
 
-Status: concluída localmente; aguardando publicação
+Status: concluída
 
 Estimar como o treino de hoje afeta a viabilidade do próximo treino-chave. A previsão deve ser faixa de risco, não promessa.
 
 ## SPEC-06 — Histórico de decisões
 
-Status: concluída localmente; aguardando publicação
+Status: concluída
 
 Registrar original, recomendação, decisão, alteração efetiva e resultado posterior. Nunca modificar o histórico.
 
 ## SPEC-07 — Alertas de risco futuro
 
-Status: concluída localmente; aguardando publicação
+Status: concluída
 
 Notificar quando um treino futuro entrar em risco. O alerta não aplica mudança; oferece acesso à proposta para confirmação.
