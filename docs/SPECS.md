@@ -10,7 +10,7 @@ Aceite: relatório explica o objetivo considerado; ajustes de hoje e propostas f
 
 ## SPEC-02 — Comparação de sessões semelhantes
 
-Status: próxima
+Status: concluída
 
 Comparar cada treino concluído com sessões pessoais semelhantes por estrutura, duração e intensidade. Traduzir potência, FC, cadência, desacoplamento, RPE e carga em linguagem simples.
 
@@ -18,7 +18,7 @@ Aceite: mostrar grupo de comparação, diferença relevante, confiança e limite
 
 ## SPEC-03 — Aprendizado individual
 
-Status: planejada
+Status: próxima
 
 Aprender associações recorrentes entre sono, HRV, FC, carga e desempenho, sem diagnóstico e sem afirmar causalidade com pouca evidência.
 

@@ -9,18 +9,26 @@
 - Testar que somente uma variável muda em amarelo.
 - [x] Publicar no PWA e atualizar a memória.
 
-## NEXT — T02 Construir comparação de sessões semelhantes
+## Concluída — T02 Construir comparação de sessões semelhantes
 
-- Definir critérios de semelhança por tipo, duração, intensidade e estrutura.
-- Exigir amostra mínima e declarar confiança.
-- Comparar potência, FC, cadência, carga, desacoplamento e RPE quando disponíveis.
-- Traduzir o resultado para linguagem simples.
-- Não modificar treinos nem dados históricos.
+- [x] Definir critérios de semelhança por modalidade, duração e intensidade.
+- [x] Exigir ao menos três sessões e declarar confiança.
+- [x] Comparar potência, FC, cadência, carga, desacoplamento e RPE quando disponíveis.
+- [x] Traduzir o resultado para linguagem simples.
+- [x] Não modificar treinos nem dados históricos.
+- [x] Validar, publicar e atualizar a memória.
+
+## NEXT — T03 Criar modelo de aprendizado individual
+
+- Identificar associações recorrentes entre recuperação, carga e desempenho.
+- Exigir amostra mínima e separar associação de causalidade.
+- Mostrar confiança, evidências e limites em linguagem simples.
+- Suspender conclusões quando os dados forem insuficientes ou contraditórios.
+- Não diagnosticar nem modificar treinos nesta SPEC.
 - Validar, publicar e atualizar a memória.
 
 ## Depois
 
-- T03 Criar modelo de aprendizado individual com amostra mínima — SPEC-03.
 - T04 Ampliar check-in e bloqueios conservadores — SPEC-04.
 - T05 Criar previsão dos próximos dias — SPEC-05.
 - T06 Criar histórico de decisões — SPEC-06.

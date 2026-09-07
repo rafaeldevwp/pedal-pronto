@@ -38,12 +38,13 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 - Sugestões variáveis para dias OFF.
 - Objetivo da temporada persistido.
 - Proposta de replanejamento futuro com comparação e confirmação.
+- Comparação pós-treino com até oito sessões pessoais semelhantes dos últimos 120 dias, amostra mínima, evidências e confiança.
 
 ## Estado exato de retomada
 
-`NEXT`: T02 — construir comparação de sessões semelhantes.
+`NEXT`: T03 — criar modelo de aprendizado individual com amostra mínima.
 
-A integração do objetivo ao motor foi validada e publicada no PWA. Ela faz o objetivo definir qual variável preservar e protege a especificidade nas três semanas antes de uma meta principal.
+A comparação de sessões semelhantes foi validada e publicada no PWA. Ela separa indoor e outdoor, filtra duração e intensidade próximas, exige pelo menos três sessões e combina potência, esforço cardíaco, cadência, carga, desacoplamento e RPE sem alterar o calendário ou o histórico.
 
 O repositório privado `rafaeldevwp/pedal-pronto` foi criado e a integração recebeu acesso somente a ele. O envio inicial do conteúdo foi interrompido e deve ser retomado separadamente; não confundir isso com a publicação do PWA pelo Sites.
 

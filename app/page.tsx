@@ -79,6 +79,14 @@ type WeekWorkout = {
     confidence: string;
     signals: string[];
   };
+  comparison?: {
+    headline: string;
+    message: string;
+    group: string;
+    confidence: string;
+    evidence: string[];
+    caveat: string;
+  };
   details?: {
     power?: number;
     heartRate?: number;
@@ -773,6 +781,18 @@ export default function Home() {
                     <small className="confidence-note">
                       Confiança {workout.feedback.confidence} · {workout.feedback.signals.length} sinais combinados
                     </small>
+                  </div>
+                )}
+                {workout.comparison && (
+                  <div className="similar-comparison">
+                    <small className="comparison-label">COMPARADO AO SEU HISTÓRICO</small>
+                    <strong>{workout.comparison.headline}</strong>
+                    <p>{workout.comparison.message}</p>
+                    <span>{workout.comparison.group}</span>
+                    {workout.comparison.evidence.length > 0 && (
+                      <ul>{workout.comparison.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
+                    )}
+                    <small>Confiança {workout.comparison.confidence} · {workout.comparison.caveat}</small>
                   </div>
                 )}
                 {workout.structure.length ? (

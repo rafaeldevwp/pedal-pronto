@@ -15,6 +15,7 @@
 - Proposta futura: selo “Requer confirmação” e impacto na carga semanal.
 - Dados incompletos: ação desabilitada e orientação para sincronizar/autenticar.
 - Feedback: título simples, explicação curta, próxima ação e confiança.
+- Comparação pessoal: mostrar o grupo usado, a diferença combinada, evidências curtas, confiança e fatores externos que limitam a leitura.
 - Objetivo: visível como contexto da decisão, nunca como incentivo automático a treinar mais.
 
 ## Vocabulário
@@ -30,4 +31,3 @@ Detalhes como CTL, ATL, HRV e desacoplamento podem aparecer em segundo nível co
 - Alterações automáticas de vários dias.
 - Gamificação baseada em acumular carga.
 - Substituir o calendário oficial do Intervals.icu.
-
