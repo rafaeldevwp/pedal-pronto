@@ -26,6 +26,8 @@
 - Confirmação de escrita: `Programado → Recomendado`, impacto e botão explícito; fechar ou cancelar preserva o original.
 - Alvo concluído entre proposta e confirmação: retirar a ação, preservar a atividade e mostrar “Treino já realizado — nenhuma alteração aplicada”.
 - Sliders: extremos sempre visíveis e tocáveis; zero é valor válido, persistente e nunca equivale a dado ausente.
+- Glossário: explicação curta junto à métrica e verbete completo pesquisável; abrir por toque, teclado ou leitor de tela, sem depender de hover.
+- Verbete técnico: `o que é → como usamos → como interpretar → limitações → fonte`, sempre priorizando a linha de base individual.
 - Objetivo: visível como contexto da decisão, nunca como incentivo automático a treinar mais.
 
 ## Vocabulário
@@ -33,6 +35,8 @@
 Preferir: “esforço do coração”, “carga da semana”, “recuperação”, “treino exigente”.
 
 Detalhes como CTL, ATL, HRV e desacoplamento podem aparecer em segundo nível com explicação.
+
+Nunca apresentar “alto/baixo” como universal quando a interpretação depende do padrão individual, do contexto ou da qualidade da medição.
 
 ## Fora de escopo por enquanto
 

@@ -92,3 +92,36 @@ Aceite:
 - O valor mostrado coincide com o valor enviado ao motor de prontidão.
 - Há contraste, foco visível, alvo de toque adequado e rótulo acessível.
 - Testes regressivos cobrem mínimo, máximo, ida e volta ao zero, recarga da página e tamanhos de tela móvel.
+
+## SPEC-10 — Glossário contextual de fisiologia e treinamento
+
+Status: planejada
+
+Criar um glossário em linguagem simples para todos os termos técnicos exibidos pelo Pedal Pronto. A explicação deve estar disponível no contexto em que a métrica aparece e também em uma área única de consulta. O objetivo é ajudar atletas leigos a entender o dado sem transformar a métrica isolada em diagnóstico ou ordem de treino.
+
+Conteúdo inicial:
+
+- Recuperação: HRV, frequência cardíaca de repouso, ANS Charge, Nightly Recharge, duração do sono, qualidade do sono, interrupções e regularidade.
+- Carga: fitness/CTL, fadiga/ATL, forma, rampa, carga cardiovascular, carga do treino e carga acumulada.
+- Treino: potência média, potência normalizada/ponderada, intensidade, cadência, RPE, eficiência potência–coração e desacoplamento aeróbico/cardíaco.
+- Planejamento: prontidão verde/amarela/vermelha, treino-chave, especificidade, volume, intensidade, densidade, endurance e recuperação ativa.
+
+Cada verbete deve informar:
+
+- Nome completo, sigla e unidade quando houver.
+- O que representa em linguagem cotidiana.
+- Como o Pedal Pronto usa a informação.
+- O que geralmente significa subir, cair ou permanecer estável, deixando claro quando “maior” não significa necessariamente “melhor”.
+- Por que a linha de base individual e a tendência importam mais que um valor isolado.
+- Fonte do dado: Polar, Intervals.icu, cálculo do app ou percepção do atleta.
+- Limitações, fatores que podem distorcer a medida e aviso médico quando pertinente.
+
+Aceite:
+
+- Todo termo técnico visível possui acesso ao verbete por ícone de informação, toque ou link “Entenda”.
+- Tooltips são curtos; a área completa oferece busca, categorias e referências cruzadas.
+- O glossário funciona por toque, teclado e leitor de tela e não depende de hover.
+- As explicações usam exemplos pessoais sem criar faixas universais ou diagnóstico.
+- Termos e definições são centralizados em uma única fonte para evitar textos divergentes entre telas.
+- Ausência de dado, unidade ou fonte é apresentada explicitamente, sem inferência inventada.
+- Testes verificam abertura no celular, foco, busca, links contextuais e consistência de cada termo usado no produto.

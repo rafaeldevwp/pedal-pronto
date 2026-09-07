@@ -79,5 +79,6 @@
 ## Depois
 
 - T09 Corrigir slider em zero e validar acessibilidade — SPEC-09.
+- T10 Criar glossário contextual e centralizado — SPEC-10.
 
 Regra: trabalhar somente na tarefa marcada como `NEXT`.
