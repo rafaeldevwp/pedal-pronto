@@ -20,6 +20,7 @@
 - Check-in: explicar a direção de cada escala; destacar imediatamente quando dor ou sintomas ativarem conduta conservadora.
 - Previsão: mostrar `Hoje → próximo treino-chave`, faixa de risco, evidências, orientação e aviso explícito de incerteza.
 - Histórico: linha do tempo expansível, `Programado → decisão efetiva`, justificativa e resultado posterior; sempre somente leitura.
+- Alerta futuro: um alerta por risco relevante, acesso direto à proposta, opção de notificação no celular e texto explícito de que nada foi alterado.
 - Objetivo: visível como contexto da decisão, nunca como incentivo automático a treinar mais.
 
 ## Vocabulário

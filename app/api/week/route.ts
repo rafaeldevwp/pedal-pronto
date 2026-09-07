@@ -426,6 +426,16 @@ async function context(owner: string) {
     : null;
   const weeklyPlannedLoad = planned.reduce((sum, event) => sum + Number(event.load || 0), 0);
   const proposal = proposalBuilt?.proposal || null;
+  const futureAlert = proposal && ['moderado', 'alto'].includes(forecastRisk) && readiness.classification !== 'indisponível'
+    ? {
+        id: `future-${proposal.eventId}-${forecastRisk}-${proposal.recommended.load || 'load'}`,
+        risk: forecastRisk,
+        title: forecastRisk === 'alto' ? 'Treino futuro em risco alto' : 'Treino futuro merece atenção',
+        message: `${proposal.original.name} (${proposal.date}) pode ser comprometido pela recuperação e carga atuais. Nenhuma mudança foi aplicada.`,
+        eventId: proposal.eventId,
+        workoutDate: proposal.date,
+      }
+    : null;
   const decisionRows = await runtime.DB.prepare(
     `SELECT id,decision_date,workout_date,source,status,original_json,recommended_json,effective_json,reason,created_at
      FROM training_decisions WHERE owner_id=? ORDER BY created_at DESC LIMIT 20`,
@@ -461,6 +471,7 @@ async function context(owner: string) {
     events,
     suggestion: canSuggest ? adaptiveSuggestion : null,
     forecast,
+    futureAlert,
     decisionHistory,
     planOutlook,
     proposal: proposal ? {

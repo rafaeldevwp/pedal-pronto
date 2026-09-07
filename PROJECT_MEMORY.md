@@ -42,11 +42,11 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-`NEXT`: T07 — criar alertas de risco futuro.
+`NEXT`: revisar e publicar o lote T03–T07 somente quando o atleta ordenar.
 
-A T03, T04, T05 e T06 estão implementadas e validadas apenas localmente, ainda não publicadas por solicitação do atleta. A T06 adicionou histórico append-only para decisões diárias, replanejamentos confirmados e sugestões OFF aceitas. A tela mostra programado, decisão efetiva, justificativa e resultado posterior obtido na leitura do Intervals.icu, sem reescrever registros.
+A T03 até a T07 estão implementadas e validadas apenas localmente. A T07 mostra um alerta no app somente quando há risco moderado/alto e uma proposta revisável, nunca com dados incompletos. O atleta pode ativar notificação do PWA no celular; o mesmo alerta não é repetido e abre diretamente a proposta, que continua exigindo confirmação.
 
-A versão online permanece na T02. Não publicar a T03, T04, T05, T06 ou tarefas posteriores até solicitação explícita do atleta.
+A versão online permanece na T02. Não publicar o lote T03–T07 até solicitação explícita do atleta.
 
 O repositório privado `rafaeldevwp/pedal-pronto` foi criado e a integração recebeu acesso somente a ele. O envio inicial do conteúdo foi interrompido e deve ser retomado separadamente; não confundir isso com a publicação do PWA pelo Sites.
 

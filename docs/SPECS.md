@@ -44,6 +44,6 @@ Registrar original, recomendação, decisão, alteração efetiva e resultado po
 
 ## SPEC-07 — Alertas de risco futuro
 
-Status: próxima
+Status: concluída localmente; aguardando publicação
 
 Notificar quando um treino futuro entrar em risco. O alerta não aplica mudança; oferece acesso à proposta para confirmação.

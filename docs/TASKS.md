@@ -55,16 +55,20 @@
 - [x] Validar build e migração localmente; atualizar a memória.
 - [ ] Publicar somente após solicitação explícita do atleta.
 
-## NEXT — T07 Criar alertas de risco futuro
+## Concluída localmente — T07 Criar alertas de risco futuro
 
-- Detectar quando um treino futuro entrar em risco relevante.
-- Alertar sem aplicar mudança automaticamente.
-- Levar o atleta à proposta que exige confirmação.
-- Evitar alertas repetidos ou baseados em dados incompletos.
-- Validar localmente; não publicar sem solicitação explícita.
+- [x] Detectar quando um treino futuro entrar em risco relevante.
+- [x] Alertar sem aplicar mudança automaticamente.
+- [x] Levar o atleta à proposta que exige confirmação.
+- [x] Evitar alertas repetidos ou baseados em dados incompletos.
+- [x] Oferecer ativação de notificação do PWA no celular.
+- [x] Validar localmente e atualizar a memória.
+- [ ] Publicar somente após solicitação explícita do atleta.
 
-## Depois
+## NEXT — Revisão e publicação do lote
 
-- Definir novas SPECs somente após concluir e revisar a T07.
+- Revisar T03 a T07 em conjunto quando solicitado.
+- Publicar somente após comando explícito do atleta.
+- Depois da publicação, definir novas SPECs antes de implementar outras funções.
 
 Regra: trabalhar somente na tarefa marcada como `NEXT`.

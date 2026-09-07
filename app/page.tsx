@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import {
   Activity,
+  Bell,
   Bike,
   Check,
   ChevronDown,
@@ -120,6 +121,14 @@ type Week = {
     confidence: string;
     guidance: string;
     caveat: string;
+  };
+  futureAlert: null | {
+    id: string;
+    risk: 'moderado' | 'alto';
+    title: string;
+    message: string;
+    eventId: number;
+    workoutDate: string;
   };
   planOutlook: Array<{ id: number; date: string; name: string; status: 'protegido' | 'observar'; note: string }>;
   decisionHistory: Array<{
@@ -264,6 +273,8 @@ export default function Home() {
     [loading, setLoading] = useState(false),
     [creatingSuggestion, setCreatingSuggestion] = useState(false),
     [applyingProposal, setApplyingProposal] = useState(false),
+    [dismissedAlert, setDismissedAlert] = useState(''),
+    [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('unsupported'),
     [weekMessage, setWeekMessage] = useState(''),
     [checkin, setCheckin] = useState({
       fadiga: 4, dor: 1, estresse: 3, pernas: 7, motivacao: 7, sintomas: 0, tempoDisponivel: 60,
@@ -276,8 +287,15 @@ export default function Home() {
       setInstallPrompt(e as InstallPrompt);
     };
     window.addEventListener('beforeinstallprompt', handler);
+    const openFutureProposal = () => {
+      if (window.location.hash === '#future-proposal') setTab('treinos');
+    };
+    openFutureProposal();
+    window.addEventListener('hashchange', openFutureProposal);
     const stored = localStorage.getItem('pedal-pronto-checkin');
     if (stored) setCheckin((current) => ({ ...current, ...JSON.parse(stored) }));
+    setDismissedAlert(localStorage.getItem('pedal-pronto-dismissed-alert') || '');
+    if ('Notification' in window) setNotificationPermission(Notification.permission);
     fetch('/api/polar/status')
       .then((r) => (r.ok ? r.json() : { connected: false }))
       .then((r) => {
@@ -290,7 +308,10 @@ export default function Home() {
         }
       })
       .catch(() => setPolarConnected(false));
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('hashchange', openFutureProposal);
+    };
   }, []);
   useEffect(() => {
     const refreshAfterSync = () => {
@@ -307,6 +328,23 @@ export default function Home() {
       window.clearInterval(timer);
     };
   }, [polarConnected]);
+  useEffect(() => {
+    const alert = week?.futureAlert;
+    if (!alert || notificationPermission !== 'granted') return;
+    if (localStorage.getItem('pedal-pronto-notified-alert') === alert.id) return;
+    navigator.serviceWorker?.ready.then((registration) =>
+      registration.showNotification(alert.title, {
+        body: alert.message,
+        icon: '/icon.svg',
+        tag: alert.id,
+        data: { url: '/#future-proposal' },
+      }),
+    ).then(() => localStorage.setItem('pedal-pronto-notified-alert', alert.id)).catch(() => {});
+  }, [week?.futureAlert?.id, notificationPermission]);
+  useEffect(() => {
+    if (week?.proposal && window.location.hash === '#future-proposal')
+      window.setTimeout(() => document.getElementById('future-proposal')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+  }, [week?.proposal?.eventId]);
   async function loadReadiness(apply: boolean) {
     setLoading(true);
     try {
@@ -399,6 +437,18 @@ export default function Home() {
     await installPrompt.prompt();
     await installPrompt.userChoice;
     setInstallPrompt(null);
+  }
+  async function enableNotifications() {
+    if (!('Notification' in window)) return;
+    setNotificationPermission(await Notification.requestPermission());
+  }
+  function reviewFutureProposal() {
+    setTab('treinos');
+    window.setTimeout(() => document.getElementById('future-proposal')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+  }
+  function dismissFutureAlert(id: string) {
+    localStorage.setItem('pedal-pronto-dismissed-alert', id);
+    setDismissedAlert(id);
   }
   function saveCheckin() {
     localStorage.setItem('pedal-pronto-checkin', JSON.stringify(checkin));
@@ -913,6 +963,22 @@ export default function Home() {
           ) : week?.suggestionStatus ? (
             <p className="suggestion-status">{week.suggestionStatus}</p>
           ) : null}
+          {week?.futureAlert && dismissedAlert !== week.futureAlert.id && (
+            <Card className={`future-alert risk-${week.futureAlert.risk}`} role="alert">
+              <div className="future-alert-icon"><Bell /></div>
+              <div className="future-alert-copy">
+                <small>ALERTA DO PLANO</small>
+                <h2>{week.futureAlert.title}</h2>
+                <p>{week.futureAlert.message}</p>
+                <div className="future-alert-actions">
+                  <Button onClick={reviewFutureProposal}>Revisar proposta</Button>
+                  {notificationPermission === 'default' && <Button variant="outline" onClick={enableNotifications}>Ativar no celular</Button>}
+                  <Button variant="ghost" onClick={() => dismissFutureAlert(week.futureAlert!.id)}>Dispensar</Button>
+                </div>
+                <span>O alerta não altera o treino. A confirmação continua sendo sua.</span>
+              </div>
+            </Card>
+          )}
           {week?.forecast && (
             <Card className={`forecast-card risk-${week.forecast.risk}`}>
               <div className="forecast-heading">
@@ -936,7 +1002,7 @@ export default function Home() {
             </Card>
           )}
           {week?.proposal && (
-            <Card className="proposal-card">
+            <Card className="proposal-card" id="future-proposal">
               <div className="proposal-heading">
                 <div>
                   <p className="eyebrow">PROPOSTA PARA {formatDay(week.proposal.date).toUpperCase()}</p>
