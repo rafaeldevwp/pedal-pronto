@@ -17,6 +17,12 @@ export type ReadinessResult = {
     load?: number;
     action: string;
     structure?: string[];
+    original?: {
+      name: string;
+      durationMinutes?: number;
+      load?: number;
+      structure?: string[];
+    };
   } | null;
   metrics: {
     sleepHours?: number;
@@ -355,6 +361,12 @@ export async function runReadiness(
             ? 'Ajuste moderado recomendado.'
             : 'Substituição conservadora recomendada.';
     let finalName = workout?.name || 'Nenhum treino planejado';
+    const originalWorkout = workout ? {
+      name: String(workout.name || 'Treino planejado'),
+      durationMinutes: num(workout.moving_time, workout.duration) ? Math.round(num(workout.moving_time, workout.duration)! / 60) : undefined,
+      load: num(workout.icu_training_load, workout.load) ? Math.round(num(workout.icu_training_load, workout.load)!) : undefined,
+      structure: workoutStructure(workout.description),
+    } : undefined;
     let structure = workout ? workoutStructure(workout.description) : [];
     let duration = num(workout?.moving_time, workout?.duration);
     let load = num(workout?.icu_training_load, workout?.load);
@@ -408,6 +420,7 @@ export async function runReadiness(
         load: load ? Math.round(load) : undefined,
         action,
         structure,
+        original: originalWorkout,
       },
       metrics: {
         sleepHours: +sleepHours.toFixed(1),

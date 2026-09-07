@@ -137,14 +137,28 @@ const completedWorkout = (activity: Json, planned?: ReturnType<typeof normalize>
     },
   };
 };
-const suggestion = {
-  name: 'Giro regenerativo opcional',
-  durationMinutes: 30,
-  load: 18,
-  structure: ['- 10m 45%', '- 15m 50%', '- 5m 40%'],
-  reason:
-    'Sessão curta e leve, oferecida apenas como opção. Não substitui descanso quando houver dor, doença ou fadiga fora do padrão.',
-};
+function chooseSuggestion(readiness: Awaited<ReturnType<typeof runReadiness>>, activities: Json[], planned: Array<ReturnType<typeof normalize>>, today: string) {
+  const recent = activities.slice(-4);
+  const hard = recent.filter((a) => Number(a.icu_intensity || a.intensity || 0) >= 75).length;
+  const long = recent.some((a) => Number(a.moving_time || 0) >= 2 * 3600);
+  const next = planned.find((event) => event.date > today);
+  if (readiness.classification === 'amarela' || hard >= 2 || long) return {
+    name: 'Ativação regenerativa opcional', durationMinutes: 25, load: 12,
+    structure: ['- 8m 42%', '- 12m 48% 90-95rpm', '- 5m 40%'],
+    reason: `A semana já trouxe ${hard >= 2 ? 'estímulos intensos' : long ? 'volume relevante' : 'recuperação parcial'}. Esta opção favorece circulação sem adicionar um novo estímulo.${next ? ` Preserva o próximo treino: ${next.name}.` : ''}`,
+  };
+  const lowCadence = recent.every((a) => Number(a.average_cadence || 0) < 88);
+  if (lowCadence) return {
+    name: 'Técnica de cadência opcional', durationMinutes: 35, load: 20,
+    structure: ['- 10m 48%', '- 4x 2m 55% 95-105rpm, 2m 45%', '- 9m 45%'],
+    reason: `Prontidão favorável e pouco trabalho recente de cadência. O estímulo é técnico e leve, sem competir com a progressão da semana.${next ? ` O treino ${next.name} continua prioritário.` : ''}`,
+  };
+  return {
+    name: 'Endurance leve opcional', durationMinutes: 40, load: 25,
+    structure: ['- 10m 48%', '- 25m 58-62%', '- 5m 42%'],
+    reason: `Recuperação favorável e carga recente controlada. Esta opção acrescenta base aeróbica com baixo custo, sem transformar o descanso em obrigação.${next ? ` Preserva o próximo treino: ${next.name}.` : ''}`,
+  };
+}
 
 async function context(owner: string) {
   const today = todayInZone();
@@ -186,12 +200,24 @@ async function context(owner: string) {
     restDay &&
     !hasToday &&
     ['verde', 'amarela'].includes(readiness.classification);
+  const adaptiveSuggestion = chooseSuggestion(readiness, activities, planned, today);
+  const yesterday = addDays(today, -1);
+  const yesterdayLoad = activities.filter((a) => activityDate(a) === yesterday).reduce((sum, a) => sum + Number(a.icu_training_load || a.load || 0), 0);
+  const planOutlook = planned.filter((event) => event.date > today).slice(0, 3).map((event) => {
+    const stressed = readiness.classification !== 'verde' || yesterdayLoad > Math.max(70, Number(readiness.metrics.ctl || 0) * 1.5);
+    return {
+      id: event.id, date: event.date, name: event.name,
+      status: stressed ? 'observar' : 'protegido',
+      note: stressed ? 'Pode precisar de ajuste se a recuperação não normalizar. Nenhuma mudança aplicada.' : 'Compatível com a carga atual. Nenhuma mudança proposta.',
+    };
+  });
   return {
     today,
     monday,
     sunday,
     events,
-    suggestion: canSuggest ? suggestion : null,
+    suggestion: canSuggest ? adaptiveSuggestion : null,
+    planOutlook,
     suggestionStatus: !restDay
       ? 'Sugestões aparecem somente em dias de descanso.'
       : hasToday
@@ -236,10 +262,10 @@ export async function POST(request: Request) {
         body: JSON.stringify({
           category: 'WORKOUT',
           start_date_local: `${state.today}T07:00:00`,
-          name: suggestion.name,
-          description: suggestion.structure.join('\n'),
-          moving_time: suggestion.durationMinutes * 60,
-          icu_training_load: suggestion.load,
+          name: state.suggestion.name,
+          description: state.suggestion.structure.join('\n'),
+          moving_time: state.suggestion.durationMinutes * 60,
+          icu_training_load: state.suggestion.load,
         }),
       },
     );

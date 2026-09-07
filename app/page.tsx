@@ -46,6 +46,7 @@ type Result = {
     load?: number;
     action: string;
     structure?: string[];
+    original?: { name: string; durationMinutes?: number; load?: number; structure?: string[] };
   } | null;
   metrics: {
     sleepHours?: number;
@@ -100,7 +101,9 @@ type Week = {
     reason: string;
   };
   suggestionStatus?: string;
+  planOutlook: Array<{ id: number; date: string; name: string; status: 'protegido' | 'observar'; note: string }>;
 };
+type AthleteGoal = { objective: string; eventName: string; eventDate: string; priority: string };
 type Performance = {
   updatedAt: string;
   activityCount: number;
@@ -203,6 +206,8 @@ export default function Home() {
     [result, setResult] = useState<Result | null>(null),
     [week, setWeek] = useState<Week | null>(null),
     [performance, setPerformance] = useState<Performance | null>(null),
+    [goal, setGoal] = useState<AthleteGoal>({ objective: 'performance', eventName: '', eventDate: '', priority: 'principal' }),
+    [goalSaved, setGoalSaved] = useState(false),
     [powerRange, setPowerRange] = useState<'season' | 'recent' | 'all'>('season'),
     [loading, setLoading] = useState(false),
     [creatingSuggestion, setCreatingSuggestion] = useState(false),
@@ -226,6 +231,7 @@ export default function Home() {
           loadReadiness(false);
           loadWeek();
           loadPerformance();
+          loadGoal();
         }
       })
       .catch(() => setPolarConnected(false));
@@ -269,6 +275,20 @@ export default function Home() {
   async function loadPerformance() {
     const response = await fetch('/api/performance');
     if (response.ok) setPerformance(await response.json());
+  }
+  async function loadGoal() {
+    const response = await fetch('/api/profile');
+    if (response.ok) setGoal(await response.json());
+  }
+  async function saveGoal() {
+    const response = await fetch('/api/profile', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(goal),
+    });
+    if (response.ok) {
+      setGoal(await response.json());
+      setGoalSaved(true);
+      setTimeout(() => setGoalSaved(false), 2200);
+    }
   }
   async function createSuggestion() {
     if (
@@ -500,6 +520,21 @@ export default function Home() {
                 </div>
               </CardHeader>
               <CardContent>
+                {result?.changed && result.workout?.original && (
+                  <div className="workout-comparison">
+                    <div>
+                      <small>ESTAVA PROGRAMADO</small>
+                      <strong>{result.workout.original.name}</strong>
+                      <span>{result.workout.original.durationMinutes ?? '—'} min · carga {result.workout.original.load ?? '—'}</span>
+                    </div>
+                    <ChevronRight />
+                    <div className="recommended-workout">
+                      <small>SERÁ FEITO</small>
+                      <strong>{result.workout.name}</strong>
+                      <span>{result.workout.durationMinutes ?? '—'} min · carga {result.workout.load ?? '—'}</span>
+                    </div>
+                  </div>
+                )}
                 <div className="change-note">
                   <ShieldCheck size={18} />
                   <p>
@@ -768,11 +803,66 @@ export default function Home() {
           ) : week?.suggestionStatus ? (
             <p className="suggestion-status">{week.suggestionStatus}</p>
           ) : null}
+          {week?.planOutlook?.length > 0 && (
+            <Card className="outlook-card">
+              <p className="eyebrow">PRÓXIMOS DIAS</p>
+              <h2>Plano vivo, sem mudanças silenciosas</h2>
+              <p className="muted-copy">A carga atual já é considerada, mas qualquer alteração futura continuará apenas como proposta.</p>
+              <div className="outlook-list">
+                {week.planOutlook.map((item) => (
+                  <div key={item.id}>
+                    <span className={`outlook-state ${item.status}`} />
+                    <span>
+                      <small>{formatDay(item.date)} · {item.status === 'protegido' ? 'Plano protegido' : 'Em observação'}</small>
+                      <strong>{item.name}</strong>
+                      <em>{item.note}</em>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
           {weekMessage && <p className="week-message">{weekMessage}</p>}
         </section>
       )}
       {tab === 'evolucao' && (
         <section className="panel-stack">
+          <Card className="goal-card">
+            <div className="goal-heading">
+              <div>
+                <p className="eyebrow">DIREÇÃO DA TEMPORADA</p>
+                <h2>Onde você quer chegar?</h2>
+              </div>
+              <Badge variant="outline">Guia do plano</Badge>
+            </div>
+            <p className="muted-copy">A prontidão decide o que cabe hoje; este objetivo impede que ajustes diários desviem sua evolução.</p>
+            <div className="goal-form">
+              <label>Objetivo
+                <select value={goal.objective} onChange={(event) => setGoal({ ...goal, objective: event.target.value })}>
+                  <option value="performance">Melhorar performance geral</option>
+                  <option value="resistencia">Ganhar resistência</option>
+                  <option value="ftp">Evoluir potência/FTP</option>
+                  <option value="saude">Saúde e consistência</option>
+                </select>
+              </label>
+              <label>Evento ou marco
+                <input value={goal.eventName} placeholder="Ex.: Gran Fondo" onChange={(event) => setGoal({ ...goal, eventName: event.target.value })} />
+              </label>
+              <div className="goal-row">
+                <label>Data
+                  <input type="date" value={goal.eventDate} onChange={(event) => setGoal({ ...goal, eventDate: event.target.value })} />
+                </label>
+                <label>Prioridade
+                  <select value={goal.priority} onChange={(event) => setGoal({ ...goal, priority: event.target.value })}>
+                    <option value="principal">Principal</option>
+                    <option value="secundario">Secundário</option>
+                    <option value="base">Construção de base</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+            <Button className="primary-action" onClick={saveGoal}>{goalSaved ? <><Check /> Objetivo salvo</> : 'Salvar direção da temporada'}</Button>
+          </Card>
           <Card className={`daily-evolution ${dailyEvolution.key}`}>
             <div className="daily-evolution-heading">
               <span className="insight-icon"><Sparkles /></span>

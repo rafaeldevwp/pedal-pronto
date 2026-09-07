@@ -27,6 +27,9 @@ export async function ensurePolarSchema() {
     runtime.DB.prepare(
       'CREATE INDEX IF NOT EXISTS idx_readiness_runs_owner_date ON readiness_runs(owner_id, run_date, created_at DESC)',
     ),
+    runtime.DB.prepare(
+      'CREATE TABLE IF NOT EXISTS athlete_goals (owner_id TEXT PRIMARY KEY, objective TEXT NOT NULL, event_name TEXT, event_date TEXT, priority TEXT NOT NULL, updated_at INTEGER NOT NULL)',
+    ),
   ]);
 }
 export function ownerId(request: Request) {
