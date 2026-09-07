@@ -77,15 +77,22 @@ function curvePower(payload: any, seconds: number): number | undefined {
 }
 
 export async function GET(request: Request) {
-  if (!ownerId(request)) return Response.json({ error: 'Não autorizado' }, { status: 401 });
+  const owner = ownerId(request);
+  if (!owner) return Response.json({ error: 'Não autorizado' }, { status: 401 });
   const now = new Date(), today = isoDate(now), oldest = isoDate(addDays(now, -83));
   try {
-    const [body, season0, season1, days42, allTime] = await Promise.all([
+    const [body, season0, season1, days42, allTime, readinessHistory] = await Promise.all([
       get(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/activities?oldest=${oldest}&newest=${today}&limit=500`),
       getOptional(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/power-curves?curves=s0&type=Ride&now=${today}`),
       getOptional(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/power-curves?curves=s1&type=Ride&now=${today}`),
       getOptional(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/power-curves?curves=42d&type=Ride&now=${today}`),
       getOptional(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/power-curves?curves=all&type=Ride&now=${today}`),
+      runtime.DB.prepare(
+        `SELECT run_date,report_json FROM readiness_runs
+         WHERE owner_id=? AND run_date>=?
+         AND id IN (SELECT MAX(id) FROM readiness_runs WHERE owner_id=? AND run_date>=? GROUP BY run_date)
+         ORDER BY run_date`,
+      ).bind(owner, oldest, owner, oldest).all<{ run_date: string; report_json: string }>(),
     ]);
     const activities: Json[] = (Array.isArray(body) ? body : body.activities || []).filter((activity: Json) =>
       ['Ride', 'VirtualRide', 'EBikeRide', 'MountainBikeRide'].includes(activity.type || activity.icu_type),
@@ -152,6 +159,72 @@ export async function GET(request: Request) {
       : efficiencyChange > 3 ? 'Mais potência para esforço cardíaco parecido'
         : efficiencyChange < -3 ? 'O coração está trabalhando mais para a potência produzida'
           : 'Eficiência estável';
+    const readinessByDate = new Map((readinessHistory.results || []).map((row) => {
+      try { return [row.run_date, JSON.parse(row.report_json)]; } catch { return [row.run_date, null]; }
+    }));
+    const paired = recent.map((activity) => {
+      const readiness = readinessByDate.get(dateOf(activity));
+      const watts = num(activity.average_watts, activity.weighted_average_watts);
+      const heartRate = num(activity.average_heartrate, activity.average_hr);
+      if (!readiness?.metrics || !watts || !heartRate) return null;
+      return {
+        date: dateOf(activity), metrics: readiness.metrics,
+        outcome: watts / heartRate,
+        decoupling: Math.abs(num(activity.decoupling, activity.aerobic_decoupling) || 0),
+        rpe: num(activity.perceived_exertion, activity.rpe),
+      };
+    }).filter(Boolean) as Array<{ date: string; metrics: Json; outcome: number; decoupling: number; rpe?: number }>;
+    const median = (values: number[]) => {
+      const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
+      if (!sorted.length) return undefined;
+      const middle = Math.floor(sorted.length / 2);
+      return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+    };
+    const metricRules = [
+      { key: 'sleepHours', label: 'sono', favorable: (value: number, base: number) => value >= base },
+      { key: 'hrv', label: 'HRV', favorable: (value: number, base: number) => value >= base },
+      { key: 'restingHr', label: 'FC de repouso', favorable: (value: number, base: number) => value <= base },
+      { key: 'ansCharge', label: 'ANS Charge', favorable: (value: number, base: number) => value >= base },
+    ];
+    const outcomeBase = median(paired.map((row) => row.outcome));
+    const learnedEvidence: string[] = [];
+    let strongest: { label: string; difference: number; sample: number } | undefined;
+    for (const rule of metricRules) {
+      const valid = paired.filter((row) => Number.isFinite(Number(row.metrics[rule.key])));
+      const base = median(valid.map((row) => Number(row.metrics[rule.key])));
+      if (!base || valid.length < 8) continue;
+      const favorable = valid.filter((row) => rule.favorable(Number(row.metrics[rule.key]), base));
+      const unfavorable = valid.filter((row) => !rule.favorable(Number(row.metrics[rule.key]), base));
+      if (favorable.length < 3 || unfavorable.length < 3) continue;
+      const favorableOutcome = median(favorable.map((row) => row.outcome));
+      const unfavorableOutcome = median(unfavorable.map((row) => row.outcome));
+      if (!favorableOutcome || !unfavorableOutcome) continue;
+      const difference = ((favorableOutcome / unfavorableOutcome) - 1) * 100;
+      if (Math.abs(difference) >= 2) learnedEvidence.push(
+        `${rule.label}: em ${valid.length} dias comparáveis, a relação potência–coração ficou ${Math.abs(difference).toFixed(0)}% ${difference > 0 ? 'melhor quando o sinal estava favorável' : 'menos favorável quando o sinal parecia melhor'}.`,
+      );
+      if (!strongest || Math.abs(difference) > Math.abs(strongest.difference)) strongest = { label: rule.label, difference, sample: valid.length };
+    }
+    const enough = paired.length >= 8 && Boolean(outcomeBase) && learnedEvidence.length > 0;
+    const learning = enough && strongest ? {
+      status: 'observado',
+      headline: strongest.difference > 0 ? `${strongest.label} parece acompanhar seus melhores dias` : 'Seus sinais ainda não formam um padrão simples',
+      message: strongest.difference > 0
+        ? `No seu histórico recente, dias com ${strongest.label} favorável apareceram junto de melhor eficiência no pedal.`
+        : 'Um sinal aparentemente favorável não coincidiu de forma consistente com melhor eficiência. Outros fatores podem estar pesando mais.',
+      sample: paired.length,
+      confidence: paired.length >= 16 && learnedEvidence.length >= 2 ? 'boa' : 'moderada',
+      evidence: learnedEvidence.slice(0, 3),
+      caveat: 'Isto mostra associação no seu histórico, não causa. Tipo de treino, terreno, clima, fadiga e sensores podem influenciar o resultado.',
+    } : {
+      status: 'insuficiente',
+      headline: 'Ainda aprendendo o seu padrão',
+      message: `Há ${paired.length} ${paired.length === 1 ? 'dia pareado' : 'dias pareados'} entre recuperação e treino; são necessários ao menos 8, com grupos comparáveis, para mostrar uma tendência.`,
+      sample: paired.length,
+      confidence: 'limitada',
+      evidence: ['Nenhuma conclusão será exibida enquanto a amostra mínima e a consistência não forem atingidas.'],
+      caveat: 'A ausência de padrão não significa evolução ou regressão.',
+    };
     return Response.json({
       updatedAt: new Date().toISOString(), activityCount: recent.length, profile, profileMessage, power,
       powerViews: {
@@ -160,7 +233,7 @@ export async function GET(request: Request) {
         all: curveSet(allTime),
       },
       powerSource: seasonPower.some((point) => point.current) ? 'Curvas oficiais do Intervals.icu' : 'Atividades disponíveis no Intervals.icu',
-      cardio: cardioList, efficiencyChange, cardioHeadline,
+      cardio: cardioList, efficiencyChange, cardioHeadline, learning,
       warning: recent.length < 4 ? 'Poucas atividades recentes: interprete as tendências com cautela.' : undefined,
     });
   } catch (error) {

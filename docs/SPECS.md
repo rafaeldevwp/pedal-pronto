@@ -18,7 +18,7 @@ Aceite: mostrar grupo de comparação, diferença relevante, confiança e limite
 
 ## SPEC-03 — Aprendizado individual
 
-Status: próxima
+Status: concluída localmente; aguardando publicação
 
 Aprender associações recorrentes entre sono, HRV, FC, carga e desempenho, sem diagnóstico e sem afirmar causalidade com pouca evidência.
 
@@ -26,7 +26,7 @@ Aceite: exigir amostra mínima, mostrar confiança e permitir que dados insufici
 
 ## SPEC-04 — Check-in ampliado
 
-Status: planejada
+Status: próxima
 
 Adicionar pernas, motivação, sintomas e tempo disponível aos campos existentes. Sintomas ou dor relevante devem bloquear intensificação e favorecer recomendação conservadora.
 

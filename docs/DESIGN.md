@@ -16,6 +16,7 @@
 - Dados incompletos: ação desabilitada e orientação para sincronizar/autenticar.
 - Feedback: título simples, explicação curta, próxima ação e confiança.
 - Comparação pessoal: mostrar o grupo usado, a diferença combinada, evidências curtas, confiança e fatores externos que limitam a leitura.
+- Aprendizado individual: falar em associação, mostrar quantos dias foram pareados e ocultar conclusões abaixo da amostra mínima.
 - Objetivo: visível como contexto da decisão, nunca como incentivo automático a treinar mais.
 
 ## Vocabulário

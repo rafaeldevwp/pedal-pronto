@@ -135,6 +135,15 @@ type Performance = {
   cardio: Array<{ date: string; watts: number; heartRate: number; efficiency: number; decoupling?: number }>;
   efficiencyChange?: number;
   cardioHeadline: string;
+  learning: {
+    status: 'observado' | 'insuficiente';
+    headline: string;
+    message: string;
+    sample: number;
+    confidence: string;
+    evidence: string[];
+    caveat: string;
+  };
 };
 
 function evolutionInsight(performance: Performance | null, result: Result | null, weeklySessions: number) {
@@ -1048,6 +1057,22 @@ export default function Home() {
                 <Zap size={17} />
                 <span><strong>{performance.efficiencyChange >= 0 ? '+' : ''}{performance.efficiencyChange.toFixed(1)}%</strong> de mudança na relação potência–coração dentro do período.</span>
               </div>
+            )}
+          </Card>
+          <Card className="learning-card">
+            <div className="learning-heading">
+              <div>
+                <p className="eyebrow">SEU PADRÃO PESSOAL</p>
+                <h2>{performance?.learning?.headline || 'Reunindo recuperação e treinos'}</h2>
+              </div>
+              <Badge variant="outline">{performance?.learning?.sample ?? 0} dias</Badge>
+            </div>
+            <p>{performance?.learning?.message || 'A análise aparecerá quando houver dados suficientes.'}</p>
+            {performance?.learning?.evidence?.length ? (
+              <ul>{performance.learning.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
+            ) : null}
+            {performance?.learning && (
+              <small>Confiança {performance.learning.confidence} · {performance.learning.caveat}</small>
             )}
           </Card>
           <p className="analysis-note">Tendências comparam períodos, não diagnosticam saúde e não substituem sua percepção durante o treino.</p>

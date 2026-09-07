@@ -18,18 +18,26 @@
 - [x] Não modificar treinos nem dados históricos.
 - [x] Validar, publicar e atualizar a memória.
 
-## NEXT — T03 Criar modelo de aprendizado individual
+## Concluída localmente — T03 Criar modelo de aprendizado individual
 
-- Identificar associações recorrentes entre recuperação, carga e desempenho.
-- Exigir amostra mínima e separar associação de causalidade.
-- Mostrar confiança, evidências e limites em linguagem simples.
-- Suspender conclusões quando os dados forem insuficientes ou contraditórios.
-- Não diagnosticar nem modificar treinos nesta SPEC.
-- Validar, publicar e atualizar a memória.
+- [x] Identificar associações recorrentes entre recuperação e desempenho.
+- [x] Exigir ao menos oito dias pareados e grupos mínimos de três.
+- [x] Separar associação de causalidade.
+- [x] Mostrar confiança, evidências e limites em linguagem simples.
+- [x] Suspender conclusões quando os dados forem insuficientes ou contraditórios.
+- [x] Não diagnosticar nem modificar treinos nesta SPEC.
+- [x] Validar localmente e atualizar a memória.
+- [ ] Publicar somente após solicitação explícita do atleta.
+
+## NEXT — T04 Ampliar check-in e bloqueios conservadores
+
+- Adicionar pernas, motivação, sintomas e tempo disponível.
+- Fazer dor ou sintomas relevantes prevalecerem sobre métricas favoráveis.
+- Impedir intensificação e orientar conduta conservadora quando necessário.
+- Validar localmente; não publicar sem solicitação explícita.
 
 ## Depois
 
-- T04 Ampliar check-in e bloqueios conservadores — SPEC-04.
 - T05 Criar previsão dos próximos dias — SPEC-05.
 - T06 Criar histórico de decisões — SPEC-06.
 - T07 Criar alertas de risco futuro — SPEC-07.

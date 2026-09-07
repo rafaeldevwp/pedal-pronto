@@ -42,9 +42,11 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-`NEXT`: T03 — criar modelo de aprendizado individual com amostra mínima.
+`NEXT`: T04 — ampliar check-in e bloqueios conservadores.
 
-A comparação de sessões semelhantes foi validada e publicada no PWA. Ela separa indoor e outdoor, filtra duração e intensidade próximas, exige pelo menos três sessões e combina potência, esforço cardíaco, cadência, carga, desacoplamento e RPE sem alterar o calendário ou o histórico.
+A T03 está implementada e validada apenas localmente, ainda não publicada por solicitação do atleta. Ela pareia recuperação e treino no mesmo dia, exige ao menos oito dias e grupos de três, mostra apenas associações com diferença relevante e declara confiança e limitações. Não modifica treinos nem dados históricos.
+
+A versão online permanece na T02. Não publicar a T03 ou tarefas posteriores até solicitação explícita do atleta.
 
 O repositório privado `rafaeldevwp/pedal-pronto` foi criado e a integração recebeu acesso somente a ele. O envio inicial do conteúdo foi interrompido e deve ser retomado separadamente; não confundir isso com a publicação do PWA pelo Sites.
 
