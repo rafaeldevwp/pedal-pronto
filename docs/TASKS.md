@@ -29,16 +29,23 @@
 - [x] Validar localmente e atualizar a memória.
 - [ ] Publicar somente após solicitação explícita do atleta.
 
-## NEXT — T04 Ampliar check-in e bloqueios conservadores
+## Concluída localmente — T04 Ampliar check-in e bloqueios conservadores
 
-- Adicionar pernas, motivação, sintomas e tempo disponível.
-- Fazer dor ou sintomas relevantes prevalecerem sobre métricas favoráveis.
-- Impedir intensificação e orientar conduta conservadora quando necessário.
+- [x] Adicionar pernas, motivação, sintomas e tempo disponível.
+- [x] Fazer dor ou sintomas relevantes prevalecerem sobre métricas favoráveis.
+- [x] Impedir intensificação e orientar conduta conservadora quando necessário.
+- [x] Validar localmente e atualizar a memória.
+- [ ] Publicar somente após solicitação explícita do atleta.
+
+## NEXT — T05 Criar previsão dos próximos dias
+
+- Estimar como o treino de hoje afeta a viabilidade do próximo treino-chave.
+- Mostrar faixa de risco, evidências e incerteza, sem promessa.
+- Não aplicar mudanças futuras sem confirmação explícita.
 - Validar localmente; não publicar sem solicitação explícita.
 
 ## Depois
 
-- T05 Criar previsão dos próximos dias — SPEC-05.
 - T06 Criar histórico de decisões — SPEC-06.
 - T07 Criar alertas de risco futuro — SPEC-07.
 

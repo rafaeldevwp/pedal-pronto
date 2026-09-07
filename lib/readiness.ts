@@ -42,6 +42,15 @@ export type ReadinessResult = {
 };
 
 type Objective = 'performance' | 'resistencia' | 'ftp' | 'saude';
+type Checkin = {
+  fadiga?: number;
+  dor?: number;
+  estresse?: number;
+  pernas?: number;
+  motivacao?: number;
+  sintomas?: number;
+  tempoDisponivel?: number;
+};
 const objectiveNames: Record<Objective, string> = {
   performance: 'performance geral', resistencia: 'resistência', ftp: 'potência/FTP', saude: 'saúde e consistência',
 };
@@ -167,7 +176,7 @@ function adaptWorkout(event: Json, classification: 'amarela' | 'vermelha', objec
 export async function runReadiness(
   owner: string,
   apply: boolean,
-  checkin?: { fadiga?: number; dor?: number; estresse?: number },
+  checkin?: Checkin,
 ): Promise<ReadinessResult> {
   await ensurePolarSchema();
   const connection = await runtime.DB.prepare(
@@ -352,6 +361,27 @@ export async function runReadiness(
       Boolean(checkin?.estresse !== undefined && checkin.estresse >= 8),
       `Estresse percebido ${checkin?.estresse}/10`,
     );
+    flag(
+      Boolean(checkin?.pernas !== undefined && checkin.pernas <= 3),
+      `Pernas pesadas (${checkin?.pernas}/10 de disposição muscular)`,
+      Boolean(checkin?.pernas !== undefined && checkin.pernas <= 1),
+    );
+    flag(
+      Boolean(checkin?.motivacao !== undefined && checkin.motivacao <= 3),
+      `Motivação baixa (${checkin?.motivacao}/10)`,
+    );
+    flag(
+      Boolean(checkin?.sintomas !== undefined && checkin.sintomas >= 3),
+      `Sintomas percebidos ${checkin?.sintomas}/10`,
+      Boolean(checkin?.sintomas !== undefined && checkin.sintomas >= 5),
+    );
+    const plannedMinutes = num(workout?.moving_time, workout?.duration)
+      ? Math.round(num(workout?.moving_time, workout?.duration)! / 60)
+      : undefined;
+    const limitedTime = Boolean(
+      checkin?.tempoDisponivel !== undefined && plannedMinutes && checkin.tempoDisponivel < plannedMinutes,
+    );
+    if (limitedTime) evidence.push(`Tempo disponível ${checkin?.tempoDisponivel} min, abaixo dos ${plannedMinutes} min planejados`);
     if (!evidence.length)
       evidence.push(
         'Sono, recuperação autonômica e carga estão dentro da tendência individual.',
@@ -366,10 +396,12 @@ export async function runReadiness(
           num(r.nightly_recharge_status)! <= 3 ||
           (num(r.ans_charge) ?? 0) <= -3,
       );
+    const conservativeOverride = (checkin?.dor ?? 0) >= 6 || (checkin?.sintomas ?? 0) >= 5;
+    const cautionOverride = (checkin?.dor ?? 0) >= 4 || (checkin?.sintomas ?? 0) >= 3;
     let classification: 'verde' | 'amarela' | 'vermelha' =
-      severe >= 2 || (flags >= 4 && priorBad) || (checkin?.dor ?? 0) >= 6
+      conservativeOverride || severe >= 2 || (flags >= 4 && priorBad)
         ? 'vermelha'
-        : flags >= 2
+        : cautionOverride || flags >= 2 || limitedTime
           ? 'amarela'
           : 'verde';
     let changed = false,
@@ -412,6 +444,8 @@ export async function runReadiness(
       }
     } else if (restDay && classification !== 'verde')
       action = 'Dia de descanso preservado; nenhum treino foi criado.';
+    if (conservativeOverride && !workout)
+      action = 'Nenhum treino criado; dor ou sintomas relevantes exigem conduta conservadora.';
     const result: ReadinessResult = {
       classification,
       score:
@@ -430,7 +464,7 @@ export async function runReadiness(
           ? 'Hidrate-se e siga o plano sem aumentar a sessão.'
           : classification === 'amarela'
             ? 'Priorize alimentação, hidratação e sono; reavalie sensações no aquecimento.'
-            : 'Priorize descanso; dor ou sintomas de doença justificam avaliação profissional.',
+            : 'Priorize descanso. Dor persistente, sintomas de doença ou piora justificam avaliação profissional.',
       loadTrend,
       workout: {
         id: workout?.id,

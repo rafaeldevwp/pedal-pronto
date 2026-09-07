@@ -42,11 +42,11 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-`NEXT`: T04 — ampliar check-in e bloqueios conservadores.
+`NEXT`: T05 — criar previsão dos próximos dias.
 
-A T03 está implementada e validada apenas localmente, ainda não publicada por solicitação do atleta. Ela pareia recuperação e treino no mesmo dia, exige ao menos oito dias e grupos de três, mostra apenas associações com diferença relevante e declara confiança e limitações. Não modifica treinos nem dados históricos.
+A T03 e a T04 estão implementadas e validadas apenas localmente, ainda não publicadas por solicitação do atleta. A T04 ampliou o check-in com pernas, motivação, sintomas e tempo disponível. Dor a partir de 4/10 ou sintomas a partir de 3/10 impedem leitura verde; dor a partir de 6/10 ou sintomas a partir de 5/10 forçam conduta vermelha e conservadora. Nenhuma regra permite intensificação.
 
-A versão online permanece na T02. Não publicar a T03 ou tarefas posteriores até solicitação explícita do atleta.
+A versão online permanece na T02. Não publicar a T03, T04 ou tarefas posteriores até solicitação explícita do atleta.
 
 O repositório privado `rafaeldevwp/pedal-pronto` foi criado e a integração recebeu acesso somente a ele. O envio inicial do conteúdo foi interrompido e deve ser retomado separadamente; não confundir isso com a publicação do PWA pelo Sites.
 

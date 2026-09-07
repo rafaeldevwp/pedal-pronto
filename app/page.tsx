@@ -241,7 +241,9 @@ export default function Home() {
     [creatingSuggestion, setCreatingSuggestion] = useState(false),
     [applyingProposal, setApplyingProposal] = useState(false),
     [weekMessage, setWeekMessage] = useState(''),
-    [checkin, setCheckin] = useState({ fadiga: 4, dor: 1, estresse: 3 });
+    [checkin, setCheckin] = useState({
+      fadiga: 4, dor: 1, estresse: 3, pernas: 7, motivacao: 7, sintomas: 0, tempoDisponivel: 60,
+    });
   useEffect(() => {
     if ('serviceWorker' in navigator)
       navigator.serviceWorker.register('/sw.js');
@@ -251,7 +253,7 @@ export default function Home() {
     };
     window.addEventListener('beforeinstallprompt', handler);
     const stored = localStorage.getItem('pedal-pronto-checkin');
-    if (stored) setCheckin(JSON.parse(stored));
+    if (stored) setCheckin((current) => ({ ...current, ...JSON.parse(stored) }));
     fetch('/api/polar/status')
       .then((r) => (r.ok ? r.json() : { connected: false }))
       .then((r) => {
@@ -379,6 +381,15 @@ export default function Home() {
     setSaved(true);
     setTimeout(() => setSaved(false), 2200);
   }
+  const checkinFields = [
+    { key: 'fadiga', label: 'Fadiga', hint: '0 descansado · 10 exausto', min: 0, max: 10, step: 1 },
+    { key: 'dor', label: 'Dor', hint: '0 nenhuma · 10 intensa', min: 0, max: 10, step: 1 },
+    { key: 'estresse', label: 'Estresse', hint: '0 baixo · 10 muito alto', min: 0, max: 10, step: 1 },
+    { key: 'pernas', label: 'Pernas', hint: '0 muito pesadas · 10 ótimas', min: 0, max: 10, step: 1 },
+    { key: 'motivacao', label: 'Motivação', hint: '0 nenhuma · 10 muito alta', min: 0, max: 10, step: 1 },
+    { key: 'sintomas', label: 'Sintomas', hint: '0 nenhum · 10 fortes', min: 0, max: 10, step: 1 },
+    { key: 'tempoDisponivel', label: 'Tempo disponível', hint: 'Minutos disponíveis hoje', min: 0, max: 180, step: 5 },
+  ] as const;
   const status = result?.classification || 'indisponível';
   const recoveryCopy = status === 'verde'
     ? { title: 'Seu corpo está respondendo bem', action: 'Pode seguir o treino planejado. Não é necessário aumentar a sessão.' }
@@ -700,23 +711,29 @@ export default function Home() {
               </p>
             </CardHeader>
             <CardContent className="slider-list">
-              {Object.entries(checkin).map(([key, value]) => (
-                <label key={key}>
+              {checkinFields.map((field) => (
+                <label key={field.key}>
                   <span>
-                    <strong>{key[0].toUpperCase() + key.slice(1)}</strong>
-                    <b>{value}</b>
+                    <span className="checkin-label"><strong>{field.label}</strong><small>{field.hint}</small></span>
+                    <b>{checkin[field.key]}{field.key === 'tempoDisponivel' ? ' min' : ''}</b>
                   </span>
                   <Slider
-                    min={0}
-                    max={10}
-                    step={1}
-                    value={[value]}
+                    min={field.min}
+                    max={field.max}
+                    step={field.step}
+                    value={[checkin[field.key]]}
                     onValueChange={(v) =>
-                      setCheckin({ ...checkin, [key]: v[0] })
+                      setCheckin({ ...checkin, [field.key]: v[0] })
                     }
                   />
                 </label>
               ))}
+              {(checkin.dor >= 6 || checkin.sintomas >= 5) && (
+                <div className="checkin-alert">
+                  <strong>Conduta conservadora ativada</strong>
+                  <span>O app não recomendará intensificação. Dor persistente, sintomas ou piora merecem avaliação profissional.</span>
+                </div>
+              )}
               <Button className="primary-action" onClick={saveCheckin}>
                 {saved ? (
                   <>

@@ -26,13 +26,13 @@ Aceite: exigir amostra mínima, mostrar confiança e permitir que dados insufici
 
 ## SPEC-04 — Check-in ampliado
 
-Status: próxima
+Status: concluída localmente; aguardando publicação
 
 Adicionar pernas, motivação, sintomas e tempo disponível aos campos existentes. Sintomas ou dor relevante devem bloquear intensificação e favorecer recomendação conservadora.
 
 ## SPEC-05 — Previsão dos próximos dias
 
-Status: planejada
+Status: próxima
 
 Estimar como o treino de hoje afeta a viabilidade do próximo treino-chave. A previsão deve ser faixa de risco, não promessa.
 
