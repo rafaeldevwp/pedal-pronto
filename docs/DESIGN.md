@@ -7,6 +7,7 @@
 - Explicar sempre “por quê”, “o que mudou” e “qual o impacto”.
 - Verde, amarelo e vermelho mantêm significado consistente.
 - Nenhuma alteração futura silenciosa.
+- Nenhuma alteração de hoje ou futura sem consentimento específico; avaliar e atualizar dados são sempre ações somente leitura.
 - Incerteza deve aparecer como confiança limitada, não como falsa precisão.
 
 ## Padrões de interface
@@ -21,6 +22,8 @@
 - Previsão: mostrar `Hoje → próximo treino-chave`, faixa de risco, evidências, orientação e aviso explícito de incerteza.
 - Histórico: linha do tempo expansível, `Programado → decisão efetiva`, justificativa e resultado posterior; sempre somente leitura.
 - Alerta futuro: um alerta por risco relevante, acesso direto à proposta, opção de notificação no celular e texto explícito de que nada foi alterado.
+- Confirmação de escrita: `Programado → Recomendado`, impacto e botão explícito; fechar ou cancelar preserva o original.
+- Sliders: extremos sempre visíveis e tocáveis; zero é valor válido, persistente e nunca equivale a dado ausente.
 - Objetivo: visível como contexto da decisão, nunca como incentivo automático a treinar mais.
 
 ## Vocabulário

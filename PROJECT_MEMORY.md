@@ -25,8 +25,7 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 - Vermelha prioriza recuperação, endurance leve ou descanso.
 - Quarta, sexta e domingo são descanso.
 - Limites: segunda 1h; terça 1h20; quinta 1h20; sábado conforme o longo.
-- Alteração de hoje pode ser automática pelas regras existentes.
-- Alteração futura exige confirmação explícita no PWA.
+- Nenhuma alteração, criação, substituição ou cancelamento de treino pode ocorrer sem confirmação explícita do atleta para a mudança específica; isso vale para hoje e para dias futuros.
 - Dor ou doença exigem conduta conservadora, sem diagnóstico médico.
 
 ## O que está publicado
@@ -47,11 +46,13 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-`NEXT`: definir um novo ciclo de SPECs após observar o uso real do lote T03–T07.
+`NEXT`: T08 — bloquear qualquer alteração no Intervals.icu sem consentimento específico, conforme SPEC-08.
 
 A T03 até a T07 foram integradas, validadas e publicadas em um único lote após autorização do atleta.
 
 A versão online contém as SPECs T01–T07.
+
+Dois bugs foram especificados após uso real: o treino de hoje foi alterado sem consentimento e o botão do slider desaparece em zero. A SPEC-08 é correção crítica e vem antes da SPEC-09. As correções ainda não foram implementadas nem publicadas.
 
 O repositório privado `rafaeldevwp/pedal-pronto` foi criado e a integração recebeu acesso somente a ele. O envio inicial do conteúdo foi interrompido e deve ser retomado separadamente; não confundir isso com a publicação do PWA pelo Sites.
 

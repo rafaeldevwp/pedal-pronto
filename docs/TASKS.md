@@ -65,9 +65,16 @@
 - [x] Validar localmente e atualizar a memória.
 - [x] Publicada no lote T03–T07 após autorização do atleta.
 
-## NEXT — Definir novo ciclo de SPECs
+## NEXT — T08 Bloquear alterações sem consentimento — SPEC-08
 
-- Revisar o uso real das funções publicadas.
-- Definir novas SPECs antes de implementar outras funções.
+- Separar avaliação, proposta e aplicação no cliente e no servidor.
+- Remover qualquer escrita automática da prontidão diária e da automação.
+- Exigir confirmação específica e revalidar o treino antes da escrita.
+- Adicionar idempotência, auditoria e regressão dos cenários críticos.
+- Publicar apenas após validação e autorização do atleta.
+
+## Depois
+
+- T09 Corrigir slider em zero e validar acessibilidade — SPEC-09.
 
 Regra: trabalhar somente na tarefa marcada como `NEXT`.
