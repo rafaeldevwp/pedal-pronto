@@ -102,6 +102,16 @@ type Week = {
   };
   suggestionStatus?: string;
   planOutlook: Array<{ id: number; date: string; name: string; status: 'protegido' | 'observar'; note: string }>;
+  proposal: null | {
+    eventId: number;
+    date: string;
+    reason: string;
+    change: string;
+    weeklyLoadBefore: number;
+    weeklyLoadAfter: number;
+    original: { name: string; durationMinutes?: number; load?: number; structure: string[] };
+    recommended: { name: string; durationMinutes?: number; load?: number; structure: string[] };
+  };
 };
 type AthleteGoal = { objective: string; eventName: string; eventDate: string; priority: string };
 type Performance = {
@@ -211,6 +221,7 @@ export default function Home() {
     [powerRange, setPowerRange] = useState<'season' | 'recent' | 'all'>('season'),
     [loading, setLoading] = useState(false),
     [creatingSuggestion, setCreatingSuggestion] = useState(false),
+    [applyingProposal, setApplyingProposal] = useState(false),
     [weekMessage, setWeekMessage] = useState(''),
     [checkin, setCheckin] = useState({ fadiga: 4, dor: 1, estresse: 3 });
   useEffect(() => {
@@ -311,6 +322,25 @@ export default function Home() {
       setWeekMessage(error instanceof Error ? error.message : 'Falha ao criar treino.');
     } finally {
       setCreatingSuggestion(false);
+    }
+  }
+  async function applyProposal() {
+    if (!week?.proposal || !window.confirm(`Confirmar a alteração de “${week.proposal.original.name}” no Intervals.icu?`)) return;
+    setApplyingProposal(true);
+    setWeekMessage('');
+    try {
+      const response = await fetch('/api/week', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'apply_proposal', eventId: week.proposal.eventId }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || 'Não foi possível aplicar a proposta.');
+      setWeek(body.week);
+      setWeekMessage('Alteração confirmada e enviada ao Intervals.icu.');
+    } catch (error) {
+      setWeekMessage(error instanceof Error ? error.message : 'Falha ao alterar o treino.');
+    } finally {
+      setApplyingProposal(false);
     }
   }
   const formatDay = (date: string) =>
@@ -803,6 +833,40 @@ export default function Home() {
           ) : week?.suggestionStatus ? (
             <p className="suggestion-status">{week.suggestionStatus}</p>
           ) : null}
+          {week?.proposal && (
+            <Card className="proposal-card">
+              <div className="proposal-heading">
+                <div>
+                  <p className="eyebrow">PROPOSTA PARA {formatDay(week.proposal.date).toUpperCase()}</p>
+                  <h2>Proteger o próximo estímulo</h2>
+                </div>
+                <Badge>Requer confirmação</Badge>
+              </div>
+              <p className="muted-copy">{week.proposal.reason}</p>
+              <div className="proposal-comparison">
+                <div>
+                  <small>PROGRAMADO</small>
+                  <strong>{week.proposal.original.name}</strong>
+                  <span>{week.proposal.original.durationMinutes ?? '—'} min · carga {week.proposal.original.load ?? '—'}</span>
+                </div>
+                <ChevronRight />
+                <div>
+                  <small>RECOMENDADO</small>
+                  <strong>{week.proposal.recommended.name}</strong>
+                  <span>{week.proposal.recommended.durationMinutes ?? '—'} min · carga {week.proposal.recommended.load ?? '—'}</span>
+                </div>
+              </div>
+              <div className="proposal-reason"><ShieldCheck /><span><strong>Mudança única</strong>{week.proposal.change}</span></div>
+              <div className="weekly-impact">
+                <span>Carga semanal</span>
+                <strong>{week.proposal.weeklyLoadBefore} <ChevronRight /> {week.proposal.weeklyLoadAfter}</strong>
+              </div>
+              <Button className="primary-action" onClick={applyProposal} disabled={applyingProposal}>
+                {applyingProposal ? <><RefreshCw className="spin" /> Aplicando…</> : 'Confirmar e enviar ao Intervals.icu'}
+              </Button>
+              <small className="proposal-footnote">Somente este treino será alterado. Atividades realizadas e os demais dias permanecem intactos.</small>
+            </Card>
+          )}
           {week?.planOutlook?.length > 0 && (
             <Card className="outlook-card">
               <p className="eyebrow">PRÓXIMOS DIAS</p>

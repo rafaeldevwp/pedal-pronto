@@ -137,6 +137,49 @@ const completedWorkout = (activity: Json, planned?: ReturnType<typeof normalize>
     },
   };
 };
+
+function futureProposal(event: Json) {
+  const original = normalize(event);
+  const description = String(event.description || '');
+  if (description.includes('Ajuste semanal confirmado pelo Pedal Pronto.')) return null;
+  const updated = { ...event };
+  const reps = description.match(/\b([3-9]|[1-9]\d)x\b/i);
+  let change = '';
+  let factor = 0.86;
+  if (reps) {
+    const from = Number(reps[1]);
+    const to = Math.max(2, from - 1);
+    updated.description = description.replace(reps[0], `${to}x`);
+    updated.name = String(event.name || '').replace(new RegExp(`\\b${from}x`, 'i'), `${to}x`);
+    change = `Reduzir somente as repetições, de ${from} para ${to}; intensidade e recuperação permanecem iguais.`;
+    factor = Math.max(0.72, to / from);
+  } else {
+    const intensity = description.match(/\b(8[5-9]|9\d|1[0-4]\d)%/);
+    if (!intensity) return null;
+    const from = Number(intensity[1]);
+    const to = Math.max(80, from - 5);
+    updated.description = description.replace(intensity[0], `${to}%`);
+    change = `Reduzir somente a intensidade principal, de ${from}% para ${to}%; duração e recuperações permanecem iguais.`;
+    factor = 0.9;
+  }
+  delete updated.workout_doc;
+  delete updated.icu_training_load;
+  updated.description = `${updated.description}\n\nAjuste semanal confirmado pelo Pedal Pronto.`;
+  const proposed = normalize(updated);
+  proposed.durationMinutes = original.durationMinutes;
+  proposed.load = original.load ? Math.round(original.load * factor) : undefined;
+  return {
+    updated,
+    proposal: {
+      eventId: original.id,
+      date: original.date,
+      reason: 'A recuperação ou a carga recente pode comprometer a qualidade do próximo estímulo. A proposta reduz apenas uma variável.',
+      change,
+      original: { name: original.name, durationMinutes: original.durationMinutes, load: original.load, structure: original.structure },
+      recommended: { name: proposed.name, durationMinutes: proposed.durationMinutes, load: proposed.load, structure: proposed.structure },
+    },
+  };
+}
 function chooseSuggestion(readiness: Awaited<ReturnType<typeof runReadiness>>, activities: Json[], planned: Array<ReturnType<typeof normalize>>, today: string) {
   const recent = activities.slice(-4);
   const hard = recent.filter((a) => Number(a.icu_intensity || a.intensity || 0) >= 75).length;
@@ -174,9 +217,9 @@ async function context(owner: string) {
       `/athlete/${runtime.INTERVALS_ATHLETE_ID}/activities?oldest=${monday}&newest=${sunday}&limit=50`,
     ),
   ]);
-  const planned = (Array.isArray(body) ? body : body?.events || [])
+  const rawPlanned = (Array.isArray(body) ? body : body?.events || [])
     .filter((event: Json) => event.category === 'WORKOUT')
-    .map(normalize);
+  const planned = rawPlanned.map(normalize);
   const activities = (Array.isArray(activityBody)
     ? activityBody
     : activityBody?.activities || []
@@ -211,6 +254,18 @@ async function context(owner: string) {
       note: stressed ? 'Pode precisar de ajuste se a recuperação não normalizar. Nenhuma mudança aplicada.' : 'Compatível com a carga atual. Nenhuma mudança proposta.',
     };
   });
+  const stressed = readiness.classification !== 'verde' || yesterdayLoad > Math.max(70, Number(readiness.metrics.ctl || 0) * 1.5);
+  const proposalBuilt = stressed
+    ? rawPlanned
+        .filter((event: Json) => {
+          const date = String(event.start_date_local || event.start_date || '').slice(0, 10);
+          return date > today && ![0, 3, 5].includes(dayNumber(date));
+        })
+        .map(futureProposal)
+        .find(Boolean)
+    : null;
+  const weeklyPlannedLoad = planned.reduce((sum, event) => sum + Number(event.load || 0), 0);
+  const proposal = proposalBuilt?.proposal || null;
   return {
     today,
     monday,
@@ -218,6 +273,11 @@ async function context(owner: string) {
     events,
     suggestion: canSuggest ? adaptiveSuggestion : null,
     planOutlook,
+    proposal: proposal ? {
+      ...proposal,
+      weeklyLoadBefore: Math.round(weeklyPlannedLoad),
+      weeklyLoadAfter: Math.round(weeklyPlannedLoad - Number(proposal.original.load || 0) + Number(proposal.recommended.load || proposal.original.load || 0)),
+    } : null,
     suggestionStatus: !restDay
       ? 'Sugestões aparecem somente em dias de descanso.'
       : hasToday
@@ -250,6 +310,20 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Não autorizado' }, { status: 401 });
   try {
     const state = await context(owner);
+    let body: Json = {};
+    try { body = await request.json(); } catch {}
+    if (body.action === 'apply_proposal') {
+      if (!state.proposal || Number(body.eventId) !== Number(state.proposal.eventId))
+        return Response.json({ error: 'A proposta não está mais disponível. Atualize os dados.' }, { status: 409 });
+      const eventsBody = await intervals(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/events?oldest=${state.monday}&newest=${state.sunday}&category=WORKOUT&resolve=true`);
+      const source = (Array.isArray(eventsBody) ? eventsBody : eventsBody?.events || []).find((event: Json) => Number(event.id) === Number(state.proposal.eventId));
+      const recalculated = source ? futureProposal(source) : null;
+      if (!recalculated) return Response.json({ error: 'Não foi possível recalcular a proposta com segurança.' }, { status: 409 });
+      await intervals(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/events/${source.id}`, {
+        method: 'PUT', body: JSON.stringify(recalculated.updated),
+      });
+      return Response.json({ applied: true, week: await context(owner) });
+    }
     if (!state.suggestion)
       return Response.json(
         { error: state.suggestionStatus || 'Sugestão não disponível.' },
