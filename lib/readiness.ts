@@ -1,4 +1,5 @@
 import { ensurePolarSchema, recordTrainingDecision, runtime } from '@/lib/polar';
+import { assertEditablePlannedEvent, claimTrainingWrite, completeTrainingWrite, proposalFingerprint } from '@/lib/training-safety';
 
 type Json = Record<string, any>;
 export type ReadinessResult = {
@@ -24,6 +25,15 @@ export type ReadinessResult = {
       structure?: string[];
     };
   } | null;
+  proposal?: {
+    id: string;
+    eventId: number;
+    date: string;
+    classification: 'amarela' | 'vermelha';
+    change: string;
+    original: { name: string; durationMinutes?: number; load?: number; structure?: string[] };
+    recommended: { name: string; durationMinutes?: number; load?: number; structure?: string[] };
+  };
   metrics: {
     sleepHours?: number;
     sleepScore?: number;
@@ -42,7 +52,7 @@ export type ReadinessResult = {
 };
 
 type Objective = 'performance' | 'resistencia' | 'ftp' | 'saude';
-type Checkin = {
+export type Checkin = {
   fadiga?: number;
   dor?: number;
   estresse?: number;
@@ -175,7 +185,6 @@ function adaptWorkout(event: Json, classification: 'amarela' | 'vermelha', objec
 
 export async function runReadiness(
   owner: string,
-  apply: boolean,
   checkin?: Checkin,
 ): Promise<ReadinessResult> {
   await ensurePolarSchema();
@@ -205,7 +214,7 @@ export async function runReadiness(
           `/athlete/${runtime.INTERVALS_ATHLETE_ID}/wellness?oldest=${isoDate(new Date(now.getTime() - 42 * 86400000))}&newest=${today}`,
         ),
         intervals(
-          `/athlete/${runtime.INTERVALS_ATHLETE_ID}/activities?oldest=${yesterday}&newest=${yesterday}&limit=20`,
+          `/athlete/${runtime.INTERVALS_ATHLETE_ID}/activities?oldest=${yesterday}&newest=${today}&limit=40`,
         ),
         intervals(
           `/athlete/${runtime.INTERVALS_ATHLETE_ID}/events?oldest=${today}&newest=${today}&category=WORKOUT&resolve=true`,
@@ -285,9 +294,13 @@ export async function runReadiness(
     const acts: Json[] = Array.isArray(activities)
       ? activities
       : activities.activities || [];
-    const yesterdayLoad = acts.reduce(
+    const yesterdayLoad = acts.filter((activity) => String(activity.start_date_local || activity.start_date || '').slice(0, 10) === yesterday).reduce(
       (s, a) => s + (num(a.icu_training_load, a.training_load) || 0),
       0,
+    );
+    const todayCompleted = acts.some((activity) =>
+      String(activity.start_date_local || activity.start_date || '').slice(0, 10) === today &&
+      ['Ride', 'VirtualRide', 'EBikeRide', 'MountainBikeRide'].includes(activity.type || activity.icu_type),
     );
     const evidence: string[] = [];
     let flags = 0,
@@ -404,53 +417,49 @@ export async function runReadiness(
         : cautionOverride || flags >= 2 || limitedTime
           ? 'amarela'
           : 'verde';
-    let changed = false,
-      action =
+    const action =
         classification === 'verde'
           ? 'Treino mantido sem aumento.'
           : classification === 'amarela'
-            ? 'Ajuste moderado recomendado.'
-            : 'Substituição conservadora recomendada.';
-    let finalName = workout?.name || 'Nenhum treino planejado';
+            ? 'Ajuste moderado disponível para revisão; nada foi alterado.'
+            : 'Substituição conservadora disponível para revisão; nada foi alterado.';
     const originalWorkout = workout ? {
       name: String(workout.name || 'Treino planejado'),
       durationMinutes: num(workout.moving_time, workout.duration) ? Math.round(num(workout.moving_time, workout.duration)! / 60) : undefined,
       load: num(workout.icu_training_load, workout.load) ? Math.round(num(workout.icu_training_load, workout.load)!) : undefined,
       structure: workoutStructure(workout.description),
     } : undefined;
-    let structure = workout ? workoutStructure(workout.description) : [];
-    let duration = num(workout?.moving_time, workout?.duration);
-    let load = num(workout?.icu_training_load, workout?.load);
+    const structure = workout ? workoutStructure(workout.description) : [];
+    const duration = num(workout?.moving_time, workout?.duration);
+    const load = num(workout?.icu_training_load, workout?.load);
     const weekday = new Intl.DateTimeFormat('en-US', {
       timeZone: zone,
       weekday: 'short',
     }).format(now);
     const restDay = ['Wed', 'Fri', 'Sun'].includes(weekday);
-    if (apply && workout && classification !== 'verde' && !restDay) {
-      const adapted = adaptWorkout(workout, classification, objective, protectSpecificity);
-      if (adapted) {
-        await intervals(
-          `/athlete/${runtime.INTERVALS_ATHLETE_ID}/events/${workout.id}`,
-          { method: 'PUT', body: JSON.stringify(adapted.updated) },
-        );
-        changed = true;
-        action = adapted.action;
-        finalName = adapted.updated.name;
-        structure = workoutStructure(adapted.updated.description);
-        duration = adapted.durationMinutes
-          ? adapted.durationMinutes * 60
-          : duration;
-        load = adapted.load ?? load;
-      }
-    } else if (restDay && classification !== 'verde')
-      action = 'Dia de descanso preservado; nenhum treino foi criado.';
-    if (conservativeOverride && !workout)
-      action = 'Nenhum treino criado; dor ou sintomas relevantes exigem conduta conservadora.';
+    const adapted = workout && classification !== 'verde' && !restDay && !todayCompleted
+      ? adaptWorkout(workout, classification, objective, protectSpecificity)
+      : null;
+    const recommended = adapted ? {
+      name: String(adapted.updated.name),
+      durationMinutes: adapted.durationMinutes,
+      load: adapted.load,
+      structure: workoutStructure(adapted.updated.description),
+    } : undefined;
+    const proposal = adapted && originalWorkout ? {
+      id: proposalFingerprint(workout, adapted.updated),
+      eventId: Number(workout.id),
+      date: today,
+      classification: classification as 'amarela' | 'vermelha',
+      change: adapted.action,
+      original: originalWorkout,
+      recommended: recommended!,
+    } : undefined;
     const result: ReadinessResult = {
       classification,
       score:
         classification === 'verde' ? 4 : classification === 'amarela' ? 3 : 1,
-      changed,
+      changed: false,
       title:
         classification === 'verde'
           ? 'Pronto para o treino'
@@ -468,13 +477,14 @@ export async function runReadiness(
       loadTrend,
       workout: {
         id: workout?.id,
-        name: finalName,
+        name: workout?.name || 'Nenhum treino planejado',
         durationMinutes: duration ? Math.round(duration / 60) : undefined,
         load: load ? Math.round(load) : undefined,
         action,
         structure,
         original: originalWorkout,
       },
+      proposal,
       metrics: {
         sleepHours: +sleepHours.toFixed(1),
         sleepScore,
@@ -506,28 +516,6 @@ export async function runReadiness(
                 : 'Preservamos o estímulo principal com o menor ajuste necessário.',
       },
     };
-    if (apply && workout) {
-      await recordTrainingDecision(owner, {
-        decisionDate: today,
-        workoutDate: today,
-        source: 'prontidao_diaria',
-        status: changed ? 'alterado' : 'mantido',
-        original: originalWorkout,
-        recommended: changed ? {
-          name: finalName,
-          durationMinutes: duration ? Math.round(duration / 60) : undefined,
-          load: load ? Math.round(load) : undefined,
-          structure,
-        } : originalWorkout,
-        effective: {
-          name: finalName,
-          durationMinutes: duration ? Math.round(duration / 60) : undefined,
-          load: load ? Math.round(load) : undefined,
-          structure,
-        },
-        reason: `${classification.toUpperCase()}: ${action}`,
-      });
-    }
     await runtime.DB.prepare(
       'INSERT INTO readiness_runs (owner_id,run_date,classification,changed,report_json,created_at) VALUES (?,?,?,?,?,?)',
     )
@@ -535,7 +523,7 @@ export async function runReadiness(
         owner,
         today,
         classification,
-        changed ? 1 : 0,
+        0,
         JSON.stringify(result),
         Date.now(),
       )
@@ -553,6 +541,41 @@ export async function runReadiness(
       null,
     );
   }
+}
+
+export async function confirmReadinessProposal(owner: string, proposalId: string, operationId: string, checkin?: Checkin) {
+  const evaluated = await runReadiness(owner, checkin);
+  const proposal = evaluated.proposal;
+  if (!proposal || proposal.id !== proposalId) throw new Error('PROPOSAL_CHANGED');
+  const [eventBody, activityBody] = await Promise.all([
+    intervals(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/events?oldest=${proposal.date}&newest=${proposal.date}&category=WORKOUT&resolve=true`),
+    intervals(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/activities?oldest=${proposal.date}&newest=${proposal.date}&limit=40`),
+  ]);
+  const event = (Array.isArray(eventBody) ? eventBody : eventBody?.events || []).find((item: Json) => Number(item.id) === proposal.eventId);
+  const activities = (Array.isArray(activityBody) ? activityBody : activityBody?.activities || []).filter((activity: Json) =>
+    ['Ride', 'VirtualRide', 'EBikeRide', 'MountainBikeRide'].includes(activity.type || activity.icu_type),
+  );
+  assertEditablePlannedEvent(event, activities, proposal.date);
+  const eventDays = evaluated.goal?.eventDate
+    ? Math.ceil((new Date(`${evaluated.goal.eventDate}T12:00:00Z`).getTime() - Date.now()) / 86400000)
+    : undefined;
+  const protectSpecificity = evaluated.goal?.priority === 'principal' && eventDays !== undefined && eventDays >= 0 && eventDays <= 21;
+  const adapted = adaptWorkout(event, proposal.classification, ((evaluated.goal?.objective || 'performance') as Objective), protectSpecificity);
+  if (!adapted || proposalFingerprint(event, adapted.updated) !== proposal.id) throw new Error('PROPOSAL_CHANGED');
+  const claim = await claimTrainingWrite(owner, operationId, proposal.id);
+  if (claim.repeated) return claim.response;
+  await intervals(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/events/${event.id}`, { method: 'PUT', body: JSON.stringify(adapted.updated) });
+  const response = {
+    applied: true,
+    message: `TREINO ALTERADO — ${adapted.updated.name}: ${adapted.action}. Nova duração ${adapted.durationMinutes ?? 'não informada'} min, carga ${adapted.load ?? 'não informada'}.`,
+  };
+  await completeTrainingWrite(owner, operationId, response);
+  await recordTrainingDecision(owner, {
+    decisionDate: proposal.date, workoutDate: proposal.date, source: 'prontidao_diaria', status: 'alterado',
+    original: proposal.original, recommended: proposal.recommended, effective: proposal.recommended,
+    reason: `${proposal.classification.toUpperCase()}: ${adapted.action}`,
+  });
+  return response;
 }
 function workoutStructure(description: unknown) {
   return String(description || '')

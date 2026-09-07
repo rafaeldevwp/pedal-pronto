@@ -65,20 +65,27 @@
 - [x] Validar localmente e atualizar a memória.
 - [x] Publicada no lote T03–T07 após autorização do atleta.
 
-## NEXT — T08 Bloquear alterações sem consentimento — SPEC-08
+## Concluída localmente — T08 Bloquear alterações sem consentimento — SPEC-08
 
-- Separar avaliação, proposta e aplicação no cliente e no servidor.
-- Remover qualquer escrita automática da prontidão diária e da automação.
-- Exigir confirmação específica e revalidar o treino antes da escrita.
-- Criar uma guarda central no servidor que permita escrita somente em evento planejado não concluído.
-- Consultar atividades no momento da confirmação e bloquear alvos concluídos, associados a atividade ou históricos.
-- Adicionar idempotência, auditoria e regressão dos cenários críticos.
-- Testar conclusão antes da proposta, entre proposta e confirmação, sincronização atrasada e múltiplas sessões no mesmo dia.
-- Publicar apenas após validação e autorização do atleta.
+- [x] Separar avaliação, proposta e aplicação no cliente e no servidor.
+- [x] Remover escrita automática da avaliação de prontidão.
+- [x] Exigir confirmação específica e revalidar o treino antes da escrita.
+- [x] Criar uma guarda central no servidor que permita escrita somente em evento planejado não concluído.
+- [x] Consultar atividades no momento da confirmação e bloquear alvos concluídos, associados a atividade ou históricos.
+- [x] Adicionar idempotência e registro imutável da decisão confirmada.
+- [x] Cobrir por regressão evento concluído, atividade associada, sincronização atrasada, múltiplas sessões e mudança da proposta.
+- [x] Validar testes e build localmente.
+- [ ] Publicar somente após autorização do atleta.
+
+## NEXT — T09 Corrigir slider em zero e validar acessibilidade — SPEC-09
+
+- Corrigir trilho e botão em todos os extremos.
+- Preservar zero como valor válido no estado e no envio.
+- Validar toque, mouse, teclado, contraste e tamanhos móveis.
+- Não publicar até autorização do atleta.
 
 ## Depois
 
-- T09 Corrigir slider em zero e validar acessibilidade — SPEC-09.
 - T10 Criar glossário contextual e centralizado — SPEC-10.
 
 Regra: trabalhar somente na tarefa marcada como `NEXT`.

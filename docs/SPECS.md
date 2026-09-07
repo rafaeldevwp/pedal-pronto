@@ -50,7 +50,7 @@ Notificar quando um treino futuro entrar em risco. O alerta não aplica mudança
 
 ## SPEC-08 — Consentimento obrigatório antes de alterar o Intervals.icu
 
-Status: próxima — correção crítica
+Status: implementada e validada localmente; publicação pendente de autorização
 
 Nenhuma avaliação, atualização manual, automação diária ou alerta pode modificar, substituir, cancelar ou criar um treino no Intervals.icu sem uma confirmação explícita do atleta para aquela mudança específica. A regra vale para hoje e para dias futuros e substitui a permissão automática anterior. A avaliação pode gerar uma proposta, mas deve permanecer somente leitura até a confirmação.
 

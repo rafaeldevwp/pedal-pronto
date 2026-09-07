@@ -49,6 +49,15 @@ type Result = {
     structure?: string[];
     original?: { name: string; durationMinutes?: number; load?: number; structure?: string[] };
   } | null;
+  proposal?: {
+    id: string;
+    eventId: number;
+    date: string;
+    classification: 'amarela' | 'vermelha';
+    change: string;
+    original: { name: string; durationMinutes?: number; load?: number; structure?: string[] };
+    recommended: { name: string; durationMinutes?: number; load?: number; structure?: string[] };
+  };
   metrics: {
     sleepHours?: number;
     sleepScore?: number;
@@ -104,6 +113,7 @@ type Week = {
   sunday: string;
   events: WeekWorkout[];
   suggestion: null | {
+    id: string;
     name: string;
     durationMinutes: number;
     load: number;
@@ -145,6 +155,7 @@ type Week = {
     outcome: null | { name: string; durationMinutes?: number; load?: number; rpe?: number };
   }>;
   proposal: null | {
+    id: string;
     eventId: number;
     date: string;
     reason: string;
@@ -345,21 +356,43 @@ export default function Home() {
     if (week?.proposal && window.location.hash === '#future-proposal')
       window.setTimeout(() => document.getElementById('future-proposal')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
   }, [week?.proposal?.eventId]);
-  async function loadReadiness(apply: boolean) {
+  async function loadReadiness(withCheckin: boolean) {
     setLoading(true);
     try {
       const r = await fetch('/api/readiness', {
-        method: apply ? 'POST' : 'GET',
-        headers: apply ? { 'Content-Type': 'application/json' } : undefined,
-        body: apply ? JSON.stringify({ checkin }) : undefined,
+        method: withCheckin ? 'POST' : 'GET',
+        headers: withCheckin ? { 'Content-Type': 'application/json' } : undefined,
+        body: withCheckin ? JSON.stringify({ action: 'evaluate', checkin }) : undefined,
       });
       if (r.ok) {
         setResult(await r.json());
-        if (apply) loadWeek();
+        if (withCheckin) loadWeek();
       }
     } finally {
       setLoading(false);
     }
+  }
+  async function confirmTodayProposal() {
+    if (!result?.proposal || !window.confirm(`Confirmar a alteração de “${result.proposal.original.name}” no Intervals.icu?`)) return;
+    setLoading(true);
+    try {
+      const response = await fetch('/api/readiness', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'confirm_today', confirmed: true, proposalId: result.proposal.id, operationId: crypto.randomUUID(), checkin }),
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        const message = body.error === 'WORKOUT_COMPLETED' ? 'Treino já realizado — nenhuma alteração aplicada.'
+          : body.error === 'PROPOSAL_CHANGED' ? 'O treino ou a proposta mudou. Atualize e revise novamente.'
+            : 'Não foi possível aplicar a alteração.';
+        setWeekMessage(message);
+        await loadReadiness(true);
+        return;
+      }
+      setWeekMessage(body.message);
+      await loadReadiness(false);
+      await loadWeek();
+    } finally { setLoading(false); }
   }
   async function loadWeek() {
     const response = await fetch('/api/week');
@@ -394,7 +427,10 @@ export default function Home() {
     setCreatingSuggestion(true);
     setWeekMessage('');
     try {
-      const response = await fetch('/api/week', { method: 'POST' });
+      const response = await fetch('/api/week', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create_suggestion', confirmed: true, proposalId: week.suggestion.id, operationId: crypto.randomUUID() }),
+      });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || 'Não foi possível criar.');
       setWeek(body.week);
@@ -413,7 +449,7 @@ export default function Home() {
     try {
       const response = await fetch('/api/week', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'apply_proposal', eventId: week.proposal.eventId }),
+        body: JSON.stringify({ action: 'apply_proposal', confirmed: true, proposalId: week.proposal.id, operationId: crypto.randomUUID(), eventId: week.proposal.eventId }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || 'Não foi possível aplicar a proposta.');
@@ -641,9 +677,7 @@ export default function Home() {
                 </div>
                 <div>
                   <strong>
-                    {result?.changed
-                      ? 'TREINO ALTERADO — alteração aplicada'
-                      : 'Plano protegido'}
+                    {result?.proposal ? 'Proposta pronta — confirmação necessária' : 'Plano protegido'}
                   </strong>
                   <span>
                     {result?.workout?.load
@@ -662,18 +696,18 @@ export default function Home() {
                     </span>
                   </div>
                 )}
-                {result?.changed && result.workout?.original && (
+                {result?.proposal && (
                   <div className="workout-comparison">
                     <div>
                       <small>ESTAVA PROGRAMADO</small>
-                      <strong>{result.workout.original.name}</strong>
-                      <span>{result.workout.original.durationMinutes ?? '—'} min · carga {result.workout.original.load ?? '—'}</span>
+                      <strong>{result.proposal.original.name}</strong>
+                      <span>{result.proposal.original.durationMinutes ?? '—'} min · carga {result.proposal.original.load ?? '—'}</span>
                     </div>
                     <ChevronRight />
                     <div className="recommended-workout">
-                      <small>SERÁ FEITO</small>
-                      <strong>{result.workout.name}</strong>
-                      <span>{result.workout.durationMinutes ?? '—'} min · carga {result.workout.load ?? '—'}</span>
+                      <small>RECOMENDADO</small>
+                      <strong>{result.proposal.recommended.name}</strong>
+                      <span>{result.proposal.recommended.durationMinutes ?? '—'} min · carga {result.proposal.recommended.load ?? '—'}</span>
                     </div>
                   </div>
                 )}
@@ -681,9 +715,7 @@ export default function Home() {
                   <ShieldCheck size={18} />
                   <p>
                     <strong>
-                      {result?.changed
-                        ? 'Mudança concluída no Intervals.icu'
-                        : 'Decisão conservadora'}
+                      {result?.proposal ? 'Nada foi alterado sem sua confirmação' : 'Decisão conservadora'}
                     </strong>
                     <br />
                     {result?.workout?.action ||
@@ -704,9 +736,15 @@ export default function Home() {
                       <RefreshCw className="spin" /> Atualizando…
                     </>
                   ) : (
-                    'Atualizar treino agora'
+                    'Atualizar avaliação'
                   )}
                 </Button>
+                {result?.proposal && (
+                  <Button className="primary-action" onClick={(event) => { event.stopPropagation(); confirmTodayProposal(); }} disabled={loading}>
+                    Confirmar e enviar ao Intervals.icu
+                  </Button>
+                )}
+                {weekMessage && <p className="action-message">{weekMessage}</p>}
                 <Button
                   variant="ghost"
                   className="details-action"

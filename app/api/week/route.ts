@@ -1,5 +1,6 @@
 import { ensurePolarSchema, ownerId, recordTrainingDecision, runtime } from '@/lib/polar';
 import { runReadiness } from '@/lib/readiness';
+import { assertDayAvailableForCreation, assertEditablePlannedEvent, claimTrainingWrite, completeTrainingWrite, proposalFingerprint } from '@/lib/training-safety';
 
 export const dynamic = 'force-dynamic';
 
@@ -267,6 +268,7 @@ function futureProposal(event: Json, goal: { objective: string; eventDate?: stri
   return {
     updated,
     proposal: {
+      id: proposalFingerprint(event, updated),
       eventId: original.id,
       date: original.date,
       reason: `A recuperação ou a carga recente pode comprometer o próximo estímulo. A proposta protege o objetivo de ${objectiveNames[objective] || objectiveNames.performance}${protectSpecificity ? ` e a especificidade da meta principal em ${eventDays} dias` : ''}, reduzindo apenas uma variável.`,
@@ -307,7 +309,7 @@ async function context(owner: string) {
   const sunday = addDays(monday, 6);
   const historyStart = addDays(today, -120);
   const [readiness, body, activityBody, historyBody, goalRow] = await Promise.all([
-    runReadiness(owner, false),
+    runReadiness(owner),
     intervals(
       `/athlete/${runtime.INTERVALS_ATHLETE_ID}/events?oldest=${monday}&newest=${sunday}&category=WORKOUT&resolve=true`,
     ),
@@ -469,7 +471,7 @@ async function context(owner: string) {
     monday,
     sunday,
     events,
-    suggestion: canSuggest ? adaptiveSuggestion : null,
+    suggestion: canSuggest ? { ...adaptiveSuggestion, id: `off-${today}-${adaptiveSuggestion.name}-${adaptiveSuggestion.durationMinutes}-${adaptiveSuggestion.load}` } : null,
     forecast,
     futureAlert,
     decisionHistory,
@@ -515,15 +517,26 @@ export async function POST(request: Request) {
     let body: Json = {};
     try { body = await request.json(); } catch {}
     if (body.action === 'apply_proposal') {
+      if (!body.confirmed || !body.proposalId || !body.operationId)
+        return Response.json({ error: 'CONSENT_REQUIRED' }, { status: 400 });
       if (!state.proposal || Number(body.eventId) !== Number(state.proposal.eventId))
         return Response.json({ error: 'A proposta não está mais disponível. Atualize os dados.' }, { status: 409 });
       const eventsBody = await intervals(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/events?oldest=${state.monday}&newest=${state.sunday}&category=WORKOUT&resolve=true`);
       const source = (Array.isArray(eventsBody) ? eventsBody : eventsBody?.events || []).find((event: Json) => Number(event.id) === Number(state.proposal.eventId));
       const recalculated = source ? futureProposal(source, state.goal) : null;
-      if (!recalculated) return Response.json({ error: 'Não foi possível recalcular a proposta com segurança.' }, { status: 409 });
+      if (!recalculated || recalculated.proposal.id !== body.proposalId || recalculated.proposal.id !== state.proposal.id)
+        return Response.json({ error: 'PROPOSAL_CHANGED' }, { status: 409 });
+      const activityBody = await intervals(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/activities?oldest=${state.proposal.date}&newest=${state.proposal.date}&limit=40`);
+      const dayActivities = (Array.isArray(activityBody) ? activityBody : activityBody?.activities || []).filter((activity: Json) =>
+        ['Ride', 'VirtualRide', 'EBikeRide', 'MountainBikeRide'].includes(activity.type || activity.icu_type),
+      );
+      assertEditablePlannedEvent(source, dayActivities, state.today);
+      const claim = await claimTrainingWrite(owner, body.operationId, body.proposalId);
+      if (claim.repeated) return Response.json({ ...claim.response, week: await context(owner) });
       await intervals(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/events/${source.id}`, {
         method: 'PUT', body: JSON.stringify(recalculated.updated),
       });
+      await completeTrainingWrite(owner, body.operationId, { applied: true });
       await recordTrainingDecision(owner, {
         decisionDate: state.today,
         workoutDate: state.proposal.date,
@@ -541,6 +554,19 @@ export async function POST(request: Request) {
         { error: state.suggestionStatus || 'Sugestão não disponível.' },
         { status: 409 },
       );
+    if (body.action !== 'create_suggestion' || !body.confirmed || body.proposalId !== state.suggestion.id || !body.operationId)
+      return Response.json({ error: 'CONSENT_REQUIRED' }, { status: 400 });
+    const [latestEvents, latestActivities] = await Promise.all([
+      intervals(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/events?oldest=${state.today}&newest=${state.today}&category=WORKOUT&resolve=true`),
+      intervals(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/activities?oldest=${state.today}&newest=${state.today}&limit=40`),
+    ]);
+    const existingEvents = (Array.isArray(latestEvents) ? latestEvents : latestEvents?.events || []).filter((event: Json) => event.category === 'WORKOUT');
+    const existingActivities = (Array.isArray(latestActivities) ? latestActivities : latestActivities?.activities || []).filter((activity: Json) =>
+      ['Ride', 'VirtualRide', 'EBikeRide', 'MountainBikeRide'].includes(activity.type || activity.icu_type),
+    );
+    assertDayAvailableForCreation(existingEvents, existingActivities);
+    const claim = await claimTrainingWrite(owner, body.operationId, body.proposalId);
+    if (claim.repeated) return Response.json({ ...claim.response, week: await context(owner) });
     const created = await intervals(
       `/athlete/${runtime.INTERVALS_ATHLETE_ID}/events`,
       {
@@ -555,6 +581,7 @@ export async function POST(request: Request) {
         }),
       },
     );
+    await completeTrainingWrite(owner, body.operationId, { created: normalize(created) });
     await recordTrainingDecision(owner, {
       decisionDate: state.today,
       workoutDate: state.today,
@@ -566,9 +593,11 @@ export async function POST(request: Request) {
     });
     return Response.json({ created: normalize(created), week: await context(owner) });
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Falha ao criar treino';
+    const status = ['WORKOUT_COMPLETED', 'EVENT_NOT_EDITABLE', 'PROPOSAL_CHANGED', 'CONSENT_REQUIRED', 'WRITE_IN_PROGRESS'].includes(message) ? 409 : 502;
     return Response.json(
-      { error: error instanceof Error ? error.message : 'Falha ao criar treino' },
-      { status: 502 },
+      { error: message },
+      { status },
     );
   }
 }

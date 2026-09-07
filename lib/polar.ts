@@ -36,6 +36,12 @@ export async function ensurePolarSchema() {
     runtime.DB.prepare(
       'CREATE INDEX IF NOT EXISTS idx_training_decisions_owner_created ON training_decisions(owner_id, created_at DESC)',
     ),
+    runtime.DB.prepare(
+      'CREATE TABLE IF NOT EXISTS training_write_operations (operation_id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, proposal_id TEXT NOT NULL, status TEXT NOT NULL, response_json TEXT, created_at INTEGER NOT NULL, completed_at INTEGER)',
+    ),
+    runtime.DB.prepare(
+      'CREATE INDEX IF NOT EXISTS idx_training_write_operations_owner ON training_write_operations(owner_id, created_at DESC)',
+    ),
   ]);
 }
 export async function recordTrainingDecision(owner: string, decision: {
