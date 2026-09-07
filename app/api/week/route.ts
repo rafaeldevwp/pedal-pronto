@@ -1,4 +1,4 @@
-import { ownerId, runtime } from '@/lib/polar';
+import { ensurePolarSchema, ownerId, runtime } from '@/lib/polar';
 import { runReadiness } from '@/lib/readiness';
 
 export const dynamic = 'force-dynamic';
@@ -138,7 +138,10 @@ const completedWorkout = (activity: Json, planned?: ReturnType<typeof normalize>
   };
 };
 
-function futureProposal(event: Json) {
+const objectiveNames: Record<string, string> = { performance: 'performance geral', resistencia: 'resistência', ftp: 'potência/FTP', saude: 'saúde e consistência' };
+
+function futureProposal(event: Json, goal: { objective: string; eventDate?: string; priority?: string }) {
+  const objective = goal.objective || 'performance';
   const original = normalize(event);
   const description = String(event.description || '');
   if (description.includes('Ajuste semanal confirmado pelo Pedal Pronto.')) return null;
@@ -146,7 +149,11 @@ function futureProposal(event: Json) {
   const reps = description.match(/\b([3-9]|[1-9]\d)x\b/i);
   let change = '';
   let factor = 0.86;
-  if (reps) {
+  const intensity = description.match(/\b(8[5-9]|9\d|1[0-4]\d)%/);
+  const eventDays = goal.eventDate ? Math.ceil((new Date(`${goal.eventDate}T12:00:00Z`).getTime() - Date.now()) / 86400000) : undefined;
+  const protectSpecificity = goal.priority === 'principal' && eventDays !== undefined && eventDays >= 0 && eventDays <= 21;
+  const preferIntensity = !protectSpecificity && (objective === 'resistencia' || objective === 'saude');
+  if (reps && (!preferIntensity || !intensity)) {
     const from = Number(reps[1]);
     const to = Math.max(2, from - 1);
     updated.description = description.replace(reps[0], `${to}x`);
@@ -154,7 +161,6 @@ function futureProposal(event: Json) {
     change = `Reduzir somente as repetições, de ${from} para ${to}; intensidade e recuperação permanecem iguais.`;
     factor = Math.max(0.72, to / from);
   } else {
-    const intensity = description.match(/\b(8[5-9]|9\d|1[0-4]\d)%/);
     if (!intensity) return null;
     const from = Number(intensity[1]);
     const to = Math.max(80, from - 5);
@@ -173,7 +179,7 @@ function futureProposal(event: Json) {
     proposal: {
       eventId: original.id,
       date: original.date,
-      reason: 'A recuperação ou a carga recente pode comprometer a qualidade do próximo estímulo. A proposta reduz apenas uma variável.',
+      reason: `A recuperação ou a carga recente pode comprometer o próximo estímulo. A proposta protege o objetivo de ${objectiveNames[objective] || objectiveNames.performance}${protectSpecificity ? ` e a especificidade da meta principal em ${eventDays} dias` : ''}, reduzindo apenas uma variável.`,
       change,
       original: { name: original.name, durationMinutes: original.durationMinutes, load: original.load, structure: original.structure },
       recommended: { name: proposed.name, durationMinutes: proposed.durationMinutes, load: proposed.load, structure: proposed.structure },
@@ -204,11 +210,12 @@ function chooseSuggestion(readiness: Awaited<ReturnType<typeof runReadiness>>, a
 }
 
 async function context(owner: string) {
+  await ensurePolarSchema();
   const today = todayInZone();
   const weekday = dayNumber(today);
   const monday = addDays(today, weekday === 0 ? -6 : 1 - weekday);
   const sunday = addDays(monday, 6);
-  const [readiness, body, activityBody] = await Promise.all([
+  const [readiness, body, activityBody, goalRow] = await Promise.all([
     runReadiness(owner, false),
     intervals(
       `/athlete/${runtime.INTERVALS_ATHLETE_ID}/events?oldest=${monday}&newest=${sunday}&category=WORKOUT&resolve=true`,
@@ -216,7 +223,14 @@ async function context(owner: string) {
     intervals(
       `/athlete/${runtime.INTERVALS_ATHLETE_ID}/activities?oldest=${monday}&newest=${sunday}&limit=50`,
     ),
+    runtime.DB.prepare('SELECT objective,event_name,event_date,priority FROM athlete_goals WHERE owner_id=?').bind(owner).first<Record<string, string>>(),
   ]);
+  const goal = {
+    objective: goalRow?.objective || 'performance',
+    eventName: goalRow?.event_name || '',
+    eventDate: goalRow?.event_date || '',
+    priority: goalRow?.priority || 'principal',
+  };
   const rawPlanned = (Array.isArray(body) ? body : body?.events || [])
     .filter((event: Json) => event.category === 'WORKOUT')
   const planned = rawPlanned.map(normalize);
@@ -261,7 +275,7 @@ async function context(owner: string) {
           const date = String(event.start_date_local || event.start_date || '').slice(0, 10);
           return date > today && ![0, 3, 5].includes(dayNumber(date));
         })
-        .map(futureProposal)
+        .map((event: Json) => futureProposal(event, goal))
         .find(Boolean)
     : null;
   const weeklyPlannedLoad = planned.reduce((sum, event) => sum + Number(event.load || 0), 0);
@@ -278,6 +292,7 @@ async function context(owner: string) {
       weeklyLoadBefore: Math.round(weeklyPlannedLoad),
       weeklyLoadAfter: Math.round(weeklyPlannedLoad - Number(proposal.original.load || 0) + Number(proposal.recommended.load || proposal.original.load || 0)),
     } : null,
+    goal,
     suggestionStatus: !restDay
       ? 'Sugestões aparecem somente em dias de descanso.'
       : hasToday
@@ -317,7 +332,7 @@ export async function POST(request: Request) {
         return Response.json({ error: 'A proposta não está mais disponível. Atualize os dados.' }, { status: 409 });
       const eventsBody = await intervals(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/events?oldest=${state.monday}&newest=${state.sunday}&category=WORKOUT&resolve=true`);
       const source = (Array.isArray(eventsBody) ? eventsBody : eventsBody?.events || []).find((event: Json) => Number(event.id) === Number(state.proposal.eventId));
-      const recalculated = source ? futureProposal(source) : null;
+      const recalculated = source ? futureProposal(source, state.goal) : null;
       if (!recalculated) return Response.json({ error: 'Não foi possível recalcular a proposta com segurança.' }, { status: 409 });
       await intervals(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/events/${source.id}`, {
         method: 'PUT', body: JSON.stringify(recalculated.updated),

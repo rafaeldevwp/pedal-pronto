@@ -2,12 +2,12 @@
 
 ## NEXT — T01 Integrar objetivo ao motor
 
-- Validar a implementação local atual.
+- [x] Validar a implementação local atual.
 - Confirmar regras para performance, resistência, FTP e saúde.
 - Confirmar proteção de especificidade até 21 dias da meta principal.
 - Testar que verde não aumenta treino.
 - Testar que somente uma variável muda em amarelo.
-- Publicar e atualizar a memória.
+- [ ] Publicar no PWA e atualizar a memória.
 
 ## Depois
 
@@ -19,4 +19,3 @@
 - T07 Criar alertas de risco futuro — SPEC-07.
 
 Regra: não iniciar T02 antes de T01 estar validada e publicada.
-

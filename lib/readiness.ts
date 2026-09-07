@@ -38,6 +38,12 @@ export type ReadinessResult = {
   };
   updatedAt: string;
   warning?: string;
+  goal?: { objective: string; eventName?: string; eventDate?: string; priority: string; guidance: string };
+};
+
+type Objective = 'performance' | 'resistencia' | 'ftp' | 'saude';
+const objectiveNames: Record<Objective, string> = {
+  performance: 'performance geral', resistencia: 'resistência', ftp: 'potência/FTP', saude: 'saúde e consistência',
 };
 
 const zone = 'America/Sao_Paulo';
@@ -99,7 +105,7 @@ const intervals = async (path: string, init?: RequestInit) => {
   return r.status === 204 ? null : r.json();
 };
 
-function adaptWorkout(event: Json, classification: 'amarela' | 'vermelha') {
+function adaptWorkout(event: Json, classification: 'amarela' | 'vermelha', objective: Objective, protectSpecificity = false) {
   const updated = { ...event };
   const oldName = String(event.name || 'Treino planejado');
   const oldDescription = String(event.description || '');
@@ -121,7 +127,22 @@ function adaptWorkout(event: Json, classification: 'amarela' | 'vermelha') {
     };
   }
   const reps = oldDescription.match(/\b([2-9]|[1-9]\d)x\b/i);
-  if (reps) {
+  const intensity = oldDescription.match(/\b(8[5-9]|9\d|1[0-4]\d)%/);
+  const reduceIntensity = () => {
+    if (!intensity) return null;
+    const from = Number(intensity[1]), to = Math.max(80, from - 5);
+    updated.description = oldDescription.replace(intensity[0], `${to}%`);
+    delete updated.workout_doc;
+    delete updated.icu_training_load;
+    return {
+      updated,
+      action: `intensidade reduzida de ${from}% para ${to}%; duração preservada para sustentar o objetivo de ${objectiveNames[objective]}`,
+      durationMinutes: oldDuration ? Math.round(oldDuration / 60) : undefined,
+      load: oldLoad ? Math.round(oldLoad * 0.9) : undefined,
+    };
+  };
+  const reduceRepetitions = () => {
+    if (!reps) return null;
     const from = Number(reps[1]),
       to = Math.max(2, from - 1);
     updated.description = oldDescription.replace(reps[0], `${to}x`);
@@ -131,28 +152,16 @@ function adaptWorkout(event: Json, classification: 'amarela' | 'vermelha') {
     delete updated.moving_time;
     return {
       updated,
-      action: `repetições reduzidas de ${from} para ${to}; intensidade e recuperações preservadas`,
+      action: `repetições reduzidas de ${from} para ${to}; intensidade preservada para sustentar o objetivo de ${objectiveNames[objective]}`,
       durationMinutes: oldDuration
         ? Math.round((oldDuration / 60) * 0.9)
         : undefined,
       load: oldLoad ? Math.round(oldLoad * 0.84) : undefined,
     };
-  }
-  const intensity = oldDescription.match(/\b(8[5-9]|9\d|1[0-4]\d)%/);
-  if (intensity) {
-    const from = Number(intensity[1]),
-      to = Math.max(80, from - 5);
-    updated.description = oldDescription.replace(intensity[0], `${to}%`);
-    delete updated.workout_doc;
-    delete updated.icu_training_load;
-    return {
-      updated,
-      action: `intensidade reduzida de ${from}% para ${to}%; volume e densidade preservados`,
-      durationMinutes: oldDuration ? Math.round(oldDuration / 60) : undefined,
-      load: oldLoad ? Math.round(oldLoad * 0.9) : undefined,
-    };
-  }
-  return null;
+  };
+  return !protectSpecificity && (objective === 'resistencia' || objective === 'saude')
+    ? reduceIntensity() || reduceRepetitions()
+    : reduceRepetitions() || reduceIntensity();
 }
 
 export async function runReadiness(
@@ -167,6 +176,14 @@ export async function runReadiness(
     .bind(owner)
     .first<{ access_token: string }>();
   if (!connection) throw new Error('POLAR_NOT_CONNECTED');
+  const goalRow = await runtime.DB.prepare(
+    'SELECT objective,event_name,event_date,priority FROM athlete_goals WHERE owner_id=?',
+  ).bind(owner).first<Record<string, string>>();
+  const objective = (['performance', 'resistencia', 'ftp', 'saude'].includes(goalRow?.objective || '') ? goalRow!.objective : 'performance') as Objective;
+  const eventDays = goalRow?.event_date
+    ? Math.ceil((new Date(`${goalRow.event_date}T12:00:00Z`).getTime() - Date.now()) / 86400000)
+    : undefined;
+  const protectSpecificity = goalRow?.priority === 'principal' && eventDays !== undefined && eventDays >= 0 && eventDays <= 21;
   const now = new Date(),
     today = isoDate(now),
     yesterday = isoDate(new Date(now.getTime() - 86400000));
@@ -339,6 +356,8 @@ export async function runReadiness(
       evidence.push(
         'Sono, recuperação autonômica e carga estão dentro da tendência individual.',
       );
+    evidence.push(`Objetivo de ${objectiveNames[objective]} considerado; boa prontidão nunca aumenta a sessão automaticamente.`);
+    if (protectSpecificity) evidence.push(`Meta principal em ${eventDays} dias: especificidade preservada e volume reduzido antes da intensidade quando necessário.`);
     const priorBad = recharges
       .filter((r) => r.date < latestRecharge.date)
       .slice(-1)
@@ -376,7 +395,7 @@ export async function runReadiness(
     }).format(now);
     const restDay = ['Wed', 'Fri', 'Sun'].includes(weekday);
     if (apply && workout && classification !== 'verde' && !restDay) {
-      const adapted = adaptWorkout(workout, classification);
+      const adapted = adaptWorkout(workout, classification, objective, protectSpecificity);
       if (adapted) {
         await intervals(
           `/athlete/${runtime.INTERVALS_ATHLETE_ID}/events/${workout.id}`,
@@ -435,6 +454,23 @@ export async function runReadiness(
         ramp,
       },
       updatedAt: new Date().toISOString(),
+      goal: {
+        objective,
+        eventName: goalRow?.event_name || undefined,
+        eventDate: goalRow?.event_date || undefined,
+        priority: goalRow?.priority || 'principal',
+        guidance: classification === 'vermelha'
+          ? `A segurança prevalece sobre o objetivo de ${objectiveNames[objective]}.`
+          : protectSpecificity
+            ? `Meta principal em ${eventDays} dias: preservamos a especificidade e moderamos primeiro o volume.`
+          : objective === 'resistencia'
+            ? 'Preservamos duração quando possível e moderamos a intensidade.'
+            : objective === 'ftp'
+              ? 'Preservamos a intensidade-alvo quando possível e moderamos as repetições.'
+              : objective === 'saude'
+                ? 'Priorizamos consistência e baixo risco de fadiga excessiva.'
+                : 'Preservamos o estímulo principal com o menor ajuste necessário.',
+      },
     };
     await runtime.DB.prepare(
       'INSERT INTO readiness_runs (owner_id,run_date,classification,changed,report_json,created_at) VALUES (?,?,?,?,?,?)',

@@ -62,6 +62,7 @@ type Result = {
   };
   updatedAt: string;
   warning?: string;
+  goal?: { objective: string; eventName?: string; eventDate?: string; priority: string; guidance: string };
 };
 type WeekWorkout = {
   id: number;
@@ -550,6 +551,15 @@ export default function Home() {
                 </div>
               </CardHeader>
               <CardContent>
+                {result?.goal && (
+                  <div className="goal-guidance">
+                    <Sparkles />
+                    <span>
+                      <small>OBJETIVO CONSIDERADO{result.goal.eventName ? ` · ${result.goal.eventName}` : ''}</small>
+                      <strong>{result.goal.guidance}</strong>
+                    </span>
+                  </div>
+                )}
                 {result?.changed && result.workout?.original && (
                   <div className="workout-comparison">
                     <div>

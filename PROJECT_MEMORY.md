@@ -7,6 +7,7 @@ Atualizado em: 2026-09-07
 PWA pessoal de ciclismo que cruza recuperação do Polar com carga e calendário do Intervals.icu. O objetivo é traduzir dados em decisões simples, adaptar treinos com segurança e preservar a evolução da temporada.
 
 Site: https://pedal-pronto-rafael.rafiusic.chatgpt.site/
+GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Fontes de verdade
 
@@ -42,7 +43,7 @@ Site: https://pedal-pronto-rafael.rafiusic.chatgpt.site/
 
 `NEXT`: concluir a integração do objetivo ao motor de decisão.
 
-A implementação está no diretório de trabalho, ainda não validada nem publicada. Arquivos modificados: `lib/readiness.ts`, `app/api/week/route.ts`, `app/page.tsx` e `app/globals.css`. Ela faz o objetivo definir qual variável preservar e protege especificidade nas três semanas antes de uma meta principal.
+A implementação foi validada localmente, mas ainda não foi publicada no PWA. Ela faz o objetivo definir qual variável preservar e protege a especificidade nas três semanas antes de uma meta principal.
 
 ## Arquitetura curta
 
@@ -57,4 +58,3 @@ A implementação está no diretório de trabalho, ainda não validada nem publi
 ## Publicação
 
 Projeto Sites privado, proprietário único. Antes de publicar: build, commit, envio da fonte, pacote com `dist` + hosting + migrations, salvar versão, publicar versão privada e confirmar sucesso.
-
