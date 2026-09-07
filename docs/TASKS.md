@@ -37,16 +37,24 @@
 - [x] Validar localmente e atualizar a memória.
 - [ ] Publicar somente após solicitação explícita do atleta.
 
-## NEXT — T05 Criar previsão dos próximos dias
+## Concluída localmente — T05 Criar previsão dos próximos dias
 
-- Estimar como o treino de hoje afeta a viabilidade do próximo treino-chave.
-- Mostrar faixa de risco, evidências e incerteza, sem promessa.
-- Não aplicar mudanças futuras sem confirmação explícita.
+- [x] Estimar como o treino de hoje afeta a viabilidade do próximo treino-chave.
+- [x] Mostrar faixa de risco, evidências e incerteza, sem promessa.
+- [x] Não aplicar mudanças futuras sem confirmação explícita.
+- [x] Impedir propostas quando a prontidão estiver indisponível.
+- [x] Validar localmente e atualizar a memória.
+- [ ] Publicar somente após solicitação explícita do atleta.
+
+## NEXT — T06 Criar histórico de decisões
+
+- Registrar treino original, recomendação, decisão e alteração efetiva.
+- Preparar o vínculo com o resultado posterior sem reescrever registros.
+- Exibir histórico de forma simples e somente leitura.
 - Validar localmente; não publicar sem solicitação explícita.
 
 ## Depois
 
-- T06 Criar histórico de decisões — SPEC-06.
 - T07 Criar alertas de risco futuro — SPEC-07.
 
 Regra: trabalhar somente na tarefa marcada como `NEXT`.

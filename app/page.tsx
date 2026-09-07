@@ -110,6 +110,17 @@ type Week = {
     reason: string;
   };
   suggestionStatus?: string;
+  forecast: {
+    risk: 'baixo' | 'moderado' | 'alto' | 'indeterminado';
+    headline: string;
+    message: string;
+    today: null | { name: string; load?: number; durationMinutes?: number };
+    nextKey: null | { name: string; date: string; load?: number; durationMinutes?: number; daysAway?: number };
+    evidence: string[];
+    confidence: string;
+    guidance: string;
+    caveat: string;
+  };
   planOutlook: Array<{ id: number; date: string; name: string; status: 'protegido' | 'observar'; note: string }>;
   proposal: null | {
     eventId: number;
@@ -889,6 +900,28 @@ export default function Home() {
           ) : week?.suggestionStatus ? (
             <p className="suggestion-status">{week.suggestionStatus}</p>
           ) : null}
+          {week?.forecast && (
+            <Card className={`forecast-card risk-${week.forecast.risk}`}>
+              <div className="forecast-heading">
+                <div>
+                  <p className="eyebrow">IMPACTO NOS PRÓXIMOS DIAS</p>
+                  <h2>{week.forecast.headline}</h2>
+                </div>
+                <Badge variant="outline">Risco {week.forecast.risk}</Badge>
+              </div>
+              <p className="muted-copy">{week.forecast.message}</p>
+              {week.forecast.nextKey && (
+                <div className="forecast-route">
+                  <span><small>HOJE</small><strong>{week.forecast.today?.name || 'Recuperação'}</strong><em>{week.forecast.today?.load ? `Carga ${week.forecast.today.load}` : 'Sem carga planejada'}</em></span>
+                  <ChevronRight />
+                  <span><small>PRÓXIMO TREINO-CHAVE</small><strong>{week.forecast.nextKey.name}</strong><em>{formatDay(week.forecast.nextKey.date)} · {week.forecast.nextKey.load ? `carga ${week.forecast.nextKey.load}` : 'carga não informada'}</em></span>
+                </div>
+              )}
+              <ul className="forecast-evidence">{week.forecast.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
+              <div className="forecast-guidance"><ShieldCheck /><span><strong>Orientação</strong>{week.forecast.guidance}</span></div>
+              <small className="forecast-caveat">Confiança {week.forecast.confidence} · {week.forecast.caveat}</small>
+            </Card>
+          )}
           {week?.proposal && (
             <Card className="proposal-card">
               <div className="proposal-heading">

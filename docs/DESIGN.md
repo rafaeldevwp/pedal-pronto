@@ -18,6 +18,7 @@
 - Comparação pessoal: mostrar o grupo usado, a diferença combinada, evidências curtas, confiança e fatores externos que limitam a leitura.
 - Aprendizado individual: falar em associação, mostrar quantos dias foram pareados e ocultar conclusões abaixo da amostra mínima.
 - Check-in: explicar a direção de cada escala; destacar imediatamente quando dor ou sintomas ativarem conduta conservadora.
+- Previsão: mostrar `Hoje → próximo treino-chave`, faixa de risco, evidências, orientação e aviso explícito de incerteza.
 - Objetivo: visível como contexto da decisão, nunca como incentivo automático a treinar mais.
 
 ## Vocabulário

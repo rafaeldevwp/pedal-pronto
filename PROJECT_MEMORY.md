@@ -42,11 +42,11 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-`NEXT`: T05 — criar previsão dos próximos dias.
+`NEXT`: T06 — criar histórico de decisões.
 
-A T03 e a T04 estão implementadas e validadas apenas localmente, ainda não publicadas por solicitação do atleta. A T04 ampliou o check-in com pernas, motivação, sintomas e tempo disponível. Dor a partir de 4/10 ou sintomas a partir de 3/10 impedem leitura verde; dor a partir de 6/10 ou sintomas a partir de 5/10 forçam conduta vermelha e conservadora. Nenhuma regra permite intensificação.
+A T03, T04 e T05 estão implementadas e validadas apenas localmente, ainda não publicadas por solicitação do atleta. A T05 estima o impacto de hoje sobre o próximo treino-chave em risco baixo, moderado, alto ou indeterminado. Usa recuperação, carga, fitness/fadiga, distância temporal e carga seguinte, declara incerteza e não aplica mudanças futuras. Prontidão indisponível não gera proposta.
 
-A versão online permanece na T02. Não publicar a T03, T04 ou tarefas posteriores até solicitação explícita do atleta.
+A versão online permanece na T02. Não publicar a T03, T04, T05 ou tarefas posteriores até solicitação explícita do atleta.
 
 O repositório privado `rafaeldevwp/pedal-pronto` foi criado e a integração recebeu acesso somente a ele. O envio inicial do conteúdo foi interrompido e deve ser retomado separadamente; não confundir isso com a publicação do PWA pelo Sites.
 

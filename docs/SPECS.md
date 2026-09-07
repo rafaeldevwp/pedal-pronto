@@ -32,13 +32,13 @@ Adicionar pernas, motivação, sintomas e tempo disponível aos campos existente
 
 ## SPEC-05 — Previsão dos próximos dias
 
-Status: próxima
+Status: concluída localmente; aguardando publicação
 
 Estimar como o treino de hoje afeta a viabilidade do próximo treino-chave. A previsão deve ser faixa de risco, não promessa.
 
 ## SPEC-06 — Histórico de decisões
 
-Status: planejada
+Status: próxima
 
 Registrar original, recomendação, decisão, alteração efetiva e resultado posterior. Nunca modificar o histórico.
 

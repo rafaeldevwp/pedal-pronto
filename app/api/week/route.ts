@@ -358,15 +358,63 @@ async function context(owner: string) {
   const adaptiveSuggestion = chooseSuggestion(readiness, activities, planned, today);
   const yesterday = addDays(today, -1);
   const yesterdayLoad = activities.filter((a) => activityDate(a) === yesterday).reduce((sum, a) => sum + Number(a.icu_training_load || a.load || 0), 0);
+  const todaySession = events.find((event: Json) => event.date === today);
+  const futureSessions = planned.filter((event) => event.date > today);
+  const nextKey = futureSessions.find((event) => {
+    const source = rawPlanned.find((raw: Json) => Number(raw.id) === Number(event.id));
+    const description = String(source?.description || '');
+    const intensityMatch = description.match(/\b(\d{2,3})%/);
+    return Number(event.load || 0) >= Math.max(60, Number(readiness.metrics.ctl || 0) * 1.2) || Number(intensityMatch?.[1] || 0) >= 80;
+  }) || futureSessions[0];
+  const daysToKey = nextKey ? Math.max(1, Math.round((new Date(`${nextKey.date}T12:00:00Z`).getTime() - new Date(`${today}T12:00:00Z`).getTime()) / 86400000)) : undefined;
+  const todayLoad = Number(todaySession?.load || 0);
+  const ctl = Number(readiness.metrics.ctl || 0);
+  const form = Number(readiness.metrics.form || 0);
+  const forecastEvidence: string[] = [];
+  let riskPoints = 0;
+  if (readiness.classification === 'amarela') { riskPoints += 2; forecastEvidence.push('A recuperação de hoje está apenas parcial.'); }
+  if (readiness.classification === 'vermelha') { riskPoints += 4; forecastEvidence.push('A recuperação de hoje está insuficiente.'); }
+  if (todayLoad && ctl && todayLoad > ctl * 1.5) { riskPoints += 2; forecastEvidence.push(`A carga de hoje (${Math.round(todayLoad)}) é alta para o fitness atual (${Math.round(ctl)}).`); }
+  if (form < -15) { riskPoints += 2; forecastEvidence.push('A fadiga acumulada reduz a margem para absorver outra sessão exigente.'); }
+  if (daysToKey === 1 && todayLoad) { riskPoints += 2; forecastEvidence.push('Há menos de 24 horas até o próximo treino importante.'); }
+  if (nextKey?.load && ctl && Number(nextKey.load) > ctl * 1.4) { riskPoints += 1; forecastEvidence.push('O próximo treino também representa uma carga relevante.'); }
+  if (!todaySession) forecastEvidence.push('Hoje não há sessão planejada; preservar o descanso favorece o próximo estímulo.');
+  if (!forecastEvidence.length) forecastEvidence.push('Recuperação, carga de hoje e intervalo até o próximo estímulo estão compatíveis.');
+  const unavailableForecast = readiness.classification === 'indisponível' || !nextKey;
+  const forecastRisk = unavailableForecast ? 'indeterminado' : riskPoints >= 5 ? 'alto' : riskPoints >= 2 ? 'moderado' : 'baixo';
+  const forecast = {
+    risk: forecastRisk,
+    headline: unavailableForecast
+      ? 'Previsão ainda indisponível'
+      : forecastRisk === 'alto' ? 'O próximo treino-chave pode ficar comprometido'
+        : forecastRisk === 'moderado' ? 'O próximo treino-chave merece atenção'
+          : 'Boa chance de chegar apto ao próximo treino-chave',
+    message: unavailableForecast
+      ? 'Faltam dados confiáveis ou um próximo treino planejado para estimar o impacto.'
+      : !todaySession ? 'Manter o dia sem treino cria margem de recuperação para a próxima sessão.'
+        : forecastRisk === 'alto' ? 'A combinação atual aumenta a chance de recuperação incompleta antes da próxima sessão importante.'
+          : forecastRisk === 'moderado' ? 'O treino de hoje parece possível, mas a resposta do corpo e a recuperação depois dele serão decisivas.'
+            : 'A carga de hoje e o tempo disponível para recuperar parecem compatíveis com o próximo estímulo.',
+    today: todaySession ? { name: todaySession.name, load: todaySession.load, durationMinutes: todaySession.durationMinutes } : null,
+    nextKey: nextKey ? { name: nextKey.name, date: nextKey.date, load: nextKey.load, durationMinutes: nextKey.durationMinutes, daysAway: daysToKey } : null,
+    evidence: forecastEvidence.slice(0, 4),
+    confidence: unavailableForecast ? 'limitada' : ctl && todaySession?.load && nextKey?.load ? 'boa' : 'moderada',
+    guidance: unavailableForecast
+      ? 'Não altere o plano com base nesta previsão.'
+      : forecastRisk === 'alto' ? 'Reavalie após o treino de hoje; qualquer mudança futura continuará exigindo sua confirmação.'
+        : forecastRisk === 'moderado' ? 'Observe pernas, alimentação e sono antes do próximo treino-chave.'
+          : 'Siga o plano sem aumentar a sessão de hoje.',
+    caveat: 'Esta é uma faixa de risco, não uma promessa. A resposta real ao treino e a próxima noite de sono podem mudar a leitura.',
+  };
   const planOutlook = planned.filter((event) => event.date > today).slice(0, 3).map((event) => {
-    const stressed = readiness.classification !== 'verde' || yesterdayLoad > Math.max(70, Number(readiness.metrics.ctl || 0) * 1.5);
+    const stressed = ['amarela', 'vermelha'].includes(readiness.classification) || yesterdayLoad > Math.max(70, Number(readiness.metrics.ctl || 0) * 1.5);
     return {
       id: event.id, date: event.date, name: event.name,
       status: stressed ? 'observar' : 'protegido',
       note: stressed ? 'Pode precisar de ajuste se a recuperação não normalizar. Nenhuma mudança aplicada.' : 'Compatível com a carga atual. Nenhuma mudança proposta.',
     };
   });
-  const stressed = readiness.classification !== 'verde' || yesterdayLoad > Math.max(70, Number(readiness.metrics.ctl || 0) * 1.5);
+  const stressed = ['amarela', 'vermelha'].includes(readiness.classification) || yesterdayLoad > Math.max(70, Number(readiness.metrics.ctl || 0) * 1.5);
   const proposalBuilt = stressed
     ? rawPlanned
         .filter((event: Json) => {
@@ -384,6 +432,7 @@ async function context(owner: string) {
     sunday,
     events,
     suggestion: canSuggest ? adaptiveSuggestion : null,
+    forecast,
     planOutlook,
     proposal: proposal ? {
       ...proposal,
