@@ -41,9 +41,11 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-`NEXT`: concluir a integração do objetivo ao motor de decisão.
+`NEXT`: T02 — construir comparação de sessões semelhantes.
 
-A implementação foi validada localmente, mas ainda não foi publicada no PWA. Ela faz o objetivo definir qual variável preservar e protege a especificidade nas três semanas antes de uma meta principal.
+A integração do objetivo ao motor foi validada e preparada para publicação. Ela faz o objetivo definir qual variável preservar e protege a especificidade nas três semanas antes de uma meta principal.
+
+O repositório privado `rafaeldevwp/pedal-pronto` foi criado e a integração recebeu acesso somente a ele. O envio inicial do conteúdo foi interrompido e deve ser retomado separadamente; não confundir isso com a publicação do PWA pelo Sites.
 
 ## Arquitetura curta
 

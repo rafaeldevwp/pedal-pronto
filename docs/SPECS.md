@@ -2,7 +2,7 @@
 
 ## SPEC-01 — Objetivo orienta decisões
 
-Status: em andamento
+Status: concluída
 
 O objetivo, evento, data e prioridade devem influenciar qual estímulo preservar. FTP preserva intensidade quando possível; resistência preserva duração; saúde favorece consistência. Nas três semanas antes de uma meta principal, preservar especificidade e reduzir primeiro o volume. Nunca aumentar carga por prontidão verde.
 
@@ -10,7 +10,7 @@ Aceite: relatório explica o objetivo considerado; ajustes de hoje e propostas f
 
 ## SPEC-02 — Comparação de sessões semelhantes
 
-Status: planejada
+Status: próxima
 
 Comparar cada treino concluído com sessões pessoais semelhantes por estrutura, duração e intensidade. Traduzir potência, FC, cadência, desacoplamento, RPE e carga em linguagem simples.
 
@@ -47,4 +47,3 @@ Registrar original, recomendação, decisão, alteração efetiva e resultado po
 Status: planejada
 
 Notificar quando um treino futuro entrar em risco. O alerta não aplica mudança; oferece acesso à proposta para confirmação.
-
