@@ -42,11 +42,11 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-`NEXT`: T06 — criar histórico de decisões.
+`NEXT`: T07 — criar alertas de risco futuro.
 
-A T03, T04 e T05 estão implementadas e validadas apenas localmente, ainda não publicadas por solicitação do atleta. A T05 estima o impacto de hoje sobre o próximo treino-chave em risco baixo, moderado, alto ou indeterminado. Usa recuperação, carga, fitness/fadiga, distância temporal e carga seguinte, declara incerteza e não aplica mudanças futuras. Prontidão indisponível não gera proposta.
+A T03, T04, T05 e T06 estão implementadas e validadas apenas localmente, ainda não publicadas por solicitação do atleta. A T06 adicionou histórico append-only para decisões diárias, replanejamentos confirmados e sugestões OFF aceitas. A tela mostra programado, decisão efetiva, justificativa e resultado posterior obtido na leitura do Intervals.icu, sem reescrever registros.
 
-A versão online permanece na T02. Não publicar a T03, T04, T05 ou tarefas posteriores até solicitação explícita do atleta.
+A versão online permanece na T02. Não publicar a T03, T04, T05, T06 ou tarefas posteriores até solicitação explícita do atleta.
 
 O repositório privado `rafaeldevwp/pedal-pronto` foi criado e a integração recebeu acesso somente a ele. O envio inicial do conteúdo foi interrompido e deve ser retomado separadamente; não confundir isso com a publicação do PWA pelo Sites.
 
@@ -58,6 +58,7 @@ O repositório privado `rafaeldevwp/pedal-pronto` foi criado e a integração re
 - `app/api/performance/route.ts`: evolução e potência.
 - `app/api/profile/route.ts`: objetivo da temporada.
 - `lib/polar.ts`: ambiente, identidade e estrutura D1.
+- `drizzle/0002_training_decisions.sql`: histórico imutável de decisões.
 - `.openai/hosting.json`: projeto hospedado e D1.
 
 ## Publicação

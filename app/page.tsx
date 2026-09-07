@@ -122,6 +122,19 @@ type Week = {
     caveat: string;
   };
   planOutlook: Array<{ id: number; date: string; name: string; status: 'protegido' | 'observar'; note: string }>;
+  decisionHistory: Array<{
+    id: number;
+    decisionDate: string;
+    workoutDate: string;
+    source: 'prontidao_diaria' | 'replanejamento' | 'sugestao_off';
+    status: 'mantido' | 'alterado' | 'adicionado';
+    original: null | { name: string; durationMinutes?: number; load?: number };
+    recommended: null | { name: string; durationMinutes?: number; load?: number };
+    effective: null | { name: string; durationMinutes?: number; load?: number };
+    reason: string;
+    createdAt: string;
+    outcome: null | { name: string; durationMinutes?: number; load?: number; rpe?: number };
+  }>;
   proposal: null | {
     eventId: number;
     date: string;
@@ -975,6 +988,41 @@ export default function Home() {
               </div>
             </Card>
           )}
+          <Card className="decision-history-card">
+            <div className="history-heading">
+              <div>
+                <p className="eyebrow">HISTÓRICO DE DECISÕES</p>
+                <h2>O que foi decidido e o que aconteceu</h2>
+              </div>
+              <Badge variant="outline">Somente leitura</Badge>
+            </div>
+            {week?.decisionHistory?.length ? (
+              <div className="decision-list">
+                {week.decisionHistory.map((decision) => (
+                  <details key={decision.id} className="decision-item">
+                    <summary>
+                      <span className={`decision-state ${decision.status}`} />
+                      <span><small>{formatDay(decision.workoutDate)} · {decision.source === 'prontidao_diaria' ? 'Prontidão diária' : decision.source === 'replanejamento' ? 'Replanejamento confirmado' : 'Treino opcional'}</small><strong>{decision.effective?.name || decision.recommended?.name || decision.original?.name || 'Decisão registrada'}</strong></span>
+                      <Badge variant="outline">{decision.status}</Badge>
+                    </summary>
+                    <div className="decision-flow">
+                      <span><small>PROGRAMADO</small><strong>{decision.original?.name || 'Dia sem treino'}</strong><em>{decision.original?.durationMinutes ? `${decision.original.durationMinutes} min` : '—'} · carga {decision.original?.load ?? '—'}</em></span>
+                      <ChevronRight />
+                      <span><small>DECISÃO EFETIVA</small><strong>{decision.effective?.name || 'Sem alteração'}</strong><em>{decision.effective?.durationMinutes ? `${decision.effective.durationMinutes} min` : '—'} · carga {decision.effective?.load ?? '—'}</em></span>
+                    </div>
+                    <p>{decision.reason}</p>
+                    {decision.outcome ? (
+                      <div className="decision-outcome"><Check /><span><strong>Resultado posterior encontrado</strong>{decision.outcome.durationMinutes ?? '—'} min · carga {decision.outcome.load ?? '—'}{decision.outcome.rpe ? ` · sensação ${decision.outcome.rpe}/10` : ''}</span></div>
+                    ) : (
+                      <small className="history-pending">Resultado posterior ainda não disponível. O registro original permanece intacto.</small>
+                    )}
+                  </details>
+                ))}
+              </div>
+            ) : (
+              <p className="muted-copy">As próximas decisões manuais aparecerão aqui sem alterar registros anteriores.</p>
+            )}
+          </Card>
           {weekMessage && <p className="week-message">{weekMessage}</p>}
         </section>
       )}

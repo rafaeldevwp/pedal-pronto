@@ -1,4 +1,4 @@
-import { ensurePolarSchema, ownerId, runtime } from '@/lib/polar';
+import { ensurePolarSchema, ownerId, recordTrainingDecision, runtime } from '@/lib/polar';
 import { runReadiness } from '@/lib/readiness';
 
 export const dynamic = 'force-dynamic';
@@ -426,6 +426,34 @@ async function context(owner: string) {
     : null;
   const weeklyPlannedLoad = planned.reduce((sum, event) => sum + Number(event.load || 0), 0);
   const proposal = proposalBuilt?.proposal || null;
+  const decisionRows = await runtime.DB.prepare(
+    `SELECT id,decision_date,workout_date,source,status,original_json,recommended_json,effective_json,reason,created_at
+     FROM training_decisions WHERE owner_id=? ORDER BY created_at DESC LIMIT 20`,
+  ).bind(owner).all<Json>();
+  const parseStored = (value?: string) => {
+    try { return value ? JSON.parse(value) : null; } catch { return null; }
+  };
+  const decisionHistory = (decisionRows.results || []).map((row) => {
+    const completedActivity = history.find((activity: Json) => activityDate(activity) === row.workout_date);
+    return {
+      id: row.id,
+      decisionDate: row.decision_date,
+      workoutDate: row.workout_date,
+      source: row.source,
+      status: row.status,
+      original: parseStored(row.original_json),
+      recommended: parseStored(row.recommended_json),
+      effective: parseStored(row.effective_json),
+      reason: row.reason,
+      createdAt: new Date(Number(row.created_at)).toISOString(),
+      outcome: completedActivity ? {
+        name: completedActivity.name || 'Treino realizado',
+        durationMinutes: activityMinutes(completedActivity),
+        load: Number(completedActivity.icu_training_load || completedActivity.load || 0) || undefined,
+        rpe: Number(completedActivity.perceived_exertion || completedActivity.rpe || 0) || undefined,
+      } : null,
+    };
+  });
   return {
     today,
     monday,
@@ -433,6 +461,7 @@ async function context(owner: string) {
     events,
     suggestion: canSuggest ? adaptiveSuggestion : null,
     forecast,
+    decisionHistory,
     planOutlook,
     proposal: proposal ? {
       ...proposal,
@@ -484,6 +513,16 @@ export async function POST(request: Request) {
       await intervals(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/events/${source.id}`, {
         method: 'PUT', body: JSON.stringify(recalculated.updated),
       });
+      await recordTrainingDecision(owner, {
+        decisionDate: state.today,
+        workoutDate: state.proposal.date,
+        source: 'replanejamento',
+        status: 'alterado',
+        original: state.proposal.original,
+        recommended: state.proposal.recommended,
+        effective: state.proposal.recommended,
+        reason: state.proposal.reason,
+      });
       return Response.json({ applied: true, week: await context(owner) });
     }
     if (!state.suggestion)
@@ -505,6 +544,15 @@ export async function POST(request: Request) {
         }),
       },
     );
+    await recordTrainingDecision(owner, {
+      decisionDate: state.today,
+      workoutDate: state.today,
+      source: 'sugestao_off',
+      status: 'adicionado',
+      recommended: state.suggestion,
+      effective: normalize(created),
+      reason: state.suggestion.reason,
+    });
     return Response.json({ created: normalize(created), week: await context(owner) });
   } catch (error) {
     return Response.json(

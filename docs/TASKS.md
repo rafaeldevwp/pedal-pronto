@@ -46,15 +46,25 @@
 - [x] Validar localmente e atualizar a memória.
 - [ ] Publicar somente após solicitação explícita do atleta.
 
-## NEXT — T06 Criar histórico de decisões
+## Concluída localmente — T06 Criar histórico de decisões
 
-- Registrar treino original, recomendação, decisão e alteração efetiva.
-- Preparar o vínculo com o resultado posterior sem reescrever registros.
-- Exibir histórico de forma simples e somente leitura.
+- [x] Registrar treino original, recomendação, decisão e alteração efetiva.
+- [x] Vincular o resultado posterior na leitura, sem reescrever registros.
+- [x] Exibir histórico de forma simples e somente leitura.
+- [x] Criar armazenamento append-only e índice por atleta/data.
+- [x] Validar build e migração localmente; atualizar a memória.
+- [ ] Publicar somente após solicitação explícita do atleta.
+
+## NEXT — T07 Criar alertas de risco futuro
+
+- Detectar quando um treino futuro entrar em risco relevante.
+- Alertar sem aplicar mudança automaticamente.
+- Levar o atleta à proposta que exige confirmação.
+- Evitar alertas repetidos ou baseados em dados incompletos.
 - Validar localmente; não publicar sem solicitação explícita.
 
 ## Depois
 
-- T07 Criar alertas de risco futuro — SPEC-07.
+- Definir novas SPECs somente após concluir e revisar a T07.
 
 Regra: trabalhar somente na tarefa marcada como `NEXT`.

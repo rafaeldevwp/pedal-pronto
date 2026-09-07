@@ -19,6 +19,7 @@
 - Aprendizado individual: falar em associação, mostrar quantos dias foram pareados e ocultar conclusões abaixo da amostra mínima.
 - Check-in: explicar a direção de cada escala; destacar imediatamente quando dor ou sintomas ativarem conduta conservadora.
 - Previsão: mostrar `Hoje → próximo treino-chave`, faixa de risco, evidências, orientação e aviso explícito de incerteza.
+- Histórico: linha do tempo expansível, `Programado → decisão efetiva`, justificativa e resultado posterior; sempre somente leitura.
 - Objetivo: visível como contexto da decisão, nunca como incentivo automático a treinar mais.
 
 ## Vocabulário

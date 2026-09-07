@@ -38,12 +38,12 @@ Estimar como o treino de hoje afeta a viabilidade do próximo treino-chave. A pr
 
 ## SPEC-06 — Histórico de decisões
 
-Status: próxima
+Status: concluída localmente; aguardando publicação
 
 Registrar original, recomendação, decisão, alteração efetiva e resultado posterior. Nunca modificar o histórico.
 
 ## SPEC-07 — Alertas de risco futuro
 
-Status: planejada
+Status: próxima
 
 Notificar quando um treino futuro entrar em risco. O alerta não aplica mudança; oferece acesso à proposta para confirmação.

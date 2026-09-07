@@ -1,4 +1,4 @@
-import { ensurePolarSchema, runtime } from '@/lib/polar';
+import { ensurePolarSchema, recordTrainingDecision, runtime } from '@/lib/polar';
 
 type Json = Record<string, any>;
 export type ReadinessResult = {
@@ -506,6 +506,28 @@ export async function runReadiness(
                 : 'Preservamos o estímulo principal com o menor ajuste necessário.',
       },
     };
+    if (apply && workout) {
+      await recordTrainingDecision(owner, {
+        decisionDate: today,
+        workoutDate: today,
+        source: 'prontidao_diaria',
+        status: changed ? 'alterado' : 'mantido',
+        original: originalWorkout,
+        recommended: changed ? {
+          name: finalName,
+          durationMinutes: duration ? Math.round(duration / 60) : undefined,
+          load: load ? Math.round(load) : undefined,
+          structure,
+        } : originalWorkout,
+        effective: {
+          name: finalName,
+          durationMinutes: duration ? Math.round(duration / 60) : undefined,
+          load: load ? Math.round(load) : undefined,
+          structure,
+        },
+        reason: `${classification.toUpperCase()}: ${action}`,
+      });
+    }
     await runtime.DB.prepare(
       'INSERT INTO readiness_runs (owner_id,run_date,classification,changed,report_json,created_at) VALUES (?,?,?,?,?,?)',
     )
