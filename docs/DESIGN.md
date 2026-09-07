@@ -8,6 +8,7 @@
 - Verde, amarelo e vermelho mantêm significado consistente.
 - Nenhuma alteração futura silenciosa.
 - Nenhuma alteração de hoje ou futura sem consentimento específico; avaliar e atualizar dados são sempre ações somente leitura.
+- Atividade concluída é inviolável: aparece apenas para consulta e feedback, nunca oferece controles de alteração, substituição ou exclusão.
 - Incerteza deve aparecer como confiança limitada, não como falsa precisão.
 
 ## Padrões de interface
@@ -23,6 +24,7 @@
 - Histórico: linha do tempo expansível, `Programado → decisão efetiva`, justificativa e resultado posterior; sempre somente leitura.
 - Alerta futuro: um alerta por risco relevante, acesso direto à proposta, opção de notificação no celular e texto explícito de que nada foi alterado.
 - Confirmação de escrita: `Programado → Recomendado`, impacto e botão explícito; fechar ou cancelar preserva o original.
+- Alvo concluído entre proposta e confirmação: retirar a ação, preservar a atividade e mostrar “Treino já realizado — nenhuma alteração aplicada”.
 - Sliders: extremos sempre visíveis e tocáveis; zero é valor válido, persistente e nunca equivale a dado ausente.
 - Objetivo: visível como contexto da decisão, nunca como incentivo automático a treinar mais.
 

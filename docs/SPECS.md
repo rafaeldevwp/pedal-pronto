@@ -54,12 +54,15 @@ Status: próxima — correção crítica
 
 Nenhuma avaliação, atualização manual, automação diária ou alerta pode modificar, substituir, cancelar ou criar um treino no Intervals.icu sem uma confirmação explícita do atleta para aquela mudança específica. A regra vale para hoje e para dias futuros e substitui a permissão automática anterior. A avaliação pode gerar uma proposta, mas deve permanecer somente leitura até a confirmação.
 
+Atividades e treinos já concluídos no Intervals.icu são permanentemente somente leitura para o Pedal Pronto. Mesmo com confirmação do atleta, o app nunca pode editar, substituir, cancelar, apagar ou sobrescrever uma atividade realizada nem seus dados históricos. A adaptação só pode apontar para um evento planejado que ainda não foi executado.
+
 Fluxo obrigatório:
 
 - Mostrar `Programado → Recomendado`, mudança exata, duração, carga e justificativa.
 - Exigir uma ação separada e inequívoca: `Confirmar e enviar ao Intervals.icu`.
 - No servidor, separar os comandos de avaliar, propor e aplicar; atualizar dados ou executar a automação nunca pode alcançar o caminho de escrita.
 - Revalidar a proposta e o treino original imediatamente antes da escrita. Se mudaram, cancelar a operação e pedir nova revisão.
+- Antes de qualquer escrita, consultar novamente eventos e atividades do Intervals.icu e bloquear a operação se o treino já tiver sido concluído, tiver atividade associada ou tiver deixado de ser um evento futuro editável.
 - Tornar a confirmação idempotente para impedir aplicação duplicada por toque repetido, repetição de rede ou atualização da página.
 - Registrar proposta, consentimento e resultado no histórico imutável.
 - Emitir `TREINO ALTERADO —` somente depois de o Intervals.icu confirmar a escrita.
@@ -70,7 +73,10 @@ Aceite:
 - Nenhuma requisição sem consentimento específico consegue executar `POST` ou `PUT` de treino.
 - Uma proposta amarela/vermelha permanece pendente até confirmação.
 - Cancelar, fechar ou ignorar a proposta mantém o treino original.
+- Um treino concluído permanece byte a byte intocado, mesmo se ainda existir um evento planejado na mesma data ou se chegar uma confirmação atrasada.
+- O servidor rejeita qualquer tentativa de escrita cujo alvo seja atividade, histórico ou evento já executado; a interface explica que somente treinos planejados podem ser adaptados.
 - Testes regressivos cobrem verde, amarela, vermelha, descanso, dados incompletos, clique duplo e conflito com alteração feita diretamente no Intervals.icu.
+- Testes regressivos adicionais cobrem atividade concluída antes da avaliação, concluída entre proposta e confirmação, dois treinos no mesmo dia e sincronização atrasada.
 
 ## SPEC-09 — Slider do check-in permanece utilizável em zero
 

@@ -70,7 +70,10 @@
 - Separar avaliação, proposta e aplicação no cliente e no servidor.
 - Remover qualquer escrita automática da prontidão diária e da automação.
 - Exigir confirmação específica e revalidar o treino antes da escrita.
+- Criar uma guarda central no servidor que permita escrita somente em evento planejado não concluído.
+- Consultar atividades no momento da confirmação e bloquear alvos concluídos, associados a atividade ou históricos.
 - Adicionar idempotência, auditoria e regressão dos cenários críticos.
+- Testar conclusão antes da proposta, entre proposta e confirmação, sincronização atrasada e múltiplas sessões no mesmo dia.
 - Publicar apenas após validação e autorização do atleta.
 
 ## Depois

@@ -19,6 +19,7 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 ## Regras imutáveis
 
 - Nunca apagar atividades ou alterar dados históricos.
+- Treino ou atividade concluída no Intervals.icu é permanentemente somente leitura, mesmo com confirmação; adaptações só podem atingir eventos planejados ainda não executados.
 - Dados ausentes, atrasados, contraditórios ou sessão expirada: não alterar treino.
 - Verde mantém o plano; boa prontidão nunca aumenta a sessão automaticamente.
 - Amarela altera no máximo uma variável.
@@ -52,7 +53,7 @@ A T03 até a T07 foram integradas, validadas e publicadas em um único lote apó
 
 A versão online contém as SPECs T01–T07.
 
-Dois bugs foram especificados após uso real: o treino de hoje foi alterado sem consentimento e o botão do slider desaparece em zero. A SPEC-08 é correção crítica e vem antes da SPEC-09. As correções ainda não foram implementadas nem publicadas.
+Dois bugs foram especificados após uso real: o treino de hoje foi alterado sem consentimento e o botão do slider desaparece em zero. A SPEC-08 também exige uma guarda central que impeça qualquer escrita em treino concluído, inclusive quando a conclusão ocorre entre proposta e confirmação. A SPEC-08 é correção crítica e vem antes da SPEC-09. As correções ainda não foram implementadas nem publicadas.
 
 O repositório privado `rafaeldevwp/pedal-pronto` foi criado e a integração recebeu acesso somente a ele. O envio inicial do conteúdo foi interrompido e deve ser retomado separadamente; não confundir isso com a publicação do PWA pelo Sites.
 
