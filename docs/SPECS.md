@@ -95,7 +95,7 @@ Aceite:
 
 ## SPEC-10 — Glossário contextual de fisiologia e treinamento
 
-Status: planejada
+Status: implementada e validada localmente; publicação pendente de autorização
 
 Criar um glossário em linguagem simples para todos os termos técnicos exibidos pelo Pedal Pronto. A explicação deve estar disponível no contexto em que a métrica aparece e também em uma área única de consulta. O objetivo é ajudar atletas leigos a entender o dado sem transformar a métrica isolada em diagnóstico ou ordem de treino.
 

@@ -4,6 +4,7 @@ import {
   Activity,
   Bell,
   Bike,
+  BookOpen,
   Check,
   ChevronDown,
   ChevronRight,
@@ -13,6 +14,7 @@ import {
   Link2,
   Moon,
   RefreshCw,
+  Search,
   ShieldCheck,
   Sparkles,
   TrendingUp,
@@ -24,11 +26,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { checkinFields, defaultCheckin, parseStoredCheckin, type CheckinState } from '@/lib/checkin';
+import { glossary, glossaryById, type GlossaryCategory } from '@/lib/glossary';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Scatter, ScatterChart, XAxis, YAxis } from 'recharts';
 
-type Tab = 'hoje' | 'recuperacao' | 'treinos' | 'evolucao';
+type Tab = 'hoje' | 'recuperacao' | 'treinos' | 'evolucao' | 'glossario';
 type InstallPrompt = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: string }>;
@@ -255,15 +258,23 @@ function WorkoutBlocks({ steps }: { steps: string[] }) {
   );
 }
 
-function RecoveryMetric({ label, value, explanation }: { label: string; value: string; explanation: string }) {
+function TermHelp({ entryId, onOpen, light = false }: { entryId: string; onOpen: (id: string) => void; light?: boolean }) {
+  const entry = glossaryById(entryId);
+  if (!entry) return null;
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<button className={`info-trigger ${light ? 'light' : ''}`} aria-label={`Entenda ${entry.term}`} onClick={() => onOpen(entry.id)}><Info /></button>} />
+      <TooltipContent side="bottom">{entry.summary} Toque para saber mais.</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function RecoveryMetric({ label, value, entryId, onOpen }: { label: string; value: string; entryId: string; onOpen: (id: string) => void }) {
   return (
     <span>
       <small className="metric-label">
         {label}
-        <Tooltip>
-          <TooltipTrigger render={<button className="info-trigger" aria-label={`O que significa ${label}`}><Info /></button>} />
-          <TooltipContent side="bottom">{explanation}</TooltipContent>
-        </Tooltip>
+        <TermHelp entryId={entryId} onOpen={onOpen} />
       </small>
       <strong>{value}</strong>
     </span>
@@ -288,6 +299,8 @@ export default function Home() {
     [dismissedAlert, setDismissedAlert] = useState(''),
     [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('unsupported'),
     [weekMessage, setWeekMessage] = useState(''),
+    [glossarySearch, setGlossarySearch] = useState(''),
+    [glossarySelected, setGlossarySelected] = useState(''),
     [checkin, setCheckin] = useState<CheckinState>({ ...defaultCheckin });
   useEffect(() => {
     if ('serviceWorker' in navigator)
@@ -489,6 +502,12 @@ export default function Home() {
     setSaved(true);
     setTimeout(() => setSaved(false), 2200);
   }
+  function openGlossary(entryId: string) {
+    const entry = glossaryById(entryId);
+    setGlossarySearch(entry?.term || '');
+    setGlossarySelected(entryId);
+    setTab('glossario');
+  }
   const status = result?.classification || 'indisponível';
   const recoveryCopy = status === 'verde'
     ? { title: 'Seu corpo está respondendo bem', action: 'Pode seguir o treino planejado. Não é necessário aumentar a sessão.' }
@@ -512,6 +531,7 @@ export default function Home() {
     {
       icon: Moon,
       label: 'Sono',
+      entryId: 'sono',
       value: result?.metrics.sleepHours
         ? `${result.metrics.sleepHours} h`
         : '—',
@@ -522,6 +542,7 @@ export default function Home() {
     {
       icon: Waves,
       label: 'HRV',
+      entryId: 'hrv',
       value: result?.metrics.hrv ? `${Math.round(result.metrics.hrv)} ms` : '—',
       note:
         result?.metrics.ansCharge !== undefined
@@ -531,6 +552,7 @@ export default function Home() {
     {
       icon: HeartPulse,
       label: 'FC noturna',
+      entryId: 'fc-repouso',
       value: result?.metrics.restingHr
         ? `${result.metrics.restingHr} bpm`
         : '—',
@@ -555,7 +577,9 @@ export default function Home() {
                 ? 'Sua recuperação'
                 : tab === 'treinos'
                   ? 'Plano de treinos'
-                  : 'Sua evolução'}
+                  : tab === 'evolucao'
+                    ? 'Sua evolução'
+                    : 'Glossário'}
           </h1>
         </div>
         {installPrompt ? (
@@ -635,7 +659,7 @@ export default function Home() {
               {metrics.map(({ icon: Icon, ...m }) => (
                 <div className="metric" key={m.label}>
                   <Icon size={17} />
-                  <span>{m.label}</span>
+                  <span className="metric-label">{m.label}<TermHelp entryId={m.entryId} onOpen={openGlossary} light /></span>
                   <strong>{m.value}</strong>
                   <small>{m.note}</small>
                 </div>
@@ -792,9 +816,9 @@ export default function Home() {
               </div>
               <TooltipProvider>
                 <div className="recovery-signals">
-                  <RecoveryMetric label="Sono" value={result.metrics.sleepHours ? `${result.metrics.sleepHours} h` : '—'} explanation="Tempo total dormido. O aplicativo compara esta noite principalmente com o seu próprio padrão." />
-                  <RecoveryMetric label="HRV" value={result.metrics.hrv ? `${Math.round(result.metrics.hrv)} ms` : '—'} explanation="Variação entre os batimentos. Mudanças persistentes em relação ao seu padrão ajudam a indicar recuperação ou estresse." />
-                  <RecoveryMetric label="FC repouso" value={result.metrics.restingHr ? `${Math.round(result.metrics.restingHr)} bpm` : '—'} explanation="Batimentos durante o repouso noturno. Um aumento fora do habitual pode acompanhar fadiga, estresse ou recuperação incompleta." />
+                  <RecoveryMetric label="Sono" value={result.metrics.sleepHours ? `${result.metrics.sleepHours} h` : '—'} entryId="sono" onOpen={openGlossary} />
+                  <RecoveryMetric label="HRV" value={result.metrics.hrv ? `${Math.round(result.metrics.hrv)} ms` : '—'} entryId="hrv" onOpen={openGlossary} />
+                  <RecoveryMetric label="FC repouso" value={result.metrics.restingHr ? `${Math.round(result.metrics.restingHr)} bpm` : '—'} entryId="fc-repouso" onOpen={openGlossary} />
                 </div>
               </TooltipProvider>
               <Button variant="outline" className="recovery-refresh" onClick={() => { loadReadiness(false); loadWeek(); loadPerformance(); }} disabled={loading}>
@@ -851,7 +875,7 @@ export default function Home() {
           {result && (
             <div className="trend-card">
               <p className="eyebrow">EVOLUÇÃO DOS ÚLTIMOS 7 DIAS</p>
-              <h2>Carga crônica e fadiga</h2>
+              <div className="heading-with-help"><h2>Carga crônica e fadiga</h2><TermHelp entryId="ctl" onOpen={openGlossary} /></div>
               {result.loadTrend.length ? (
                 <ChartContainer
                   className="load-chart"
@@ -1271,6 +1295,52 @@ export default function Home() {
           <p className="analysis-note">Tendências comparam períodos, não diagnosticam saúde e não substituem sua percepção durante o treino.</p>
         </section>
       )}
+      {tab === 'glossario' && (
+        <section className="panel-stack glossary-page">
+          <Card className="glossary-intro">
+            <p className="eyebrow">ENTENDA SEUS DADOS</p>
+            <h2>Termos técnicos em linguagem simples</h2>
+            <p className="muted-copy">Nenhuma métrica isolada define sua saúde ou decide um treino. O app compara principalmente com seu próprio padrão.</p>
+            <label className="glossary-search">
+              <Search aria-hidden="true" />
+              <span className="sr-only">Buscar no glossário</span>
+              <input value={glossarySearch} onChange={(event) => { setGlossarySelected(''); setGlossarySearch(event.target.value); }} placeholder="Buscar HRV, carga, desacoplamento…" />
+            </label>
+          </Card>
+          {(['Recuperação', 'Carga', 'Treino', 'Planejamento'] as GlossaryCategory[]).map((category) => {
+            const query = glossarySearch.trim().toLocaleLowerCase('pt-BR');
+            const entries = glossary.filter((entry) => entry.category === category && (glossarySelected ? entry.id === glossarySelected : !query || [entry.term, entry.fullName, entry.summary].some((text) => text.toLocaleLowerCase('pt-BR').includes(query))));
+            if (!entries.length) return null;
+            return (
+              <section className="glossary-group" key={category} aria-labelledby={`glossary-${category}`}>
+                <h2 id={`glossary-${category}`}>{category}</h2>
+                {entries.map((entry) => (
+                  <details className="glossary-entry" key={entry.id} open={query.length > 0 || entry.id === glossarySelected}>
+                    <summary>
+                      <span><strong>{entry.term}</strong><small>{entry.fullName}{entry.unit ? ` · ${entry.unit}` : ''}</small></span>
+                      <ChevronDown aria-hidden="true" />
+                    </summary>
+                    <div className="glossary-body">
+                      <p>{entry.summary}</p>
+                      <dl>
+                        <div><dt>Como usamos</dt><dd>{entry.appUse}</dd></div>
+                        <div><dt>Como interpretar</dt><dd>{entry.direction}</dd></div>
+                        <div><dt>Seu padrão</dt><dd>{entry.baseline}</dd></div>
+                        <div><dt>Fonte</dt><dd>{entry.source}{entry.unit ? ` · unidade ${entry.unit}` : ' · sem unidade única'}</dd></div>
+                        <div><dt>Limites</dt><dd>{entry.limitations}</dd></div>
+                      </dl>
+                      {entry.related?.length ? <p className="related-terms">Relacionado: {entry.related.map((id) => glossaryById(id)?.term).filter(Boolean).join(' · ')}</p> : null}
+                    </div>
+                  </details>
+                ))}
+              </section>
+            );
+          })}
+          {glossarySearch && !glossarySelected && !glossary.some((entry) => [entry.term, entry.fullName, entry.summary].some((text) => text.toLocaleLowerCase('pt-BR').includes(glossarySearch.toLocaleLowerCase('pt-BR')))) && (
+            <Card className="empty-insight">Nenhum termo encontrado. Tente uma sigla ou palavra mais curta.</Card>
+          )}
+        </section>
+      )}
       {installPrompt && (
         <button className="install-banner" onClick={install}>
           <Download size={18} />
@@ -1309,6 +1379,13 @@ export default function Home() {
         >
           <TrendingUp />
           <span>Evolução</span>
+        </button>
+        <button
+          className={tab === 'glossario' ? 'active' : ''}
+          onClick={() => { setGlossarySearch(''); setGlossarySelected(''); setTab('glossario'); }}
+        >
+          <BookOpen />
+          <span>Glossário</span>
         </button>
       </nav>
     </main>

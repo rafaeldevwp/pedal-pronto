@@ -86,12 +86,18 @@
 - [x] Validar visualmente em layout móvel.
 - [ ] Publicar somente após autorização do atleta.
 
-## NEXT — T10 Criar glossário contextual e centralizado — SPEC-10
+## Concluída localmente — T10 Criar glossário contextual e centralizado — SPEC-10
 
-- Centralizar os termos técnicos e suas definições.
-- Adicionar explicação curta junto às métricas e área completa pesquisável.
-- Garantir abertura por toque, teclado e leitor de tela.
-- Validar consistência dos termos e funcionamento móvel.
-- Não publicar até autorização do atleta.
+- [x] Centralizar os termos técnicos e suas definições.
+- [x] Informar nome, unidade, interpretação, uso, linha de base, fonte e limitações.
+- [x] Adicionar explicação curta junto às métricas e área completa pesquisável.
+- [x] Organizar verbetes em Recuperação, Carga, Treino e Planejamento.
+- [x] Garantir abertura por toque, teclado e leitor de tela.
+- [x] Validar consistência dos termos, busca e funcionamento móvel.
+- [ ] Publicar somente após autorização do atleta.
+
+## Próximo
+
+- Aguardando definição de uma nova SPEC. T08, T09 e T10 permanecem locais até autorização de publicação.
 
 Regra: trabalhar somente na tarefa marcada como `NEXT`.

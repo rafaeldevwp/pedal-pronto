@@ -47,7 +47,7 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-`NEXT`: T10 — criar glossário contextual e centralizado, conforme SPEC-10.
+`NEXT`: aguardando uma nova SPEC ou autorização para publicar o lote T08–T10.
 
 A T03 até a T07 foram integradas, validadas e publicadas em um único lote após autorização do atleta.
 
@@ -55,7 +55,7 @@ A versão online contém as SPECs T01–T07.
 
 Dois bugs foram especificados após uso real: o treino de hoje foi alterado sem consentimento e o botão do slider desaparece em zero. A T08 foi implementada e validada localmente: avaliar/check-in são somente leitura; propostas de hoje, futuras e de dia OFF exigem confirmação específica; o servidor revalida evento e atividades; treinos concluídos são bloqueados; a operação é idempotente e o histórico só registra a escrita confirmada. Ela ainda não foi publicada por ordem do atleta, portanto a versão online continua sendo a versão anterior. A automação diária ativa foi atualizada em 2026-09-07 para operar somente em leitura e apresentar propostas sem escrever no Intervals.icu.
 
-A T09 foi implementada e validada localmente: botão e trilho permanecem visíveis nos extremos, a área de toque foi ampliada, há foco acessível e zero é preservado no estado e no armazenamento. A SPEC-10 é a próxima tarefa.
+A T09 foi implementada e validada localmente: botão e trilho permanecem visíveis nos extremos, a área de toque foi ampliada, há foco acessível e zero é preservado no estado e no armazenamento. A T10 também foi implementada localmente, com glossário centralizado, busca, categorias, explicações contextuais e navegação acessível.
 
 O repositório privado `rafaeldevwp/pedal-pronto` foi criado e a integração recebeu acesso somente a ele. O envio inicial do conteúdo foi interrompido e deve ser retomado separadamente; não confundir isso com a publicação do PWA pelo Sites.
 
@@ -80,6 +80,8 @@ Projeto Sites privado, proprietário único. Antes de publicar: build, commit, e
 
 - T08 completa e validada localmente.
 - T09 completa e validada localmente, incluindo teste visual e por teclado.
+- T10 completa e validada localmente, com verbetes de recuperação, carga, treino e planejamento.
 - Testes de segurança em `tests/training-safety.test.ts`.
 - Testes do check-in em `tests/checkin.test.ts`.
-- Próxima retomada: executar a T10 sem publicar.
+- Testes do glossário em `tests/glossary.test.ts`.
+- Próxima retomada: definir nova SPEC ou publicar o lote T08–T10 somente se o atleta autorizar.
