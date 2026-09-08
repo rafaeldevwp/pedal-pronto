@@ -1,6 +1,7 @@
 import { ensurePolarSchema, ownerId, recordTrainingDecision, runtime } from '@/lib/polar';
 import { loadAthleteContext } from '@/lib/context-loader';
-import { decideTraining, type Objective as EngineObjective } from '@/lib/decision-engine';
+import type { Checkin } from '@/lib/readiness';
+import { decideTraining, preferVolumeReduction, type Objective as EngineObjective } from '@/lib/decision-engine';
 import { chooseOffDaySuggestion, type SuggestionCategory } from '@/lib/off-day-suggestions';
 import { assertDayAvailableForCreation, assertEditablePlannedEvent, claimTrainingWrite, completeTrainingWrite, proposalFingerprint } from '@/lib/training-safety';
 
@@ -233,7 +234,7 @@ const completedWorkout = (activity: Json, history: Json[], planned?: ReturnType<
 
 const objectiveNames: Record<string, string> = { performance: 'performance geral', resistencia: 'resistência', ftp: 'potência/FTP', saude: 'saúde e consistência' };
 
-function futureProposal(event: Json, goal: { objective: string; eventDate?: string; priority?: string }) {
+function futureProposal(event: Json, goal: { objective: string; eventDate?: string; priority?: string }, phase = 'desconhecida') {
   const objective = goal.objective || 'performance';
   const original = normalize(event);
   const description = String(event.description || '');
@@ -245,7 +246,8 @@ function futureProposal(event: Json, goal: { objective: string; eventDate?: stri
   const intensity = description.match(/\b(8[5-9]|9\d|1[0-4]\d)%/);
   const eventDays = goal.eventDate ? Math.ceil((new Date(`${goal.eventDate}T12:00:00Z`).getTime() - Date.now()) / 86400000) : undefined;
   const protectSpecificity = goal.priority === 'principal' && eventDays !== undefined && eventDays >= 0 && eventDays <= 21;
-  const preferIntensity = !protectSpecificity && (objective === 'resistencia' || objective === 'saude');
+  const preferVolumeFirst = preferVolumeReduction(phase, (['performance', 'resistencia', 'ftp', 'saude'].includes(objective) ? objective : 'performance') as EngineObjective, protectSpecificity);
+  const preferIntensity = !preferVolumeFirst;
   if (reps && (!preferIntensity || !intensity)) {
     const from = Number(reps[1]);
     const to = Math.max(2, from - 1);
@@ -280,7 +282,7 @@ function futureProposal(event: Json, goal: { objective: string; eventDate?: stri
     },
   };
 }
-async function context(owner: string) {
+async function context(owner: string, checkin?: Checkin) {
   await ensurePolarSchema();
   const today = todayInZone();
   const weekday = dayNumber(today);
@@ -288,7 +290,7 @@ async function context(owner: string) {
   const sunday = addDays(monday, 6);
   const historyStart = addDays(today, -120);
   const [{ readiness, snapshot }, body, activityBody, historyBody] = await Promise.all([
-    loadAthleteContext(owner),
+    loadAthleteContext(owner, checkin),
     intervals(
       `/athlete/${runtime.INTERVALS_ATHLETE_ID}/events?oldest=${monday}&newest=${sunday}&category=WORKOUT&resolve=true`,
     ),
@@ -345,16 +347,6 @@ async function context(owner: string) {
     .filter(Boolean) as SuggestionCategory[];
   const recentActivities = activities.slice(-4);
   const nextPlanned = planned.find((event) => event.date > today);
-  const adaptiveSuggestion = chooseOffDaySuggestion({
-    classification: readiness.classification,
-    safetyFlags: readiness.metrics.safetyFlags || [],
-    phase: snapshot.mesocycle.value?.phase || 'desconhecida',
-    recentHardCount: recentActivities.filter((a) => Number(a.icu_intensity || a.intensity || 0) >= 75).length,
-    recentLong: recentActivities.some((a) => Number(a.moving_time || 0) >= 2 * 3600),
-    lowCadence: recentActivities.length > 0 && recentActivities.every((a) => Number(a.average_cadence || 0) < 88),
-    nextKeyName: nextPlanned?.name,
-    recentSuggestionCategories,
-  });
   const yesterday = addDays(today, -1);
   const yesterdayLoad = activities.filter((a) => activityDate(a) === yesterday).reduce((sum, a) => sum + Number(a.icu_training_load || a.load || 0), 0);
   const todaySession = events.find((event: Json) => event.date === today);
@@ -405,6 +397,19 @@ async function context(owner: string) {
           : 'Siga o plano sem aumentar a sessão de hoje.',
     caveat: 'Esta é uma faixa de risco, não uma promessa. A resposta real ao treino e a próxima noite de sono podem mudar a leitura.',
   };
+  const adaptiveSuggestion = chooseOffDaySuggestion({
+    classification: readiness.classification,
+    safetyFlags: readiness.metrics.safetyFlags || [],
+    phase: snapshot.mesocycle.value?.phase || 'desconhecida',
+    recentHardCount: recentActivities.filter((a) => Number(a.icu_intensity || a.intensity || 0) >= 75).length,
+    recentLong: recentActivities.some((a) => Number(a.moving_time || 0) >= 2 * 3600),
+    lowCadence: recentActivities.length > 0 && recentActivities.every((a) => Number(a.average_cadence || 0) < 88),
+    nextKeyName: nextPlanned?.name,
+    recentSuggestionCategories,
+    daysToNextKey: daysToKey,
+    forecastRisk: forecastRisk as 'baixo' | 'moderado' | 'alto' | 'indeterminado',
+    checkin: checkin ? { dor: checkin.dor, sintomas: checkin.sintomas, fadiga: checkin.fadiga } : undefined,
+  });
   const engineObjective: EngineObjective = ['performance', 'resistencia', 'ftp', 'saude'].includes(goal.objective) ? (goal.objective as EngineObjective) : 'performance';
   const engineEventDays = goal.eventDate ? Math.ceil((new Date(`${goal.eventDate}T12:00:00Z`).getTime() - Date.now()) / 86400000) : undefined;
   const engineProtectSpecificity = goal.priority === 'principal' && engineEventDays !== undefined && engineEventDays >= 0 && engineEventDays <= 21;
@@ -435,7 +440,7 @@ async function context(owner: string) {
           const date = String(event.start_date_local || event.start_date || '').slice(0, 10);
           return date > today && ![0, 3, 5].includes(dayNumber(date));
         })
-        .map((event: Json) => futureProposal(event, goal))
+        .map((event: Json) => futureProposal(event, goal, snapshot.mesocycle.value?.phase || 'desconhecida'))
         .find(Boolean)
     : null;
   const weeklyPlannedLoad = planned.reduce((sum, event) => sum + Number(event.load || 0), 0);
@@ -504,12 +509,24 @@ async function context(owner: string) {
   };
 }
 
+const checkinQueryKeys = ['fadiga', 'dor', 'estresse', 'pernas', 'motivacao', 'sintomas', 'tempoDisponivel'] as const;
+function parseCheckinQuery(url: URL): Checkin | undefined {
+  if (!checkinQueryKeys.some((key) => url.searchParams.has(key))) return undefined;
+  const checkin: Json = {};
+  for (const key of checkinQueryKeys) {
+    const raw = url.searchParams.get(key);
+    if (raw !== null && Number.isFinite(Number(raw))) checkin[key] = Number(raw);
+  }
+  return checkin as Checkin;
+}
+
 export async function GET(request: Request) {
   const owner = ownerId(request);
   if (!owner)
     return Response.json({ error: 'Não autorizado' }, { status: 401 });
   try {
-    return Response.json(await context(owner));
+    const checkin = parseCheckinQuery(new URL(request.url));
+    return Response.json(await context(owner, checkin));
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : 'Falha ao carregar semana' },
@@ -523,9 +540,9 @@ export async function POST(request: Request) {
   if (!owner)
     return Response.json({ error: 'Não autorizado' }, { status: 401 });
   try {
-    const state = await context(owner);
     let body: Json = {};
     try { body = await request.json(); } catch {}
+    const state = await context(owner, body.checkin);
     if (body.action === 'apply_proposal') {
       if (!body.confirmed || !body.proposalId || !body.operationId)
         return Response.json({ error: 'CONSENT_REQUIRED' }, { status: 400 });
@@ -533,7 +550,7 @@ export async function POST(request: Request) {
         return Response.json({ error: 'A proposta não está mais disponível. Atualize os dados.' }, { status: 409 });
       const eventsBody = await intervals(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/events?oldest=${state.monday}&newest=${state.sunday}&category=WORKOUT&resolve=true`);
       const source = (Array.isArray(eventsBody) ? eventsBody : eventsBody?.events || []).find((event: Json) => Number(event.id) === Number(state.proposal.eventId));
-      const recalculated = source ? futureProposal(source, state.goal) : null;
+      const recalculated = source ? futureProposal(source, state.goal, state.mesocycle?.phase || 'desconhecida') : null;
       if (!recalculated || recalculated.proposal.id !== body.proposalId || recalculated.proposal.id !== state.proposal.id)
         return Response.json({ error: 'PROPOSAL_CHANGED' }, { status: 409 });
       const activityBody = await intervals(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/activities?oldest=${state.proposal.date}&newest=${state.proposal.date}&limit=40`);
@@ -542,7 +559,7 @@ export async function POST(request: Request) {
       );
       assertEditablePlannedEvent(source, dayActivities, state.today);
       const claim = await claimTrainingWrite(owner, body.operationId, body.proposalId);
-      if (claim.repeated) return Response.json({ ...claim.response, week: await context(owner) });
+      if (claim.repeated) return Response.json({ ...claim.response, week: await context(owner, body.checkin) });
       await intervals(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/events/${source.id}`, {
         method: 'PUT', body: JSON.stringify(recalculated.updated),
       });
@@ -557,7 +574,7 @@ export async function POST(request: Request) {
         effective: state.proposal.recommended,
         reason: state.proposal.reason,
       });
-      return Response.json({ applied: true, week: await context(owner) });
+      return Response.json({ applied: true, week: await context(owner, body.checkin) });
     }
     if (!state.suggestion)
       return Response.json(
@@ -576,7 +593,7 @@ export async function POST(request: Request) {
     );
     assertDayAvailableForCreation(existingEvents, existingActivities);
     const claim = await claimTrainingWrite(owner, body.operationId, body.proposalId);
-    if (claim.repeated) return Response.json({ ...claim.response, week: await context(owner) });
+    if (claim.repeated) return Response.json({ ...claim.response, week: await context(owner, body.checkin) });
     const created = await intervals(
       `/athlete/${runtime.INTERVALS_ATHLETE_ID}/events`,
       {
@@ -601,7 +618,7 @@ export async function POST(request: Request) {
       effective: normalize(created),
       reason: state.suggestion.reason,
     });
-    return Response.json({ created: normalize(created), week: await context(owner) });
+    return Response.json({ created: normalize(created), week: await context(owner, body.checkin) });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Falha ao criar treino';
     const status = ['WORKOUT_COMPLETED', 'EVENT_NOT_EDITABLE', 'PROPOSAL_CHANGED', 'CONSENT_REQUIRED', 'WRITE_IN_PROGRESS'].includes(message) ? 409 : 502;

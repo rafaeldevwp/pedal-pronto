@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { decideTraining, type DecisionInput } from '../lib/decision-engine.ts';
+import { decideTraining, preferVolumeReduction, type DecisionInput } from '../lib/decision-engine.ts';
 
 const base: DecisionInput = {
   classification: 'verde',
@@ -85,4 +85,20 @@ test('estrutura sem repetições nem intensidade reconhecível vira recuperaçã
 test('especificidade protegida evita reduzir intensidade mesmo em objetivo de resistência', () => {
   const decision = decideTraining({ ...base, classification: 'amarela', objective: 'resistencia', protectSpecificity: true });
   assert.equal(decision.action, 'reduzir_intensidade');
+});
+
+test('preferVolumeReduction: build/peak sempre prefere reduzir volume, mesmo com especificidade protegida', () => {
+  assert.equal(preferVolumeReduction('C2W2 Build', 'ftp', true), true);
+  assert.equal(preferVolumeReduction('Peak', 'performance', false), true);
+});
+
+test('preferVolumeReduction: recovery/deload nunca prefere reduzir volume', () => {
+  assert.equal(preferVolumeReduction('Recovery', 'resistencia', false), false);
+  assert.equal(preferVolumeReduction('deload', 'saude', false), false);
+});
+
+test('preferVolumeReduction: fora de fase reconhecida, segue a regra do objetivo e da especificidade', () => {
+  assert.equal(preferVolumeReduction('desconhecida', 'resistencia', false), true);
+  assert.equal(preferVolumeReduction('desconhecida', 'resistencia', true), false);
+  assert.equal(preferVolumeReduction('desconhecida', 'performance', false), false);
 });

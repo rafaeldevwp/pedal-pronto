@@ -424,7 +424,8 @@ export default function Home() {
     } finally { setLoading(false); }
   }
   async function loadWeek() {
-    const response = await fetch('/api/week');
+    const params = new URLSearchParams(checkin as unknown as Record<string, string>);
+    const response = await fetch(`/api/week?${params.toString()}`);
     if (response.ok) setWeek(await response.json());
   }
   async function loadPerformance() {
@@ -477,7 +478,7 @@ export default function Home() {
     try {
       const response = await fetch('/api/week', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create_suggestion', confirmed: true, proposalId: week.suggestion.id, operationId: crypto.randomUUID() }),
+        body: JSON.stringify({ action: 'create_suggestion', confirmed: true, proposalId: week.suggestion.id, operationId: crypto.randomUUID(), checkin }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || 'Não foi possível criar.');
@@ -497,7 +498,7 @@ export default function Home() {
     try {
       const response = await fetch('/api/week', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'apply_proposal', confirmed: true, proposalId: week.proposal.id, operationId: crypto.randomUUID(), eventId: week.proposal.eventId }),
+        body: JSON.stringify({ action: 'apply_proposal', confirmed: true, proposalId: week.proposal.id, operationId: crypto.randomUUID(), eventId: week.proposal.eventId, checkin }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || 'Não foi possível aplicar a proposta.');

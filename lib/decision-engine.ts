@@ -68,6 +68,13 @@ function reduceRepetitions(workout: { name: string; durationMinutes?: number; lo
   };
 }
 
+export function preferVolumeReduction(phase: string, objective: Objective, protectSpecificity: boolean): boolean {
+  const phaseLower = phase.toLowerCase();
+  const isRecoveryPhase = /recovery|deload|recupera/.test(phaseLower);
+  const isProgressionPhase = /build|peak|choque|carga/.test(phaseLower);
+  return isProgressionPhase || (!isRecoveryPhase && !protectSpecificity && (objective === 'resistencia' || objective === 'saude'));
+}
+
 const recoveryRecommendation = {
   name: 'Recuperação leve — ajuste do motor adaptativo',
   durationMinutes: 30,
@@ -142,7 +149,7 @@ export function decideTraining(input: DecisionInput): EngineDecision {
     reasons.push('O próximo treino-chave está a menos de 24 horas; preservar a recuperação de hoje protege esse estímulo.');
   reasons.push(`Objetivo de ${objectiveNames[input.objective]} considerado.`);
 
-  const preferReduceVolumeFirst = isProgressionPhase || (!isRecoveryPhase && !input.protectSpecificity && (input.objective === 'resistencia' || input.objective === 'saude'));
+  const preferReduceVolumeFirst = preferVolumeReduction(input.phase, input.objective, input.protectSpecificity);
   const picked = preferReduceVolumeFirst
     ? reduceRepetitions(input.workout) || reduceIntensity(input.workout)
     : reduceIntensity(input.workout) || reduceRepetitions(input.workout);
