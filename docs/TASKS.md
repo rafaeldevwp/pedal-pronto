@@ -118,13 +118,14 @@
 
 ## NEXT — T13 Construir o contexto unificado — SPEC-13
 
-- [ ] Definir o contrato versionado do snapshot e campos obrigatórios/opcionais.
-- [ ] Criar adaptadores para Polar, Intervals.icu, perfil, mesociclo e check-in.
-- [ ] Registrar fonte, horário e qualidade de cada grupo de dados.
-- [ ] Impedir proposta quando dados obrigatórios estiverem atrasados, ausentes ou contraditórios.
-- [ ] Fazer prontidão, semana e evolução consumirem o mesmo snapshot sem mudar suas regras.
-- [ ] Cobrir snapshots completos, parciais, expirados e contraditórios em testes.
-- [ ] Validar build; não publicar sem nova ordem do atleta.
+- [x] Definir o contrato versionado do snapshot e campos obrigatórios/opcionais (`lib/context.ts`, `AthleteSnapshot` v1).
+- [x] Criar adaptadores para Polar, Intervals.icu, perfil, mesociclo e check-in (reaproveita `runReadiness`, `resolveMesocycle` e `athlete_goals`, sem duplicar chamadas de rede; rota `app/api/context/route.ts`).
+- [x] Registrar fonte, horário e qualidade de cada grupo de dados (`SnapshotField.source/updatedAt/quality`).
+- [x] Cobrir snapshots completos, parciais, expirados e contraditórios em testes (`tests/context.test.ts`, 6 casos).
+- [x] Validar build.
+- [ ] Impedir proposta quando dados obrigatórios estiverem atrasados, ausentes ou contraditórios: o snapshot já calcula `blocked`/`blockReasons` corretamente, mas nada ainda consulta esse sinal antes de escrever — a proteção de escrita continuada hoje é só a da SPEC-08, independente do snapshot.
+- [ ] Fazer prontidão, semana e evolução consumirem o mesmo snapshot sem mudar suas regras: ainda não feito. `lib/readiness.ts` e `app/api/week/route.ts` continuam buscando Polar/Intervals.icu de forma independente; religar os dois ao snapshot é o próximo passo, e mexe em caminho crítico de segurança (SPEC-08), então pede validação dedicada antes de prosseguir.
+- [ ] Não publicar sem nova ordem do atleta.
 
 ## Planejada — T14 Criar o motor adaptativo — SPEC-14
 

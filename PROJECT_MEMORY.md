@@ -49,6 +49,8 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 `NEXT`: T13 — construir o contexto unificado e explicável do atleta. Depois: T14 motor adaptativo, T15 sugestões OFF, T16 ciclo pós-treino e T17 experiência integrada.
 
+T13 está parcialmente implementada e validada localmente (build e os 28 testes passam, incluindo `tests/context.test.ts`). Feito: `lib/context.ts` define o contrato versionado do snapshot (`AthleteSnapshot` v1) com prontidão, mesociclo, objetivo e check-in, cada campo com fonte, horário de atualização e qualidade (`válido`/`atrasado`/`ausente`/`contraditório`); `app/api/context/route.ts` monta o snapshot reaproveitando `runReadiness` e `resolveMesocycle`, sem duplicar chamadas de rede. Falta: o snapshot calcula `blocked`/`blockReasons`, mas nada ainda consulta esse sinal antes de propor ou escrever um treino — a proteção de escrita em vigor continua sendo só a da SPEC-08, independente do snapshot; e `lib/readiness.ts`/`app/api/week/route.ts` ainda não foram religados para consumir o snapshot em vez de buscar Polar/Intervals.icu de forma independente, porque isso mexe em caminho crítico de segurança e pede validação dedicada antes de prosseguir. Continuar por aí antes de avançar para T14.
+
 A T03 até a T07 foram integradas, validadas e publicadas em um único lote após autorização do atleta.
 
 A versão online contém as SPECs T01–T07.
@@ -68,6 +70,9 @@ O repositório privado `rafaeldevwp/pedal-pronto` foi criado e a integração re
 - `app/api/profile/route.ts`: objetivo da temporada.
 - `lib/polar.ts`: ambiente, identidade e estrutura D1.
 - `lib/training-safety.ts` + `lib/training-safety-core.ts`: consentimento, revalidação e idempotência de escritas de treino.
+- `lib/mesocycle.ts` + `app/api/mesocycle/route.ts`: fase do mesociclo e ponteiro C/W/D (SPEC-11).
+- `lib/load-safety.ts`: ACWR e ramp rate do CTL como sinais de segurança (SPEC-12).
+- `lib/context.ts` + `app/api/context/route.ts`: snapshot unificado com fonte/horário/qualidade por campo (SPEC-13, parcial — ver Estado exato de retomada).
 - `drizzle/0002_training_decisions.sql`: histórico imutável de decisões.
 - `drizzle/0003_training_write_operations.sql`: controle idempotente das confirmações de escrita.
 - `.openai/hosting.json`: projeto hospedado e D1.
