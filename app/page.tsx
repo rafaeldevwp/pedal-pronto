@@ -29,7 +29,7 @@ import { checkinFields, defaultCheckin, parseStoredCheckin, type CheckinState } 
 import { glossary, glossaryById, type GlossaryCategory } from '@/lib/glossary';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Scatter, ScatterChart, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Scatter, ScatterChart, XAxis, YAxis } from 'recharts';
 
 type Tab = 'hoje' | 'treinos' | 'evolucao' | 'glossario';
 type InstallPrompt = Event & {
@@ -832,79 +832,36 @@ export default function Home() {
           </section>
         </>
       )}
-      {tab === 'hoje' && (
-        <section className="panel-stack" aria-label="Recuperação e check-in de hoje">
-          {result && (
-            <Card className={`recovery-overview status-${status}`}>
-              <div className="recovery-title">
-                <div>
-                  <p className="eyebrow">RECUPERAÇÃO DE HOJE</p>
-                  <h2>{recoveryCopy.title}</h2>
-                </div>
-                <Badge className="status-badge">{status.toUpperCase()}</Badge>
-              </div>
-              <p className="recovery-action"><strong>O que fazer:</strong> {recoveryCopy.action}</p>
-              <div className="recovery-why">
-                <small>O que mais pesou nesta leitura</small>
-                <p>{simpleEvidence.slice(0, 2).join(' · ')}</p>
-              </div>
-              <TooltipProvider>
-                <div className="recovery-signals">
-                  <RecoveryMetric label="Sono" value={result.metrics.sleepHours ? `${result.metrics.sleepHours} h` : '—'} entryId="sono" onOpen={openGlossary} />
-                  <RecoveryMetric label="HRV" value={result.metrics.hrv ? `${Math.round(result.metrics.hrv)} ms` : '—'} entryId="hrv" onOpen={openGlossary} />
-                  <RecoveryMetric label="FC repouso" value={result.metrics.restingHr ? `${Math.round(result.metrics.restingHr)} bpm` : '—'} entryId="fc-repouso" onOpen={openGlossary} />
-                  <RecoveryMetric label="ACWR" value={result.metrics.acwr !== undefined ? result.metrics.acwr.toFixed(2) : '—'} entryId="carga-acumulada" onOpen={openGlossary} />
-                  <RecoveryMetric label="Rampa CTL" value={result.metrics.ramp !== undefined ? `${result.metrics.ramp.toFixed(1)} /sem` : '—'} entryId="rampa" onOpen={openGlossary} />
-                </div>
-              </TooltipProvider>
-              <Button variant="outline" className="recovery-refresh" onClick={() => { loadReadiness(false); loadWeek(); loadPerformance(); }} disabled={loading}>
-                <RefreshCw className={loading ? 'spin' : ''} /> Atualizar após sincronizar
-              </Button>
-            </Card>
-          )}
-          {!result && (
-            <Card className="recovery-overview status-indisponível">
-              <div className="recovery-title">
-                <div>
-                  <p className="eyebrow">RECUPERAÇÃO DE HOJE</p>
-                  <h2>
-                    {loading
-                      ? 'Carregando seus dados…'
-                      : polarConnected === false
-                        ? 'Conecte o Polar para ver sua recuperação'
-                        : 'Não foi possível carregar sua recuperação'}
-                  </h2>
-                </div>
-              </div>
-              <p className="recovery-action">
-                <strong>O que fazer:</strong>{' '}
-                {loading
-                  ? 'Aguarde a sincronização com Polar e Intervals.icu.'
-                  : polarConnected === false
-                    ? 'Conecte sua conta Polar na aba Hoje para liberar esta avaliação.'
-                    : 'Toque em tentar novamente. Se persistir, verifique sua conexão.'}
-              </p>
-              {polarConnected === false ? (
-                <Button asChild className="primary-action">
-                  <a href="/api/polar/connect">Conectar Polar</a>
-                </Button>
-              ) : (
-                <Button variant="outline" className="recovery-refresh" onClick={() => loadReadiness(false)} disabled={loading}>
-                  <RefreshCw className={loading ? 'spin' : ''} /> Tentar novamente
-                </Button>
+      {tab === 'hoje' && polarConnected !== true && (
+        <section aria-label="Recuperação e check-in de hoje">
+          <details className="today-support">
+            <summary>
+              <span className="support-icon"><HeartPulse /></span>
+              <span>
+                <strong>Recuperação e check-in</strong>
+                <small>{result ? `${recoveryCopy.title} · toque para ver detalhes` : 'Informe como você está'}</small>
+              </span>
+              <ChevronDown />
+            </summary>
+            <div className="support-content">
+              {result && (
+                <>
+                  <p className="support-guidance"><strong>Orientação:</strong> {recoveryCopy.action}</p>
+                  <p className="support-evidence">{simpleEvidence.slice(0, 2).join(' · ')}</p>
+                  <TooltipProvider>
+                    <div className="recovery-signals">
+                      <RecoveryMetric label="Sono" value={result.metrics.sleepHours ? `${result.metrics.sleepHours} h` : '—'} entryId="sono" onOpen={openGlossary} />
+                      <RecoveryMetric label="HRV" value={result.metrics.hrv ? `${Math.round(result.metrics.hrv)} ms` : '—'} entryId="hrv" onOpen={openGlossary} />
+                      <RecoveryMetric label="FC repouso" value={result.metrics.restingHr ? `${Math.round(result.metrics.restingHr)} bpm` : '—'} entryId="fc-repouso" onOpen={openGlossary} />
+                    </div>
+                  </TooltipProvider>
+                </>
               )}
-            </Card>
-          )}
-          <Card className="checkin-card">
-            <CardHeader>
-              <p className="eyebrow">CHECK-IN RÁPIDO</p>
-              <h2>Como você está agora?</h2>
-              <p className="muted-copy">
-                Dor e sintomas prevalecem sobre o relógio. O check-in será
-                considerado na atualização manual.
-              </p>
-            </CardHeader>
-            <CardContent className="slider-list">
+              <div className="checkin-heading">
+                <strong>Como você está agora?</strong>
+                <small>Dor e sintomas prevalecem sobre o relógio.</small>
+              </div>
+              <div className="slider-list">
               {checkinFields.map((field) => (
                 <div className="checkin-field" key={field.key}>
                   <span>
@@ -939,34 +896,10 @@ export default function Home() {
                   'Salvar check-in'
                 )}
               </Button>
-            </CardContent>
-          </Card>
-          {result && (
-            <div className="trend-card">
-              <p className="eyebrow">EVOLUÇÃO DOS ÚLTIMOS 7 DIAS</p>
-              <div className="heading-with-help"><h2>Carga crônica e fadiga</h2><TermHelp entryId="ctl" onOpen={openGlossary} /></div>
-              {result.loadTrend.length ? (
-                <ChartContainer
-                  className="load-chart"
-                  config={{ fitness: { label: 'Carga crônica', color: '#165c45' }, fatigue: { label: 'Fadiga', color: '#edc961' } }}
-                >
-                  <AreaChart data={result.loadTrend} margin={{ left: 0, right: 4, top: 10, bottom: 0 }}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickFormatter={(value) => value.slice(8, 10)} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Area type="monotone" dataKey="fatigue" stroke="var(--color-fatigue)" fill="var(--color-fatigue)" fillOpacity={0.13} />
-                    <Area type="monotone" dataKey="fitness" stroke="var(--color-fitness)" fill="var(--color-fitness)" fillOpacity={0.2} />
-                  </AreaChart>
-                </ChartContainer>
-              ) : (
-                <p className="muted-copy">Aguardando histórico suficiente do Intervals.icu.</p>
-              )}
-              <div className="chart-legend">
-                <span><i className="fitness" />Carga crônica {result.metrics.ctl?.toFixed(0) ?? '—'}</span>
-                <span><i className="fatigue" />Fadiga {result.metrics.atl?.toFixed(0) ?? '—'}</span>
               </div>
             </div>
-          )}
+          </details>
+          <p className="analysis-note">Tendências e histórico ficam na aba Evolução.</p>
         </section>
       )}
       {tab === 'treinos' && (

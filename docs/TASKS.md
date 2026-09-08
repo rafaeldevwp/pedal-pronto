@@ -210,6 +210,16 @@ A maior parte desta SPEC já existia, entregue como parte da T02 (comparação d
 - [ ] Não verificado visualmente no navegador (mesma limitação de ambiente da T17).
 - [x] Publicação autorizada pelo atleta em 2026-09-08.
 
-Ordem obrigatória: T13 → T14 → T15 → T16 → T17 → T18. Trabalhar e validar uma tarefa por vez; publicar apenas mediante ordem explícita.
+## Concluída localmente — T19 Simplificar a tela Hoje — SPEC-19
+
+- [x] Manter prontidão, treino do dia, proposta e ação principal no primeiro nível.
+- [x] Mostrar estado de conexão somente quando houver espera ou ação necessária.
+- [x] Consolidar recuperação e check-in em uma única expansão acessível.
+- [x] Remover da tela Hoje a repetição do gráfico de carga, preservado na aba Evolução.
+- [x] Preservar detalhes da decisão, blocos do treino, alertas e consentimento obrigatório.
+- [x] Validar build e testes regressivos.
+- [ ] Publicar somente após nova ordem explícita do atleta.
+
+Ordem obrigatória: T13 → T14 → T15 → T16 → T17 → T18 → T19. Trabalhar e validar uma tarefa por vez; publicar apenas mediante ordem explícita.
 
 Regra: trabalhar somente na tarefa marcada como `NEXT`.

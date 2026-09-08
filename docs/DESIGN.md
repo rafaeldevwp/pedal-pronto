@@ -46,6 +46,7 @@ As telas atuais são reaproveitadas. A modernização muda a hierarquia e conect
 - **Semana:** continuidade do plano. Mostra carga-alvo, realizada e prevista, estímulos-chave, alterações confirmadas e riscos futuros.
 - **Evolução:** direção. Distingue condição do dia, tendência das últimas semanas, fase atual e progresso em relação ao objetivo.
 - **Detalhes técnicos:** métricas, gráficos, método e glossário aparecem por expansão, sem bloquear a leitura simples.
+- **Hoje essencial:** o primeiro nível contém apenas prontidão, treino, mudança proposta e ação. Recuperação/check-in ficam em uma expansão única; tendências não são duplicadas fora de Evolução.
 - **Navegação móvel:** quatro destinos fixos — Hoje, Semana, Evolução e Glossário — com alvo mínimo de toque, foco visível e indicação semântica da página ativa.
 - **Responsividade:** comparações em colunas viram fluxo vertical em telas estreitas; texto essencial permanece legível e animações respeitam a preferência por movimento reduzido.
 

@@ -281,3 +281,18 @@ Aceite:
 - `npm test` e `npm run build` validados.
 
 Dependências: SPEC-11 (fase e ponteiro do mesociclo) e SPEC-14 (motor adaptativo, onde `preferVolumeReduction` já existe) já concluídas; esta SPEC consolida, remove a divergência entre elas e o caminho de hoje (`lib/readiness.ts`), e desfaz parte da SPEC-01 (uso de objetivo para decidir carga) e da SPEC-11 (mapa manual de fases).
+
+## SPEC-19 — Tela Hoje essencial e progressiva
+
+Status: concluída localmente; não publicada
+
+A tela Hoje deve permitir decidir em poucos segundos sem repetir recuperação, carga e histórico que já aparecem em outros níveis do produto. O primeiro nível mostra somente prontidão, treino de hoje, eventual mudança proposta e a ação correspondente. Recuperação detalhada e check-in ficam disponíveis sob expansão; tendências permanecem na aba Evolução.
+
+Aceite:
+
+- Conexões saudáveis não ocupam um card; o aviso aparece apenas quando a conexão ainda está sendo verificada ou exige ação.
+- Prontidão e treino de hoje continuam visíveis sem interação.
+- Dados da decisão, estrutura do treino, recuperação e check-in permanecem acessíveis sob expansão.
+- O gráfico de carga de sete dias não é repetido na tela Hoje; sua leitura permanece em Evolução.
+- Alertas, propostas e confirmação explícita para escrita no Intervals.icu não são removidos nem escondidos.
+- Build e testes regressivos permanecem aprovados.

@@ -44,6 +44,27 @@
 .context-warning-card { padding:17px; border:1px solid #d9c9c2; background:linear-gradient(145deg,#fdfaf9,#f7efec); box-shadow:0 10px 28px #20362912; }
 .engine-preview-card { padding:17px; border:1px dashed #b9c3d5; background:linear-gradient(145deg,#f9fafd,#eef1f7); }.engine-preview-card .badge { display:inline-flex; align-items:center; gap:4px; color:#33415c; background:#dfe6f2; }.engine-preview-card .badge svg { width:11px; }
 
+/* T19: a tela Hoje mostra a decisão primeiro e mantém o contexto sob demanda. */
+.today-support { overflow:hidden; margin-top:16px; border:1px solid var(--border); border-radius:18px; background:#fff; box-shadow:0 6px 22px #2036290d; }
+.today-support>summary { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:11px; min-height:64px; padding:12px 14px; cursor:pointer; list-style:none; }
+.today-support>summary::-webkit-details-marker { display:none; }
+.today-support>summary>span:nth-child(2) { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.today-support>summary strong { font-size:14px; }
+.today-support>summary small { overflow:hidden; color:var(--muted-foreground); font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
+.today-support>summary>svg { width:18px; color:#718077; transition:transform .2s; }
+.today-support[open]>summary>svg { transform:rotate(180deg); }
+.support-icon { display:grid; place-items:center; width:40px; height:40px; color:#165c45; border-radius:12px; background:#e4f0e9; }
+.support-icon svg { width:19px; }
+.support-content { padding:0 14px 16px; border-top:1px solid var(--border); }
+.support-guidance { margin:14px 0 5px; font-size:14px; line-height:1.5; }
+.support-evidence { margin:0 0 12px; color:var(--muted-foreground); font-size:12px; line-height:1.5; }
+.today-support .recovery-signals span { color:var(--foreground); background:#f2f6f3; }
+.today-support .recovery-signals small { color:var(--muted-foreground); }
+.checkin-heading { display:flex; flex-direction:column; gap:2px; margin:18px 0 14px; padding-top:15px; border-top:1px solid var(--border); }
+.checkin-heading strong { font-size:15px; }
+.checkin-heading small { color:var(--muted-foreground); font-size:12px; }
+.today-support+.analysis-note { margin-top:9px; }
+
 /* T17: navegação móvel, leitura e foco acessível. */
 .bottom-nav { grid-template-columns:repeat(4,1fr); }
 .bottom-nav button { min-height:48px; padding:7px 4px; font-size:12px; }
