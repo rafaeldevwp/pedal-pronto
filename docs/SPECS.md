@@ -152,7 +152,7 @@ Aceite:
 
 ## SPEC-12 — ACWR e ramp rate do CTL como checagem de segurança
 
-Status: proposta
+Status: implementada e validada localmente; publicação autorizada
 
 Hoje o ramp rate já é lido em `lib/readiness.ts` e exposto em `metrics`, mas nunca entra na função que acumula os flags de severidade — é puramente decorativo, sem peso na classificação verde, amarela ou vermelha.
 

@@ -9,6 +9,8 @@
 - Nenhuma alteração futura silenciosa.
 - Nenhuma alteração de hoje ou futura sem consentimento específico; avaliar e atualizar dados são sempre ações somente leitura.
 - Atividade concluída é inviolável: aparece apenas para consulta e feedback, nunca oferece controles de alteração, substituição ou exclusão.
+- ACWR e rampa do CTL são sinais explicativos de segurança. Nesta etapa eles não mudam a decisão nem aplicam alterações; o atleta mantém controle explícito sobre qualquer escrita.
+- A âncora C1W1D1 é a fonte do ponteiro do mesociclo; códigos no nome do evento servem apenas para conferência e divergências aparecem como aviso.
 - Incerteza deve aparecer como confiança limitada, não como falsa precisão.
 
 ## Padrões de interface

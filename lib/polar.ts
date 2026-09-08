@@ -48,6 +48,9 @@ export async function ensurePolarSchema() {
     runtime.DB.prepare(
       'CREATE TABLE IF NOT EXISTS mesocycle_phases (owner_id TEXT NOT NULL, cycle INTEGER NOT NULL, week INTEGER NOT NULL, phase TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY(owner_id,cycle,week))',
     ),
+    runtime.DB.prepare(
+      'CREATE TABLE IF NOT EXISTS athlete_safety_settings (owner_id TEXT PRIMARY KEY, ramp_rate_limit REAL NOT NULL DEFAULT 6, updated_at INTEGER NOT NULL)',
+    ),
   ]);
 }
 export async function recordTrainingDecision(owner: string, decision: {

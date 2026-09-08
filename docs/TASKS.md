@@ -107,13 +107,17 @@
 - [x] Validar viradas de semana/ciclo, fase desconhecida e nomes sem padrão.
 - [ ] Publicar no lote T08–T12.
 
-## NEXT — T12 Adicionar ACWR e ramp rate como sinais de segurança — SPEC-12
+## Concluída localmente — T12 Adicionar ACWR e ramp rate como sinais de segurança — SPEC-12
 
-- [ ] Calcular ACWR sobre 7 e 28 dias.
-- [ ] Calcular ramp rate do CTL em sete dias contra teto configurável.
-- [ ] Expor métricas e flags sem automatizar alterações de treino.
-- [ ] Mostrar os sinais em linguagem simples no PWA.
-- [ ] Cobrir limiares, ausência de dados e regressões em testes.
+- [x] Calcular ACWR sobre 7 e 28 dias.
+- [x] Calcular ramp rate do CTL em sete dias contra teto configurável.
+- [x] Expor métricas e flags sem automatizar alterações de treino.
+- [x] Mostrar os sinais em linguagem simples no PWA.
+- [x] Cobrir limiares, ausência de dados e regressões em testes.
 - [ ] Publicar no lote T08–T12.
+
+## Próximo
+
+- Publicar o lote T08–T12 já autorizado e confirmar a versão online.
 
 Regra: trabalhar somente na tarefa marcada como `NEXT`.

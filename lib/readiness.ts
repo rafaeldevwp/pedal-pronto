@@ -1,5 +1,6 @@
 import { ensurePolarSchema, recordTrainingDecision, runtime } from '@/lib/polar';
 import { assertEditablePlannedEvent, claimTrainingWrite, completeTrainingWrite, proposalFingerprint } from '@/lib/training-safety';
+import { evaluateLoadSafety, type LoadSafetyFlag } from '@/lib/load-safety';
 
 type Json = Record<string, any>;
 export type ReadinessResult = {
@@ -45,6 +46,9 @@ export type ReadinessResult = {
     atl?: number;
     form?: number;
     ramp?: number;
+    acwr?: number;
+    rampLimit?: number;
+    safetyFlags?: LoadSafetyFlag[];
   };
   updatedAt: string;
   warning?: string;
@@ -197,6 +201,8 @@ export async function runReadiness(
   const goalRow = await runtime.DB.prepare(
     'SELECT objective,event_name,event_date,priority FROM athlete_goals WHERE owner_id=?',
   ).bind(owner).first<Record<string, string>>();
+  const safetySettings = await runtime.DB.prepare('SELECT ramp_rate_limit FROM athlete_safety_settings WHERE owner_id=?').bind(owner).first<{ ramp_rate_limit: number }>();
+  const rampLimit = safetySettings?.ramp_rate_limit ?? 6;
   const objective = (['performance', 'resistencia', 'ftp', 'saude'].includes(goalRow?.objective || '') ? goalRow!.objective : 'performance') as Objective;
   const eventDays = goalRow?.event_date
     ? Math.ceil((new Date(`${goalRow.event_date}T12:00:00Z`).getTime() - Date.now()) / 86400000)
@@ -214,7 +220,7 @@ export async function runReadiness(
           `/athlete/${runtime.INTERVALS_ATHLETE_ID}/wellness?oldest=${isoDate(new Date(now.getTime() - 42 * 86400000))}&newest=${today}`,
         ),
         intervals(
-          `/athlete/${runtime.INTERVALS_ATHLETE_ID}/activities?oldest=${yesterday}&newest=${today}&limit=40`,
+          `/athlete/${runtime.INTERVALS_ATHLETE_ID}/activities?oldest=${isoDate(new Date(now.getTime() - 27 * 86400000))}&newest=${today}&limit=200`,
         ),
         intervals(
           `/athlete/${runtime.INTERVALS_ATHLETE_ID}/events?oldest=${today}&newest=${today}&category=WORKOUT&resolve=true`,
@@ -294,6 +300,17 @@ export async function runReadiness(
     const acts: Json[] = Array.isArray(activities)
       ? activities
       : activities.activities || [];
+    const activityLoads = new Map<string, number>();
+    for (const activity of acts) {
+      const date = String(activity.start_date_local || activity.start_date || '').slice(0, 10);
+      activityLoads.set(date, (activityLoads.get(date) || 0) + (num(activity.icu_training_load, activity.training_load) || 0));
+    }
+    const loadDays = Array.from({ length: 28 }, (_, index) => {
+      const date = isoDate(new Date(now.getTime() - (27 - index) * 86400000));
+      const wellnessDay = wList.find((day) => String(day.id || day.date || '') === date);
+      return { date, load: activityLoads.get(date) || 0, ctl: wellnessDay ? num(wellnessDay.ctl, wellnessDay.icu_ctl) : undefined };
+    });
+    const loadSafety = evaluateLoadSafety(loadDays, rampLimit);
     const yesterdayLoad = acts.filter((activity) => String(activity.start_date_local || activity.start_date || '').slice(0, 10) === yesterday).reduce(
       (s, a) => s + (num(a.icu_training_load, a.training_load) || 0),
       0,
@@ -495,7 +512,10 @@ export async function runReadiness(
         ctl,
         atl,
         form,
-        ramp,
+        acwr: loadSafety.acwr,
+        ramp: loadSafety.rampRate ?? ramp,
+        rampLimit: loadSafety.rampLimit,
+        safetyFlags: loadSafety.flags,
       },
       updatedAt: new Date().toISOString(),
       goal: {

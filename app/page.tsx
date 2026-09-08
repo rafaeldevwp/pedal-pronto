@@ -73,6 +73,9 @@ type Result = {
     atl?: number;
     form?: number;
     ramp?: number;
+    acwr?: number;
+    rampLimit?: number;
+    safetyFlags?: Array<{ id: 'acwr_high' | 'ramp_rate_exceeded'; severity: 'moderada' | 'severa' }>;
   };
   updatedAt: string;
   warning?: string;
@@ -170,7 +173,7 @@ type Week = {
     recommended: { name: string; durationMinutes?: number; load?: number; structure: string[] };
   };
 };
-type AthleteGoal = { objective: string; eventName: string; eventDate: string; priority: string };
+type AthleteGoal = { objective: string; eventName: string; eventDate: string; priority: string; rampRateLimit: number };
 type Mesocycle = { anchor: string | null; calculated: null | { cycle: number; week: number; day: number }; event: null | { cycle: number; week: number; day: number }; phase: string; warning: string | null; phases: Record<string, string> };
 type Performance = {
   updatedAt: string;
@@ -291,7 +294,7 @@ export default function Home() {
     [result, setResult] = useState<Result | null>(null),
     [week, setWeek] = useState<Week | null>(null),
     [performance, setPerformance] = useState<Performance | null>(null),
-    [goal, setGoal] = useState<AthleteGoal>({ objective: 'performance', eventName: '', eventDate: '', priority: 'principal' }),
+    [goal, setGoal] = useState<AthleteGoal>({ objective: 'performance', eventName: '', eventDate: '', priority: 'principal', rampRateLimit: 6 }),
     [goalSaved, setGoalSaved] = useState(false),
     [mesocycle, setMesocycle] = useState<Mesocycle | null>(null),
     [mesocycleAnchor, setMesocycleAnchor] = useState(''),
@@ -844,6 +847,8 @@ export default function Home() {
                   <RecoveryMetric label="Sono" value={result.metrics.sleepHours ? `${result.metrics.sleepHours} h` : '—'} entryId="sono" onOpen={openGlossary} />
                   <RecoveryMetric label="HRV" value={result.metrics.hrv ? `${Math.round(result.metrics.hrv)} ms` : '—'} entryId="hrv" onOpen={openGlossary} />
                   <RecoveryMetric label="FC repouso" value={result.metrics.restingHr ? `${Math.round(result.metrics.restingHr)} bpm` : '—'} entryId="fc-repouso" onOpen={openGlossary} />
+                  <RecoveryMetric label="ACWR" value={result.metrics.acwr !== undefined ? result.metrics.acwr.toFixed(2) : '—'} entryId="carga-acumulada" onOpen={openGlossary} />
+                  <RecoveryMetric label="Rampa CTL" value={result.metrics.ramp !== undefined ? `${result.metrics.ramp.toFixed(1)} /sem` : '—'} entryId="rampa" onOpen={openGlossary} />
                 </div>
               </TooltipProvider>
               <Button variant="outline" className="recovery-refresh" onClick={() => { loadReadiness(false); loadWeek(); loadPerformance(); }} disabled={loading}>
@@ -1219,6 +1224,9 @@ export default function Home() {
                   </select>
                 </label>
               </div>
+              <label>Teto semanal de rampa do CTL
+                <input type="number" min="1" max="15" step="0.5" value={goal.rampRateLimit} onChange={(event) => setGoal({ ...goal, rampRateLimit: Number(event.target.value) })} />
+              </label>
             </div>
             <Button className="primary-action" onClick={saveGoal}>{goalSaved ? <><Check /> Objetivo salvo</> : 'Salvar direção da temporada'}</Button>
           </Card>

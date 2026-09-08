@@ -47,7 +47,7 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-`NEXT`: T12 — adicionar ACWR e ramp rate do CTL como sinais de segurança. A T11 foi implementada e validada localmente.
+`NEXT`: publicar o lote autorizado T08–T12 e confirmar a versão online.
 
 A T03 até a T07 foram integradas, validadas e publicadas em um único lote após autorização do atleta.
 
@@ -81,6 +81,8 @@ Projeto Sites privado, proprietário único. Antes de publicar: build, commit, e
 - T08 completa e validada localmente.
 - T09 completa e validada localmente, incluindo teste visual e por teclado.
 - T10 completa e validada localmente, com verbetes de recuperação, carga, treino e planejamento.
+- T11 completa e validada localmente: âncora, ponteiro C/W/D, fases persistidas e aviso de divergência sem efeito sobre decisões.
+- T12 completa e validada localmente: ACWR de 7/28 dias, rampa do CTL, teto configurável e flags informativos sem escrita automática.
 - Testes de segurança em `tests/training-safety.test.ts`.
 - Testes do check-in em `tests/checkin.test.ts`.
 - Testes do glossário em `tests/glossary.test.ts`.
