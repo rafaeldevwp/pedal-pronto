@@ -100,6 +100,6 @@ O lote T08–T12 foi publicado com sucesso em 2026-09-08.
 - SPEC-14/T14: motor adaptativo orientado por fase, objetivo, carga e estímulo-chave, sempre como proposta confirmável. Concluída localmente.
 - SPEC-15/T15: sugestões OFF variadas, contextuais e compatíveis com o plano. Concluída localmente.
 - SPEC-16/T16: feedback pós-treino, atualização de carga e impacto futuro. Concluída localmente.
-- SPEC-17/T17: experiência integrada de Hoje, Semana e Evolução, concluída e verificada visualmente no navegador local; publicação pendente.
-- SPEC-18/T18: fase do mesociclo substitui objetivo como orientador de carga; especificidade protegida removida; mapa manual de fases removido em favor de regra fixa por semana. Concluída localmente.
-- Todas as seis (T13–T18) foram implementadas nesta ordem; publicar somente mediante ordem explícita — e, no caso da T17/T18, só depois de conferir a interface no ambiente real.
+- SPEC-17/T17: experiência integrada de Hoje, Semana e Evolução, concluída, verificada visualmente no navegador local e autorizada para publicação em 2026-09-08.
+- SPEC-18/T18: fase do mesociclo substitui objetivo como orientador de carga; especificidade protegida removida; mapa manual de fases removido em favor de regra fixa por semana. Concluída e autorizada para publicação em 2026-09-08.
+- Todas as seis (T13–T18) foram implementadas nesta ordem; T17/T18 receberam ordem explícita de publicação após a validação local da interface.

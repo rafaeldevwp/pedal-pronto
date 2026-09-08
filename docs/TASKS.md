@@ -193,7 +193,7 @@ A maior parte desta SPEC já existia, entregue como parte da T02 (comparação d
 - [x] Verificado visualmente no navegador local: Hoje, Semana, Evolução e Glossário renderizam com navegação estável; estados sem conexão e carregamento foram conferidos. Dados autenticados reais permanecem para a validação pós-publicação.
 - [x] Acessibilidade validada: quatro colunas reais na navegação, alvo mínimo de toque, `aria-current`, associação entre navegação e painéis, foco visível, movimento reduzido e adaptação para telas estreitas.
 - [x] PWA e notificações preservados sem alteração de seus fluxos; regressão completa com 75 testes e build de produção aprovados.
-- [ ] Não publicar sem nova ordem do atleta.
+- [x] Publicação autorizada pelo atleta em 2026-09-08.
 
 ## Concluída localmente — T18 Fase do mesociclo substitui objetivo — SPEC-18
 
@@ -208,7 +208,7 @@ A maior parte desta SPEC já existia, entregue como parte da T02 (comparação d
 - [x] Testes atualizados: `tests/mesocycle.test.ts` (fase por semana, sem cadastro manual), `tests/decision-engine.test.ts` (assinatura nova de `preferVolumeReduction`, cenários de build/recovery/desconhecida sem objetivo).
 - [x] `npm test` (75 casos) e `npm run build` validados.
 - [ ] Não verificado visualmente no navegador (mesma limitação de ambiente da T17).
-- [ ] Não publicar sem nova ordem do atleta.
+- [x] Publicação autorizada pelo atleta em 2026-09-08.
 
 Ordem obrigatória: T13 → T14 → T15 → T16 → T17 → T18. Trabalhar e validar uma tarefa por vez; publicar apenas mediante ordem explícita.
 

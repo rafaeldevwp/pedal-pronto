@@ -238,7 +238,7 @@ Aceite:
 
 ## SPEC-17 — Experiência integrada “Hoje → Semana → Evolução”
 
-Status: concluída e validada localmente; publicação pendente
+Status: concluída, validada e autorizada para publicação em 2026-09-08
 
 Reorganizar a experiência para que o atleta atravesse um fluxo único: entender seu estado hoje, ver o treino e a eventual adaptação, compreender o efeito sobre a semana e acompanhar a evolução. Reaproveitar os componentes atuais de prontidão, recuperação, treinos, evolução e glossário, reduzindo repetição e mantendo detalhes técnicos em segundo nível.
 
@@ -253,6 +253,8 @@ Aceite:
 - Nenhum componente introduz um segundo calendário ou uma segunda fonte de verdade.
 
 ## SPEC-18 — Fase do mesociclo substitui objetivo como orientador de carga
+
+Status: concluída, validada e autorizada para publicação em 2026-09-08
 
 Status: concluída localmente
 
