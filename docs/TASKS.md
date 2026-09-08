@@ -98,6 +98,22 @@
 
 ## Próximo
 
-- Aguardando definição de uma nova SPEC. T08, T09 e T10 permanecem locais até autorização de publicação.
+## Concluída localmente — T11 Resolver fase e ponteiro do mesociclo — SPEC-11
+
+- [x] Persistir âncora e mapa de fases por atleta.
+- [x] Calcular C/W/D por dias corridos e resolver a fase cadastrada.
+- [x] Conferir o padrão do evento e avisar divergências sem corrigir dados.
+- [x] Exibir a âncora atual e permitir edição segura na tela Evolução.
+- [x] Validar viradas de semana/ciclo, fase desconhecida e nomes sem padrão.
+- [ ] Publicar no lote T08–T12.
+
+## NEXT — T12 Adicionar ACWR e ramp rate como sinais de segurança — SPEC-12
+
+- [ ] Calcular ACWR sobre 7 e 28 dias.
+- [ ] Calcular ramp rate do CTL em sete dias contra teto configurável.
+- [ ] Expor métricas e flags sem automatizar alterações de treino.
+- [ ] Mostrar os sinais em linguagem simples no PWA.
+- [ ] Cobrir limiares, ausência de dados e regressões em testes.
+- [ ] Publicar no lote T08–T12.
 
 Regra: trabalhar somente na tarefa marcada como `NEXT`.

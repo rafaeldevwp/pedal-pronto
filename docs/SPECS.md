@@ -128,7 +128,7 @@ Aceite:
 
 ## SPEC-11 — Fase do mesociclo e ponteiro de estado C/W/D
 
-Status: proposta
+Status: implementada e validada localmente; publicação pendente
 
 Resolver a fase do mesociclo (base, build, peak, recovery ou outra nomenclatura) e a posição atual dentro do plano (ciclo, semana, dia) sem depender só do nome do evento no Intervals.icu. Hoje a semana em `app/api/week/route.ts` é agrupada apenas por data corrida, de segunda a domingo; não existe parser de `C{n}W{n}D{n}` nem vínculo com mesociclo ou fase.
 

@@ -47,7 +47,7 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-`NEXT`: aguardando uma nova SPEC ou autorização para publicar o lote T08–T10.
+`NEXT`: T12 — adicionar ACWR e ramp rate do CTL como sinais de segurança. A T11 foi implementada e validada localmente.
 
 A T03 até a T07 foram integradas, validadas e publicadas em um único lote após autorização do atleta.
 

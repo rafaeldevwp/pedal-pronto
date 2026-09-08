@@ -171,6 +171,7 @@ type Week = {
   };
 };
 type AthleteGoal = { objective: string; eventName: string; eventDate: string; priority: string };
+type Mesocycle = { anchor: string | null; calculated: null | { cycle: number; week: number; day: number }; event: null | { cycle: number; week: number; day: number }; phase: string; warning: string | null; phases: Record<string, string> };
 type Performance = {
   updatedAt: string;
   activityCount: number;
@@ -292,6 +293,10 @@ export default function Home() {
     [performance, setPerformance] = useState<Performance | null>(null),
     [goal, setGoal] = useState<AthleteGoal>({ objective: 'performance', eventName: '', eventDate: '', priority: 'principal' }),
     [goalSaved, setGoalSaved] = useState(false),
+    [mesocycle, setMesocycle] = useState<Mesocycle | null>(null),
+    [mesocycleAnchor, setMesocycleAnchor] = useState(''),
+    [mesocyclePhase, setMesocyclePhase] = useState(''),
+    [mesocycleSaved, setMesocycleSaved] = useState(false),
     [powerRange, setPowerRange] = useState<'season' | 'recent' | 'all'>('season'),
     [loading, setLoading] = useState(false),
     [creatingSuggestion, setCreatingSuggestion] = useState(false),
@@ -327,6 +332,7 @@ export default function Home() {
           loadWeek();
           loadPerformance();
           loadGoal();
+          loadMesocycle();
         }
       })
       .catch(() => setPolarConnected(false));
@@ -416,6 +422,25 @@ export default function Home() {
   async function loadGoal() {
     const response = await fetch('/api/profile');
     if (response.ok) setGoal(await response.json());
+  }
+  async function loadMesocycle() {
+    const response = await fetch('/api/mesocycle');
+    if (!response.ok) return;
+    const value = await response.json() as Mesocycle;
+    setMesocycle(value);
+    setMesocycleAnchor(value.anchor || '');
+    setMesocyclePhase(value.calculated ? value.phases[`${value.calculated.cycle}:${value.calculated.week}`] || '' : '');
+  }
+  async function saveMesocycle() {
+    const pointer = mesocycle?.calculated;
+    const phases = pointer && mesocyclePhase ? { [`${pointer.cycle}:${pointer.week}`]: mesocyclePhase } : undefined;
+    const response = await fetch('/api/mesocycle', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ anchor: mesocycleAnchor, phases }) });
+    if (!response.ok) return;
+    const value = await response.json() as Mesocycle;
+    setMesocycle(value);
+    setMesocyclePhase(value.calculated ? value.phases[`${value.calculated.cycle}:${value.calculated.week}`] || '' : '');
+    setMesocycleSaved(true);
+    setTimeout(() => setMesocycleSaved(false), 2200);
   }
   async function saveGoal() {
     const response = await fetch('/api/profile', {
@@ -1147,6 +1172,20 @@ export default function Home() {
       )}
       {tab === 'evolucao' && (
         <section className="panel-stack">
+          <Card className="mesocycle-card">
+            <div className="goal-heading">
+              <div><p className="eyebrow">POSIÇÃO NO PLANO</p><h2>{mesocycle?.calculated ? `C${mesocycle.calculated.cycle} · W${mesocycle.calculated.week} · D${mesocycle.calculated.day}` : 'Mesociclo ainda não configurado'}</h2></div>
+              <Badge variant="outline">Fase: {mesocycle?.phase || 'desconhecida'}</Badge>
+            </div>
+            <p className="anchor-highlight"><strong>Âncora atual:</strong> {mesocycle?.anchor ? new Date(`${mesocycle.anchor}T12:00:00`).toLocaleDateString('pt-BR') : 'não definida'}</p>
+            {mesocycle?.warning && <small className="data-warning">{mesocycle.warning}</small>}
+            <div className="goal-row mesocycle-form">
+              <label>Início de C1W1D1<input type="date" value={mesocycleAnchor} onChange={(event) => setMesocycleAnchor(event.target.value)} /></label>
+              <label>Fase da semana atual<input value={mesocyclePhase} placeholder="Ex.: base, build, recovery" onChange={(event) => setMesocyclePhase(event.target.value)} /></label>
+            </div>
+            <Button className="primary-action" disabled={!mesocycleAnchor} onClick={saveMesocycle}>{mesocycleSaved ? <><Check /> Mesociclo salvo</> : 'Salvar posição do plano'}</Button>
+            <small className="analysis-note">Este contexto é informativo e não altera treinos nem decisões de prontidão.</small>
+          </Card>
           <Card className="goal-card">
             <div className="goal-heading">
               <div>
