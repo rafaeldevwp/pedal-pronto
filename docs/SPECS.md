@@ -169,3 +169,85 @@ Aceite:
 - Nenhuma mudança de comportamento na decisão de treino do dia; a SPEC só adiciona sinal.
 - Dias sem violação de ACWR ou de ramp rate mantêm o semáforo e os flags existentes idênticos aos de hoje.
 - O teto de ramp rate é parametrizável, não fixo no código, prevendo calibração pessoal futura.
+
+## SPEC-13 — Contexto unificado e explicável do atleta
+
+Status: aprovada; pronta para implementação
+
+Criar um snapshot diário único que reúna, sem duplicar as fontes existentes: prontidão e tendência do Polar; atividades, calendário, CTL, ATL, forma, TSS e carga do Intervals.icu; objetivo da temporada; posição C/W/D e fase do mesociclo; ACWR e rampa; check-in e disponibilidade do atleta. Cada campo deve carregar valor, data da última atualização, fonte e estado de qualidade (`válido`, `atrasado`, `ausente` ou `contraditório`).
+
+O snapshot será a entrada comum dos módulos de decisão, feedback e interface. Ele não modifica treino, não preenche lacunas com valores inventados e suspende recomendações quando faltar um dado obrigatório para aquela decisão. O Intervals.icu continua sendo a fonte oficial do plano e atividades.
+
+Aceite:
+
+- Uma mesma execução usa um único snapshot versionado, evitando que telas ou decisões combinem horários diferentes.
+- O payload informa proveniência e atualização de Polar, Intervals.icu, D1 e check-in.
+- Âncora/fase ausente, sessão expirada e sincronização atrasada aparecem explicitamente.
+- Dados contraditórios geram aviso e impedem proposta de escrita.
+- O snapshot é somente leitura, testável com fixtures e reutilizado pelos módulos seguintes.
+- Nenhuma regressão nas proteções da SPEC-08.
+
+## SPEC-14 — Motor adaptativo orientado por fase, objetivo e carga
+
+Status: planejada; depende da SPEC-13
+
+Transformar o snapshot em uma proposta de decisão que preserve a intenção do plano. O motor deve compreender o papel do treino dentro da fase do mesociclo, o estímulo principal da semana, o próximo treino-chave, a carga-alvo e o objetivo da temporada. Ele pode propor manter, reduzir uma variável, substituir conservadoramente ou redistribuir uma sessão futura, mas nunca escrever no Intervals.icu sem confirmação específica.
+
+Verde mantém o treino do dia; boa prontidão isolada não aumenta a sessão. Amarela altera no máximo uma variável. Vermelha favorece recuperação, endurance leve ou descanso. ACWR, rampa e fase são sinais combinados, nunca ordens isoladas. A proteção contra platô deve atuar no planejamento progressivo, não como licença para aumentar carga diariamente.
+
+Aceite:
+
+- A resposta mostra `Programado → Recomendado`, estímulo preservado, mudança exata, duração, carga e efeito esperado na semana.
+- A justificativa cita os sinais determinantes, a fase e o objetivo, em linguagem simples.
+- O motor distingue risco agudo de recuperação de necessidade crônica de progressão.
+- Dias e limites fixos do atleta continuam preservados.
+- Treino concluído é somente leitura e proposta expirada exige nova avaliação.
+- Aplicação depende do fluxo idempotente de consentimento da SPEC-08.
+- Cenários fixos cobrem verde, amarela, vermelha, deload, build, treino-chave e dados incompletos.
+
+## SPEC-15 — Sugestões OFF variadas e compatíveis com o plano
+
+Status: planejada; depende das SPECs 13 e 14
+
+Substituir a sugestão repetitiva dos dias OFF por uma biblioteca de sessões opcionais e um seletor contextual. A sugestão deve considerar fase, estímulos realizados e planejados, lacunas recentes, recuperação, tempo disponível, carga semanal e proximidade do próximo treino-chave. Descanso completo permanece uma recomendação válida e nunca deve ser apresentado como falha.
+
+Aceite:
+
+- Sugestões variam entre descanso, mobilidade, recuperação ativa, técnica/cadência e endurance leve conforme o contexto.
+- O app explica benefício provável, custo de carga e possível impacto no próximo treino.
+- Não sugere intensidade em dia de descanso diante de fadiga, dor, sintomas, ACWR/rampa elevados ou treino-chave próximo.
+- Evita repetir automaticamente a mesma sessão sem justificativa contextual.
+- `Fazer este treino` abre comparação e confirmação antes de criar o evento no Intervals.icu.
+- Ignorar a sugestão não altera o plano nem gera mensagem de culpa.
+
+## SPEC-16 — Ciclo pós-treino: feedback, atualização e impacto futuro
+
+Status: planejada; depende da SPEC-13
+
+Ao detectar uma nova atividade concluída, atualizar os dados usados pelo PWA e produzir feedback simples sobre como o treino foi absorvido e executado. Comparar realizado versus planejado e histórico pessoal semelhante usando carga, potência, frequência cardíaca, cadência, RPE, eficiência e desacoplamento quando disponíveis. Depois, recalcular o risco do próximo treino-chave e gerar apenas uma proposta caso a nova carga mude materialmente a semana.
+
+Aceite:
+
+- A atividade concluída recebe rótulo claro de `Realizado` e permanece imutável.
+- O feedback prioriza uma conclusão simples, até três evidências e uma orientação prática.
+- Dificuldade é inferida por sinais combinados e percepção, nunca por potência ou FC isolada.
+- Métricas ausentes reduzem a confiança e não são inventadas.
+- Uma sessão extra ou mais pesada atualiza carga, ACWR, rampa e previsão do próximo treino.
+- Alterações futuras continuam sendo propostas explícitas e dependem de confirmação.
+- Processamento repetido da mesma atividade não duplica feedback, histórico ou alertas.
+
+## SPEC-17 — Experiência integrada “Hoje → Semana → Evolução”
+
+Status: planejada; depende das SPECs 13–16
+
+Reorganizar a experiência para que o atleta atravesse um fluxo único: entender seu estado hoje, ver o treino e a eventual adaptação, compreender o efeito sobre a semana e acompanhar a evolução. Reaproveitar os componentes atuais de prontidão, recuperação, treinos, evolução e glossário, reduzindo repetição e mantendo detalhes técnicos em segundo nível.
+
+Aceite:
+
+- A tela Hoje apresenta decisão, treino, contexto da fase e ação principal sem exigir navegação técnica.
+- A Semana mostra original, recomendado e efetivo com carga-alvo versus realizada.
+- Evolução separa estado de hoje, tendência de adaptação e direção do ciclo.
+- Toda métrica técnica possui explicação contextual centralizada no glossário.
+- Estados de carregamento, dados atrasados, sem conexão e conflito têm orientação acionável.
+- A interface móvel preserva acessibilidade, instalação PWA e notificações já existentes.
+- Nenhum componente introduz um segundo calendário ou uma segunda fonte de verdade.

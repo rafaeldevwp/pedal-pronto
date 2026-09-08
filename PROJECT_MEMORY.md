@@ -47,7 +47,7 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-`NEXT`: aguardando a próxima SPEC priorizada pelo atleta.
+`NEXT`: T13 — construir o contexto unificado e explicável do atleta. Depois: T14 motor adaptativo, T15 sugestões OFF, T16 ciclo pós-treino e T17 experiência integrada.
 
 A T03 até a T07 foram integradas, validadas e publicadas em um único lote após autorização do atleta.
 
@@ -78,14 +78,11 @@ Projeto Sites privado, proprietário único. Antes de publicar: build, commit, e
 
 O lote T08–T12 foi publicado com sucesso em 2026-09-08.
 
-## Alterações locais ainda não publicadas
+## Planejamento ainda não publicado
 
-- T08 completa e validada localmente.
-- T09 completa e validada localmente, incluindo teste visual e por teclado.
-- T10 completa e validada localmente, com verbetes de recuperação, carga, treino e planejamento.
-- T11 completa e validada localmente: âncora, ponteiro C/W/D, fases persistidas e aviso de divergência sem efeito sobre decisões.
-- T12 completa e validada localmente: ACWR de 7/28 dias, rampa do CTL, teto configurável e flags informativos sem escrita automática.
-- Testes de segurança em `tests/training-safety.test.ts`.
-- Testes do check-in em `tests/checkin.test.ts`.
-- Testes do glossário em `tests/glossary.test.ts`.
-- Próxima retomada: definir nova SPEC ou publicar o lote T08–T10 somente se o atleta autorizar.
+- SPEC-13/T13: snapshot unificado, versionado e com qualidade/proveniência dos dados.
+- SPEC-14/T14: motor adaptativo orientado por fase, objetivo e carga, sempre como proposta confirmável.
+- SPEC-15/T15: sugestões OFF variadas, contextuais e compatíveis com o plano.
+- SPEC-16/T16: feedback pós-treino, atualização de carga e impacto futuro.
+- SPEC-17/T17: experiência integrada de Hoje, Semana e Evolução.
+- Ordem de implementação: T13 → T14 → T15 → T16 → T17; publicar somente mediante ordem explícita.

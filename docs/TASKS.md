@@ -96,9 +96,7 @@
 - [x] Validar consistência dos termos, busca e funcionamento móvel.
 - [x] Publicada no lote T08–T12 após autorização do atleta.
 
-## Próximo
-
-## Concluída localmente — T11 Resolver fase e ponteiro do mesociclo — SPEC-11
+## Concluída — T11 Resolver fase e ponteiro do mesociclo — SPEC-11
 
 - [x] Persistir âncora e mapa de fases por atleta.
 - [x] Calcular C/W/D por dias corridos e resolver a fase cadastrada.
@@ -107,7 +105,7 @@
 - [x] Validar viradas de semana/ciclo, fase desconhecida e nomes sem padrão.
 - [x] Publicada no lote T08–T12.
 
-## Concluída localmente — T12 Adicionar ACWR e ramp rate como sinais de segurança — SPEC-12
+## Concluída — T12 Adicionar ACWR e ramp rate como sinais de segurança — SPEC-12
 
 - [x] Calcular ACWR sobre 7 e 28 dias.
 - [x] Calcular ramp rate do CTL em sete dias contra teto configurável.
@@ -118,6 +116,46 @@
 
 ## Próximo
 
-- Aguardando a próxima SPEC priorizada pelo atleta.
+## NEXT — T13 Construir o contexto unificado — SPEC-13
+
+- [ ] Definir o contrato versionado do snapshot e campos obrigatórios/opcionais.
+- [ ] Criar adaptadores para Polar, Intervals.icu, perfil, mesociclo e check-in.
+- [ ] Registrar fonte, horário e qualidade de cada grupo de dados.
+- [ ] Impedir proposta quando dados obrigatórios estiverem atrasados, ausentes ou contraditórios.
+- [ ] Fazer prontidão, semana e evolução consumirem o mesmo snapshot sem mudar suas regras.
+- [ ] Cobrir snapshots completos, parciais, expirados e contraditórios em testes.
+- [ ] Validar build; não publicar sem nova ordem do atleta.
+
+## Planejada — T14 Criar o motor adaptativo — SPEC-14
+
+- [ ] Modelar estímulo, prioridade, carga-alvo e restrições da semana.
+- [ ] Integrar fase C/W/D, objetivo, recuperação, ACWR e rampa.
+- [ ] Gerar proposta determinística e explicável sem escrita automática.
+- [ ] Reutilizar confirmação, revalidação e idempotência da SPEC-08.
+- [ ] Testar cenários fisiológicos e fases do ciclo com fixtures fixas.
+
+## Planejada — T15 Evoluir sugestões de dias OFF — SPEC-15
+
+- [ ] Criar biblioteca de sessões opcionais e descanso completo.
+- [ ] Selecionar sugestão por contexto, lacuna de estímulo e custo futuro.
+- [ ] Evitar repetição sem justificativa e proteger o próximo treino-chave.
+- [ ] Exibir benefício, carga, risco e confirmação antes de enviar ao Intervals.icu.
+
+## Planejada — T16 Fechar o ciclo pós-treino — SPEC-16
+
+- [ ] Detectar atividade nova de forma idempotente.
+- [ ] Comparar planejado, realizado e histórico pessoal semelhante.
+- [ ] Produzir feedback simples com confiança e limitações.
+- [ ] Atualizar carga, sinais de segurança e previsão futura.
+- [ ] Criar proposta futura somente quando houver mudança material e exigir confirmação.
+
+## Planejada — T17 Integrar a experiência do produto — SPEC-17
+
+- [ ] Redesenhar a hierarquia Hoje, Semana e Evolução reaproveitando componentes atuais.
+- [ ] Consolidar estados de carregamento, ausência, atraso, conflito e erro.
+- [ ] Mostrar plano original, recomendação e decisão efetiva sem ambiguidade.
+- [ ] Validar acessibilidade, experiência móvel, PWA e regressões funcionais.
+
+Ordem obrigatória: T13 → T14 → T15 → T16 → T17. Trabalhar e validar uma tarefa por vez; publicar apenas mediante ordem explícita.
 
 Regra: trabalhar somente na tarefa marcada como `NEXT`.

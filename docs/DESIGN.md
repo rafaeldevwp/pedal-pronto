@@ -32,6 +32,44 @@
 - Verbete técnico: `o que é → como usamos → como interpretar → limitações → fonte`, sempre priorizando a linha de base individual.
 - Objetivo: visível como contexto da decisão, nunca como incentivo automático a treinar mais.
 
+## Visão-alvo do produto
+
+O Pedal Pronto evolui de um painel de métricas para um copiloto de execução do plano. O percurso principal é:
+
+`Estado de hoje → treino planejado → recomendação explicada → confirmação do atleta → execução → feedback → impacto na semana`.
+
+As telas atuais são reaproveitadas. A modernização muda a hierarquia e conecta os dados; não cria um produto paralelo nem substitui o Intervals.icu.
+
+## Arquitetura de experiência
+
+- **Hoje:** decisão e ação. Mostra prontidão, C/W/D/fase, treino previsto, eventual comparação `Programado → Recomendado` e recuperação prioritária.
+- **Semana:** continuidade do plano. Mostra carga-alvo, realizada e prevista, estímulos-chave, alterações confirmadas e riscos futuros.
+- **Evolução:** direção. Distingue condição do dia, tendência das últimas semanas, fase atual e progresso em relação ao objetivo.
+- **Detalhes técnicos:** métricas, gráficos, método e glossário aparecem por expansão, sem bloquear a leitura simples.
+
+## Contrato de decisão
+
+- Toda recomendação nasce de um snapshot identificado e datado.
+- A interface distingue fato, interpretação e proposta.
+- Sinal isolado não determina decisão; conflitos reduzem confiança.
+- A proposta informa o que preserva, o que muda e por quê.
+- Confirmar é uma ação separada; atualizar dados nunca equivale a confirmar.
+- Após confirmação, o servidor revalida snapshot, evento e ausência de atividade concluída.
+
+## Estados essenciais
+
+- **Atualizado:** fontes dentro da janela esperada; decisão disponível.
+- **Aguardando sincronização:** exibe último valor e idade, mas suspende escrita.
+- **Sessão expirada:** orienta reconexão e não produz decisão incompleta.
+- **Contradição:** explica quais fontes divergem e mantém o plano intacto.
+- **Treino realizado:** feedback somente leitura; nenhum controle de alteração.
+- **Proposta pendente:** comparação clara e confirmação específica.
+- **Proposta expirada:** bloqueada até nova avaliação.
+
+## Progressão sem platô
+
+O app não combate platô adicionando carga em um dia verde. Ele acompanha tendência de carga, resposta individual, fase e objetivo e sinaliza quando a progressão planejada parece insuficiente ou excessiva. Qualquer redistribuição é uma proposta de planejamento, limitada e confirmada pelo atleta.
+
 ## Vocabulário
 
 Preferir: “esforço do coração”, “carga da semana”, “recuperação”, “treino exigente”.
@@ -47,3 +85,5 @@ Nunca apresentar “alto/baixo” como universal quando a interpretação depend
 - Alterações automáticas de vários dias.
 - Gamificação baseada em acumular carga.
 - Substituir o calendário oficial do Intervals.icu.
+- Diagnóstico causal ou prescrição baseada apenas em literatura populacional.
+- Agente generativo livre com permissão direta de escrita no calendário.
