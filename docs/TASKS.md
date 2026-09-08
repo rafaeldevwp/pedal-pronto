@@ -172,20 +172,12 @@ A maior parte desta SPEC já existia, entregue como parte da T02 (comparação d
 - [x] Corrigido: `feedback.signals` agora mostra no máximo 3 evidências (o aceite da SPEC-16 pede "até três"; antes podia mostrar até 5 sem corte).
 - [ ] Não publicar sem nova ordem do atleta.
 
-## Concluída localmente (parcial, não verificada visualmente) — T17 Integrar a experiência do produto — SPEC-17
+## Planejada — T17 Integrar a experiência do produto — SPEC-17
 
-Escopo pequeno e aditivo nesta rodada — não é o redesenho completo pedido pela SPEC-17:
-
-- [x] `app/page.tsx`: tipo `Week` ganhou `mesocycle`, `contextWarning` e `engineDecision`, espelhando o backend das T13/T14.
-- [x] Card novo "Dados contraditórios / nenhuma proposta gerada" quando `week.contextWarning` existe e não há proposta — antes disso, um bloqueio por divergência de mesociclo não tinha nenhuma explicação na tela de Semana.
-- [x] Card novo "Leitura do motor adaptativo · prévia" mostrando a ação, os motivos e a mudança recomendada da T14, deixando explícito que é somente leitura ("Só leitura", sem botão de ação) — não introduz um segundo calendário nem uma segunda fonte de verdade, é só uma anotação em cima do que já existe.
-- [x] CSS novo (`.context-warning-card`, `.engine-preview-card`) seguindo o padrão visual já usado por `.proposal-card`/`.forecast-card`.
-- [x] `npm run build` validado (compila e gera as rotas normalmente).
-- [ ] **Não verificado visualmente no navegador**: tentei subir `npm run dev` e abrir no Browser pane, mas o ambiente local não tem credenciais reais de Polar/Intervals.icu nem o cabeçalho de usuário autenticado da hospedagem — o atleta confirmou que não valeria a pena insistir nisso aqui. Ou seja, o build passou, mas ninguém olhou a tela de verdade. Isso precisa ser conferido no ambiente real antes de publicar.
-- [ ] Redesenho completo da hierarquia Hoje/Semana/Evolução: não feito. As telas continuam com a estrutura de antes; só ganharam os dois cards acima.
-- [ ] Auditoria completa de estados de carregamento, ausência, atraso, conflito e erro em todas as telas: não feito — só o caso específico de `snapshot.blocked` ganhou orientação nova.
-- [ ] Validação de acessibilidade, PWA e notificações após as mudanças: não feito, depende da verificação visual acima.
-- [ ] Não publicar sem nova ordem do atleta.
+- [ ] Redesenhar a hierarquia Hoje, Semana e Evolução reaproveitando componentes atuais.
+- [ ] Consolidar estados de carregamento, ausência, atraso, conflito e erro.
+- [ ] Mostrar plano original, recomendação e decisão efetiva sem ambiguidade.
+- [ ] Validar acessibilidade, experiência móvel, PWA e regressões funcionais.
 
 Ordem obrigatória: T13 → T14 → T15 → T16 → T17. Trabalhar e validar uma tarefa por vez; publicar apenas mediante ordem explícita.
 
