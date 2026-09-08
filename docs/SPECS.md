@@ -125,3 +125,47 @@ Aceite:
 - Termos e definições são centralizados em uma única fonte para evitar textos divergentes entre telas.
 - Ausência de dado, unidade ou fonte é apresentada explicitamente, sem inferência inventada.
 - Testes verificam abertura no celular, foco, busca, links contextuais e consistência de cada termo usado no produto.
+
+## SPEC-11 — Fase do mesociclo e ponteiro de estado C/W/D
+
+Status: proposta
+
+Resolver a fase do mesociclo (base, build, peak, recovery ou outra nomenclatura) e a posição atual dentro do plano (ciclo, semana, dia) sem depender só do nome do evento no Intervals.icu. Hoje a semana em `app/api/week/route.ts` é agrupada apenas por data corrida, de segunda a domingo; não existe parser de `C{n}W{n}D{n}` nem vínculo com mesociclo ou fase.
+
+Duas tabelas novas no D1, no mesmo padrão de `athlete_goals`: `mesocycle_phases` (uma linha por ciclo e semana, com a fase correspondente) e `mesocycle_anchor` (uma linha por atleta, com a data em que C1W1D1 começou). Uma rota nova, `app/api/mesocycle/route.ts`, segue o mesmo contrato de leitura e escrita por atleta de `app/api/profile/route.ts`.
+
+Um módulo novo, `lib/mesocycle.ts`, calcula o ciclo/semana/dia de hoje a partir da âncora e da contagem de dias corridos, considerando quatro semanas de sete dias por ciclo, resolve a fase consultando o mapa cadastrado, e faz a conferência cruzada com o `C{n}W{n}D{n}` extraído do nome do evento do dia quando existir. Divergência entre o valor calculado e o extraído do evento nunca é corrigida automaticamente — apenas retornada como aviso explícito, preservando a regra do produto de nunca alterar nada sem confirmação. Ausência de fase cadastrada para o ciclo e semana atuais resulta em fase desconhecida explícita, nunca em uma fase assumida por padrão.
+
+Esta SPEC entrega apenas o dado resolvido — ciclo, semana, dia, fase e aviso de divergência quando houver. Não decide nada sobre o treino do dia; isso pertence ao motor de decisão que ainda vai consumir esse dado.
+
+Aceite:
+
+- Dado um valor de âncora e uma data de hoje conhecida, `lib/mesocycle.ts` calcula ciclo, semana e dia corretamente, incluindo virada de semana e de ciclo.
+- Dado um mapa de fases cadastrado, a fase resolvida bate com o ciclo e a semana calculados.
+- Evento com nome no padrão `C{n}W{n}D{n}` batendo com o valor calculado não gera aviso de divergência.
+- Evento com nome no padrão mas valor divergente gera aviso de divergência, sem qualquer alteração automática.
+- Evento sem o padrão no nome, como folga ou descanso, segue apenas com o valor calculado, sem erro.
+- Ciclo e semana sem fase cadastrada retornam fase desconhecida explícita.
+- `GET` e `PUT` de `app/api/mesocycle/route.ts` seguem o mesmo contrato de autenticação e escopo por atleta de `app/api/profile/route.ts`.
+- Nenhuma mudança de comportamento em `app/api/week/route.ts` ou em qualquer decisão de treino existente; a SPEC é só aditiva.
+- A âncora atual permanece visível de forma proeminente na tela de edição, não só editável, para um desvio ser notado rapidamente.
+
+## SPEC-12 — ACWR e ramp rate do CTL como checagem de segurança
+
+Status: proposta
+
+Hoje o ramp rate já é lido em `lib/readiness.ts` e exposto em `metrics`, mas nunca entra na função que acumula os flags de severidade — é puramente decorativo, sem peso na classificação verde, amarela ou vermelha.
+
+Calcular o ACWR, razão entre a soma de TSS dos últimos sete dias e a média semanal dos últimos vinte e oito dias, e o ramp rate do CTL, variação do CTL na janela de referência comparada a um teto configurável com padrão entre cinco e oito por semana conforme a literatura de referência, e somar dois novos flags à função `flag(...)`: um para ACWR elevado, com severidade moderada entre 1.3 e 1.5 e severa acima de 1.5, e um para ramp rate acima do teto configurado. Os dois participam da composição de severidade do semáforo do mesmo jeito que os flags já existentes hoje — somam, não substituem. Ambos os valores calculados passam a ser expostos em `metrics`, ao lado do que já é exposto hoje.
+
+Fica fora desta SPEC qualquer ajuste automático de treino a partir desses flags — isso pertence ao motor de decisão que ainda vai consumir esses valores como entrada, incluindo qualquer regra que condicione antecipação de carga em dia verde ao teto de ramp rate.
+
+Aceite:
+
+- Dado um histórico de TSS de vinte e oito dias conhecido, o ACWR calculado bate com a fórmula de referência.
+- Um dia com ACWR acima de 1.3 gera o flag correspondente com a severidade correta.
+- Um dia com ramp rate acima do teto configurado gera o flag correspondente.
+- ACWR e ramp rate aparecem no payload de `metrics` sem quebrar o schema existente.
+- Nenhuma mudança de comportamento na decisão de treino do dia; a SPEC só adiciona sinal.
+- Dias sem violação de ACWR ou de ramp rate mantêm o semáforo e os flags existentes idênticos aos de hoje.
+- O teto de ramp rate é parametrizável, não fixo no código, prevendo calibração pessoal futura.
