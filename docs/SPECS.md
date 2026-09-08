@@ -251,3 +251,28 @@ Aceite:
 - Estados de carregamento, dados atrasados, sem conexão e conflito têm orientação acionável.
 - A interface móvel preserva acessibilidade, instalação PWA e notificações já existentes.
 - Nenhum componente introduz um segundo calendário ou uma segunda fonte de verdade.
+
+## SPEC-18 — Fase do mesociclo substitui objetivo como orientador de carga
+
+Status: proposta; bloqueada por decisões do atleta (ver perguntas abertas) antes de virar TASK
+
+Hoje o "objetivo" da temporada (`performance`/`resistência`/`ftp`/`saúde`, salvo em `athlete_goals` junto com evento, data e prioridade) decide, em três lugares independentes, qual variável do treino cede primeiro quando a prontidão pede cautela — reduzir intensidade ou reduzir repetições/volume. Os três lugares divergem entre si: `lib/readiness.ts` (`adaptWorkout`), que decide de fato a adaptação do treino de hoje, usa só objetivo e "especificidade protegida" (dias até o evento principal) e não sabe nada sobre a fase do mesociclo; `lib/decision-engine.ts` (`preferVolumeReduction`), usado pela prévia do motor adaptativo e pelo replanejamento futuro que já escreve no Intervals.icu, cruza fase do mesociclo com objetivo, e a fase já sobrepõe o objetivo quando é de progressão (build/peak) ou de recuperação; e o texto "objetivo de X considerado" mais o mapa de nomes do objetivo (`objectiveNames`) estão copiados em três arquivos, sem fonte única. Ou seja: já existe hoje uma inconsistência real — o treino de hoje ignora a fase do mesociclo, mas o replanejamento futuro não.
+
+Com a decisão de que os ciclos já definidos no Intervals.icu (nome do evento `C{n}W{n}D{n}` mais a fase cadastrada em `mesocycle_phases`, SPEC-11) passam a ser a referência principal de "que tipo de treino cabe agora", o campo isolado de objetivo fica redundante para essa decisão específica. A regra proposta é: a fase do mesociclo vira a única fonte usada para decidir qual variável cede primeiro, tanto em `lib/readiness.ts` (hoje) quanto em `lib/decision-engine.ts`/`futureProposal` (futuro), unificando os três lugares na mesma regra — hoje essa regra só existe em `lib/decision-engine.ts`, faltando aplicá-la também em `readiness.ts`.
+
+Perguntas em aberto, bloqueiam virar TASK:
+
+1. O campo "objetivo" (performance/resistência/ftp/saúde) some completamente do app — tabela, rota `/api/profile`, tela "Direção da temporada" — ou continua existindo só como contexto narrativo da temporada, sem decidir mais nada?
+2. "Especificidade protegida" (reduzir volume antes da intensidade nos 21 dias antes de um evento principal, hoje calculada a partir de `eventDate`/`priority`) também vira responsabilidade da fase do mesociclo — por exemplo, uma fase chamada "peak" ou "taper" no seu mapa de fases já significaria isso — ou continua existindo separadamente, com sua própria data de evento, como hoje?
+3. Quando a fase está "desconhecida" (sem âncora configurada, ou sem fase cadastrada para aquele ciclo/semana), o que decide qual variável reduzir primeiro? Um padrão fixo, ou isso deveria bloquear a proposta e pedir para você cadastrar a fase antes?
+4. `athlete_goals`/`/api/profile` também guardam o teto de rampa do CTL (`rampRateLimit`, SPEC-12) — isso é independente de objetivo e deve continuar existindo do jeito que está, não importa a resposta das perguntas acima.
+
+Aceite, provisório e dependente das respostas acima:
+
+- Existe uma única função usada para decidir "reduzir intensidade ou reduzir volume primeiro", chamada por `lib/readiness.ts`, `lib/decision-engine.ts` e `futureProposal` — hoje são três decisões independentes, uma delas cega para a fase.
+- O treino de hoje (`lib/readiness.ts`) passa a considerar a fase do mesociclo pela primeira vez.
+- `objectiveNames` deixa de estar duplicado em três arquivos.
+- Ciclo/semana sem fase cadastrada segue exatamente a regra escolhida na pergunta 3, sem suposição silenciosa.
+- Testes cobrem a fase decidindo sozinha e o caso de fase desconhecida.
+
+Dependências: SPEC-11 (fase e ponteiro do mesociclo) e SPEC-14 (motor adaptativo, onde `preferVolumeReduction` já existe) já concluídas; esta SPEC consolida e remove a duplicação/divergência entre elas e o caminho de hoje (`lib/readiness.ts`).
