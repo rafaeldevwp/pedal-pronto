@@ -47,15 +47,15 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-`NEXT`: T16 — fechar o ciclo pós-treino (já quase toda entregue por T02/T06, ver TASKS.md). Depois: T17 experiência integrada (parcial, falta verificação visual).
+T13 a T17 estão todas concluídas localmente (build e 72 testes), fechando o roteiro completo do esboço "Pedal Pronto 2.0". Resumo do que cada uma entregou:
 
-T13, T14 e T15 estão concluídas e validadas localmente (build e 72 testes). T13: `lib/context.ts` (puro) define o snapshot versionado (`AthleteSnapshot` v1); `lib/context-loader.ts` monta esse snapshot chamando `runReadiness`/`resolveMesocycle` uma única vez por requisição; `app/api/readiness/route.ts` e `app/api/week/route.ts` passam por `loadAthleteContext` em vez de buscar Polar/Intervals.icu cada um por conta própria; `snapshot.blocked` impede proposta futura e sugestão OFF quando os dados são contraditórios, sempre explicando o motivo.
+- **T13**: `lib/context.ts` (puro) define o snapshot versionado (`AthleteSnapshot` v1); `lib/context-loader.ts` monta esse snapshot chamando `runReadiness`/`resolveMesocycle` uma única vez por requisição; `app/api/readiness/route.ts` e `app/api/week/route.ts` passam por `loadAthleteContext` em vez de buscar Polar/Intervals.icu cada um por conta própria; `snapshot.blocked` impede proposta futura e sugestão OFF quando os dados são contraditórios, sempre explicando o motivo.
+- **T14**: `lib/decision-engine.ts` (`decideTraining`) decide fase+ACWR/rampa+objetivo de forma determinística. Por decisão do atleta, o motor só atua em dia planejado futuro — nunca no dia de hoje, que continua sob a proposta já publicada em `lib/readiness.ts` — reaproveitando `preferVolumeReduction` dentro de `futureProposal` (`app/api/week/route.ts`), que já tem todo o fluxo de escrita da SPEC-08. `lib/stimulus.ts` classifica cada sessão em endurance/limiar/vo2max/recuperação e resume a cobertura da semana; quando o dia sendo avaliado é a única fonte prevista de limiar/VO2max da semana, intensidade é preservada e volume cede primeiro, custe o que custar de fase/objetivo.
+- **T15**: `lib/off-day-suggestions.ts` tem 5 categorias (antes 3, sem "descanso completo" como opção explícita), considera ACWR/rampa/fase/dor/sintomas (antes não considerava carga nem fase), evita repetir categoria sem motivo, e cita a lacuna de estímulo da semana na justificativa. Check-in e proximidade real do próximo treino-chave chegam de verdade em `app/api/week/route.ts`, sempre simétricos entre geração e revalidação da SPEC-08.
+- **T16**: a maior parte já existia via T02/T06 (feedback recalculado a cada leitura, sem persistência — reprocessar não duplica nada). Único ajuste real: `feedback.signals` limitado a 3 evidências, como o aceite pedia.
+- **T17 (parcial)**: `result.warning` — a razão específica de sessão expirada/dados atrasados/contraditórios, calculada há tempos no backend mas nunca exibida — agora aparece na aba Hoje e na aba Recuperação, com botão "Reconectar Polar" quando é o caso. As abas Recuperação e Treinos, que renderizavam vazio sem explicação quando os dados ainda não tinham chegado, agora mostram a causa provável e a ação certa. A aba Treinos passou a mostrar carga realizada vs. planejada da semana (`weeklyLoadTarget`/`weeklyLoadDone`).
 
-T14: `lib/decision-engine.ts` (`decideTraining`) decide fase+ACWR/rampa+objetivo de forma determinística. Em vez de uma rota de escrita nova (que competiria com a proposta de hoje já publicada em `lib/readiness.ts`), decidido com o atleta que o motor só atua em dia futuro — `preferVolumeReduction` foi extraída e reaproveitada dentro de `futureProposal` (`app/api/week/route.ts`), que já tem todo o fluxo de escrita da SPEC-08. `lib/stimulus.ts` classifica cada sessão em endurance/limiar/vo2max/recuperação (por duração+intensidade, sem chamada nova ao Intervals.icu) e resume a cobertura da semana; quando hoje (ou o dia futuro sendo replanejado) é a única fonte prevista de limiar/VO2max da semana, intensidade é preservada e volume cede primeiro, custe o que custar de fase/objetivo.
-
-T15: `lib/off-day-suggestions.ts` tem 5 categorias (antes 3), considera ACWR/rampa/fase/dor/sintomas (antes não considerava carga nem fase), evita repetir categoria sem motivo, e cita a lacuna de estímulo da semana na justificativa quando existe. Check-in e proximidade real do próximo treino-chave agora chegam de verdade em `app/api/week/route.ts` (antes só em fixtures de teste) — check-in viaja como query string no GET e no corpo do POST, sempre simétrico para a revalidação da SPEC-08 não divergir.
-
-Único gap consciente que sobrou: carga-alvo não é um número único modelado à parte; o proxy que já existia (`weeklyPlannedLoad` etc.) continua sendo a referência.
+Gaps conscientes que sobraram, nenhum bloqueante para as regras imutáveis: carga-alvo não é um número único à parte (o proxy `weeklyPlannedLoad`/`weeklyLoadTarget` continua sendo a referência); e a T17 **nunca foi verificada visualmente num navegador**, porque este ambiente não tem credenciais reais de Polar/Intervals.icu nem o cabeçalho de usuário da hospedagem — conferir isso no ambiente real é o passo que falta antes de publicar, junto com o redesenho completo de hierarquia Hoje/Semana/Evolução que a SPEC-17 pede (não feito, deliberadamente, para não arriscar mudança de layout sem conseguir ver o resultado).
 
 A T03 até a T07 foram integradas, validadas e publicadas em um único lote após autorização do atleta.
 
@@ -94,9 +94,9 @@ O lote T08–T12 foi publicado com sucesso em 2026-09-08.
 
 ## Planejamento ainda não publicado
 
-- SPEC-13/T13: snapshot unificado, versionado e com qualidade/proveniência dos dados.
-- SPEC-14/T14: motor adaptativo orientado por fase, objetivo e carga, sempre como proposta confirmável.
-- SPEC-15/T15: sugestões OFF variadas, contextuais e compatíveis com o plano.
-- SPEC-16/T16: feedback pós-treino, atualização de carga e impacto futuro.
-- SPEC-17/T17: experiência integrada de Hoje, Semana e Evolução.
-- Ordem de implementação: T13 → T14 → T15 → T16 → T17; publicar somente mediante ordem explícita.
+- SPEC-13/T13: snapshot unificado, versionado e com qualidade/proveniência dos dados. Concluída localmente.
+- SPEC-14/T14: motor adaptativo orientado por fase, objetivo, carga e estímulo-chave, sempre como proposta confirmável. Concluída localmente.
+- SPEC-15/T15: sugestões OFF variadas, contextuais e compatíveis com o plano. Concluída localmente.
+- SPEC-16/T16: feedback pós-treino, atualização de carga e impacto futuro. Concluída localmente.
+- SPEC-17/T17: experiência integrada de Hoje, Semana e Evolução. Concluída localmente, mas nunca verificada visualmente num navegador e sem o redesenho completo de hierarquia que a SPEC pede.
+- Todas as cinco (T13–T17) foram implementadas nesta ordem; publicar somente mediante ordem explícita — e, no caso da T17, só depois de conferir a interface no ambiente real.

@@ -514,6 +514,8 @@ async function context(owner: string, checkin?: Checkin) {
             : snapshot.blocked
               ? `Dados contraditórios: ${snapshot.blockReasons.join(' ')}`
               : undefined,
+    weeklyLoadTarget: Math.round(weeklyPlannedLoad),
+    weeklyLoadDone: Math.round(completed.reduce((sum, event) => sum + Number(event.load || 0), 0)),
   };
 }
 

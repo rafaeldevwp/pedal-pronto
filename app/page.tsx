@@ -174,6 +174,8 @@ type Week = {
   };
   mesocycle: null | { cycle: number; week: number; day: number; phase: string };
   contextWarning?: string;
+  weeklyLoadTarget: number;
+  weeklyLoadDone: number;
   engineDecision: {
     action: 'manter' | 'reduzir_intensidade' | 'reduzir_repeticoes' | 'substituir_recuperacao' | 'suspender';
     stimulusPreserved: string;
@@ -553,7 +555,10 @@ export default function Home() {
       ? { title: 'Você recuperou apenas em parte', action: 'Comece com calma e reavalie as sensações durante o aquecimento.' }
       : status === 'vermelha'
         ? { title: 'Hoje o corpo pede recuperação', action: 'Priorize descanso ou atividade muito leve. Dor ou sintomas exigem cautela.' }
-        : { title: 'Ainda não há dados suficientes', action: 'Sincronize o relógio antes de usar esta avaliação para decidir o treino.' };
+        : {
+            title: result?.warning ? 'Dados incompletos' : 'Ainda não há dados suficientes',
+            action: result?.warning || 'Sincronize o relógio antes de usar esta avaliação para decidir o treino.',
+          };
   const simpleEvidence = (result?.evidence || []).map((item) =>
     item.startsWith('HRV') ? 'Sua recuperação interna ficou abaixo do seu padrão'
       : item.startsWith('FC noturna') ? 'Seu coração trabalhou mais que o habitual durante o repouso'
@@ -680,6 +685,14 @@ export default function Home() {
                   : 'Carregando dados reais'}
               </span>
             </div>
+            {result?.warning && (
+              <small className="data-warning">
+                {result.warning}
+                {result.warning.includes('expirou') && (
+                  <> <a href="/api/polar/connect">Reconectar Polar</a>.</>
+                )}
+              </small>
+            )}
             <div className="score-row">
               <div className="score-ring">
                 <span>{result?.score ?? '—'}</span>
@@ -861,9 +874,47 @@ export default function Home() {
                   <RecoveryMetric label="Rampa CTL" value={result.metrics.ramp !== undefined ? `${result.metrics.ramp.toFixed(1)} /sem` : '—'} entryId="rampa" onOpen={openGlossary} />
                 </div>
               </TooltipProvider>
+              {result.warning?.includes('expirou') && (
+                <Button asChild className="primary-action">
+                  <a href="/api/polar/connect">Reconectar Polar</a>
+                </Button>
+              )}
               <Button variant="outline" className="recovery-refresh" onClick={() => { loadReadiness(false); loadWeek(); loadPerformance(); }} disabled={loading}>
                 <RefreshCw className={loading ? 'spin' : ''} /> Atualizar após sincronizar
               </Button>
+            </Card>
+          )}
+          {!result && (
+            <Card className="recovery-overview status-indisponível">
+              <div className="recovery-title">
+                <div>
+                  <p className="eyebrow">RECUPERAÇÃO DE HOJE</p>
+                  <h2>
+                    {loading
+                      ? 'Carregando seus dados…'
+                      : polarConnected === false
+                        ? 'Conecte o Polar para ver sua recuperação'
+                        : 'Não foi possível carregar sua recuperação'}
+                  </h2>
+                </div>
+              </div>
+              <p className="recovery-action">
+                <strong>O que fazer:</strong>{' '}
+                {loading
+                  ? 'Aguarde a sincronização com Polar e Intervals.icu.'
+                  : polarConnected === false
+                    ? 'Conecte sua conta Polar na aba Hoje para liberar esta avaliação.'
+                    : 'Toque em tentar novamente. Se persistir, verifique sua conexão.'}
+              </p>
+              {polarConnected === false ? (
+                <Button asChild className="primary-action">
+                  <a href="/api/polar/connect">Conectar Polar</a>
+                </Button>
+              ) : (
+                <Button variant="outline" className="recovery-refresh" onClick={() => loadReadiness(false)} disabled={loading}>
+                  <RefreshCw className={loading ? 'spin' : ''} /> Tentar novamente
+                </Button>
+              )}
             </Card>
           )}
           <Card className="checkin-card">
@@ -946,9 +997,23 @@ export default function Home() {
             <div>
               <p className="eyebrow">SEMANA ATUAL</p>
               <h2>Treinos no Intervals.icu</h2>
+              {week && (
+                <span className="week-load-summary">
+                  Carga realizada {week.weeklyLoadDone} de {week.weeklyLoadTarget} planejados
+                </span>
+              )}
             </div>
             <Badge variant="outline">{week?.events.length ?? 0} sessões</Badge>
           </div>
+          {!week && (
+            <p className="empty-insight">
+              {loading
+                ? 'Carregando o plano da semana…'
+                : polarConnected === false
+                  ? 'Conecte o Polar na aba Hoje para ver seus treinos da semana.'
+                  : 'Não foi possível carregar a semana agora. Toque em sincronizar no topo da tela.'}
+            </p>
+          )}
           <div className="week-list">
             {week?.events.map((workout) => (
               <details className={`week-workout ${workout.status}`} key={`${workout.status}-${workout.id}`}>

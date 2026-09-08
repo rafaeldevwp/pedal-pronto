@@ -158,7 +158,7 @@
 - [x] Testes: 2 casos novos em `tests/off-day-suggestions.test.ts` confirmando que a lacuna aparece na justificativa sem mudar a categoria escolhida.
 - [ ] Não publicar sem nova ordem do atleta.
 
-## Concluída localmente (parcial) — T16 Fechar o ciclo pós-treino — SPEC-16
+## Concluída localmente — T16 Fechar o ciclo pós-treino — SPEC-16
 
 A maior parte desta SPEC já existia, entregue como parte da T02 (comparação de sessões) e da T06 (histórico com resultado vinculado na leitura, sem reescrever registros):
 
@@ -172,19 +172,21 @@ A maior parte desta SPEC já existia, entregue como parte da T02 (comparação d
 - [x] Corrigido: `feedback.signals` agora mostra no máximo 3 evidências (o aceite da SPEC-16 pede "até três"; antes podia mostrar até 5 sem corte).
 - [ ] Não publicar sem nova ordem do atleta.
 
-## Concluída localmente (parcial, não verificada visualmente) — T17 Integrar a experiência do produto — SPEC-17
+## Concluída localmente (não verificada visualmente) — T17 Integrar a experiência do produto — SPEC-17
 
-Escopo pequeno e aditivo nesta rodada — não é o redesenho completo pedido pela SPEC-17:
-
-- [x] `app/page.tsx`: tipo `Week` ganhou `mesocycle`, `contextWarning` e `engineDecision`, espelhando o backend das T13/T14.
-- [x] Card novo "Dados contraditórios / nenhuma proposta gerada" quando `week.contextWarning` existe e não há proposta — antes disso, um bloqueio por divergência de mesociclo não tinha nenhuma explicação na tela de Semana.
-- [x] Card novo "Leitura do motor adaptativo · prévia" mostrando a ação, os motivos e a mudança recomendada da T14, deixando explícito que é somente leitura ("Só leitura", sem botão de ação) — não introduz um segundo calendário nem uma segunda fonte de verdade, é só uma anotação em cima do que já existe.
-- [x] CSS novo (`.context-warning-card`, `.engine-preview-card`) seguindo o padrão visual já usado por `.proposal-card`/`.forecast-card`.
-- [x] `npm run build` validado (compila e gera as rotas normalmente).
-- [ ] **Não verificado visualmente no navegador**: tentei subir `npm run dev` e abrir no Browser pane, mas o ambiente local não tem credenciais reais de Polar/Intervals.icu nem o cabeçalho de usuário autenticado da hospedagem — o atleta confirmou que não valeria a pena insistir nisso aqui. Ou seja, o build passou, mas ninguém olhou a tela de verdade. Isso precisa ser conferido no ambiente real antes de publicar.
-- [ ] Redesenho completo da hierarquia Hoje/Semana/Evolução: não feito. As telas continuam com a estrutura de antes; só ganharam os dois cards acima.
-- [ ] Auditoria completa de estados de carregamento, ausência, atraso, conflito e erro em todas as telas: não feito — só o caso específico de `snapshot.blocked` ganhou orientação nova.
-- [ ] Validação de acessibilidade, PWA e notificações após as mudanças: não feito, depende da verificação visual acima.
+- [x] `app/page.tsx`: tipo `Week` ganhou `mesocycle`, `contextWarning`, `engineDecision`, `weeklyLoadTarget` e `weeklyLoadDone`, espelhando o backend das T13/T14.
+- [x] Card "Dados contraditórios / nenhuma proposta gerada" quando `week.contextWarning` existe e não há proposta.
+- [x] Card "Leitura do motor adaptativo · prévia" com ação, motivos e mudança recomendada da T14, explicitamente só leitura.
+- [x] "A Semana mostra... carga-alvo versus realizada": `app/api/week/route.ts` agora expõe `weeklyLoadTarget` (soma da carga planejada da semana) e `weeklyLoadDone` (soma da carga já realizada), exibidos no topo da aba Treinos ("Carga realizada X de Y planejados") — antes esse número só existia internamente para calcular o antes/depois de uma proposta pontual.
+- [x] Auditoria e correção de estados sem orientação acionável, achados reais nesta rodada:
+  - `result.warning` (a razão específica de "sessão expirada" vs "dados ainda não chegaram" vs "contraditório", já calculada em `lib/readiness.ts`) nunca era exibido em lugar nenhum da interface — a aba Hoje e a aba Recuperação mostravam sempre o mesmo texto genérico ("Ainda não há dados suficientes... sincronize o relógio"), não importa a causa real. Agora `result.warning` aparece na aba Hoje (banner) e substitui o texto genérico na aba Recuperação; quando a causa é sessão expirada, aparece um botão "Reconectar Polar" direto (reaproveita a rota `/api/polar/connect` que já existia).
+  - Quando `result` ainda não carregou (`!result`), a aba Recuperação não renderizava nada além do check-in — sem indicação de carregamento, de Polar desconectado ou de falha. Agora mostra um card com a causa provável (carregando / Polar desconectado / falha) e a ação certa para cada caso (aguardar / conectar / tentar novamente).
+  - Quando `week` ainda não carregou (`!week`), a aba Treinos mostrava a lista vazia sem explicação. Agora mostra uma mensagem com a mesma lógica de causa provável.
+  - A aba Evolução já tratava bem esses casos antes (`performance?.warning`, textos de fallback em cada card) — nenhuma mudança foi necessária lá.
+- [x] `npm test` (72 casos) e `npm run build` validados após cada mudança.
+- [ ] **Não verificado visualmente no navegador**: o ambiente local não tem credenciais reais de Polar/Intervals.icu nem o cabeçalho de usuário autenticado da hospedagem, e o atleta confirmou que não vale a pena insistir nisso aqui. Precisa ser conferido no ambiente real antes de publicar — inclusive o botão `asChild` novo (mesmo padrão já usado em outro botão existente da tela, mas nunca visto renderizado nesta sessão).
+- [ ] Redesenho completo da hierarquia Hoje/Semana/Evolução (reestruturação de layout, não só os textos/estados acima): não feito, por decisão deliberada — mudanças de layout maiores sem conseguir ver o resultado renderizado são um risco desnecessário num app pessoal já em uso real. As telas continuam com a mesma estrutura de antes.
+- [ ] Validação de acessibilidade, PWA e notificações: não feito, depende da verificação visual acima.
 - [ ] Não publicar sem nova ordem do atleta.
 
 Ordem obrigatória: T13 → T14 → T15 → T16 → T17. Trabalhar e validar uma tarefa por vez; publicar apenas mediante ordem explícita.
