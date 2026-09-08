@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
+import { checkinFields, defaultCheckin, parseStoredCheckin, type CheckinState } from '@/lib/checkin';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Scatter, ScatterChart, XAxis, YAxis } from 'recharts';
@@ -287,9 +288,7 @@ export default function Home() {
     [dismissedAlert, setDismissedAlert] = useState(''),
     [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('unsupported'),
     [weekMessage, setWeekMessage] = useState(''),
-    [checkin, setCheckin] = useState({
-      fadiga: 4, dor: 1, estresse: 3, pernas: 7, motivacao: 7, sintomas: 0, tempoDisponivel: 60,
-    });
+    [checkin, setCheckin] = useState<CheckinState>({ ...defaultCheckin });
   useEffect(() => {
     if ('serviceWorker' in navigator)
       navigator.serviceWorker.register('/sw.js');
@@ -303,8 +302,7 @@ export default function Home() {
     };
     openFutureProposal();
     window.addEventListener('hashchange', openFutureProposal);
-    const stored = localStorage.getItem('pedal-pronto-checkin');
-    if (stored) setCheckin((current) => ({ ...current, ...JSON.parse(stored) }));
+    setCheckin(parseStoredCheckin(localStorage.getItem('pedal-pronto-checkin')));
     setDismissedAlert(localStorage.getItem('pedal-pronto-dismissed-alert') || '');
     if ('Notification' in window) setNotificationPermission(Notification.permission);
     fetch('/api/polar/status')
@@ -491,15 +489,6 @@ export default function Home() {
     setSaved(true);
     setTimeout(() => setSaved(false), 2200);
   }
-  const checkinFields = [
-    { key: 'fadiga', label: 'Fadiga', hint: '0 descansado · 10 exausto', min: 0, max: 10, step: 1 },
-    { key: 'dor', label: 'Dor', hint: '0 nenhuma · 10 intensa', min: 0, max: 10, step: 1 },
-    { key: 'estresse', label: 'Estresse', hint: '0 baixo · 10 muito alto', min: 0, max: 10, step: 1 },
-    { key: 'pernas', label: 'Pernas', hint: '0 muito pesadas · 10 ótimas', min: 0, max: 10, step: 1 },
-    { key: 'motivacao', label: 'Motivação', hint: '0 nenhuma · 10 muito alta', min: 0, max: 10, step: 1 },
-    { key: 'sintomas', label: 'Sintomas', hint: '0 nenhum · 10 fortes', min: 0, max: 10, step: 1 },
-    { key: 'tempoDisponivel', label: 'Tempo disponível', hint: 'Minutos disponíveis hoje', min: 0, max: 180, step: 5 },
-  ] as const;
   const status = result?.classification || 'indisponível';
   const recoveryCopy = status === 'verde'
     ? { title: 'Seu corpo está respondendo bem', action: 'Pode seguir o treino planejado. Não é necessário aumentar a sessão.' }
@@ -824,21 +813,23 @@ export default function Home() {
             </CardHeader>
             <CardContent className="slider-list">
               {checkinFields.map((field) => (
-                <label key={field.key}>
+                <div className="checkin-field" key={field.key}>
                   <span>
-                    <span className="checkin-label"><strong>{field.label}</strong><small>{field.hint}</small></span>
-                    <b>{checkin[field.key]}{field.key === 'tempoDisponivel' ? ' min' : ''}</b>
+                    <span className="checkin-label" id={`checkin-${field.key}-label`}><strong>{field.label}</strong><small>{field.hint}</small></span>
+                    <output aria-live="polite">{checkin[field.key]}{field.key === 'tempoDisponivel' ? ' min' : ''}</output>
                   </span>
                   <Slider
+                    aria-labelledby={`checkin-${field.key}-label`}
                     min={field.min}
                     max={field.max}
                     step={field.step}
                     value={[checkin[field.key]]}
-                    onValueChange={(v) =>
-                      setCheckin({ ...checkin, [field.key]: v[0] })
-                    }
+                    onValueChange={(value) => setCheckin((current) => ({
+                      ...current,
+                      [field.key]: Array.isArray(value) ? (value[0] ?? current[field.key]) : value,
+                    }))}
                   />
-                </label>
+                </div>
               ))}
               {(checkin.dor >= 6 || checkin.sintomas >= 5) && (
                 <div className="checkin-alert">

@@ -77,15 +77,21 @@
 - [x] Validar testes e build localmente.
 - [ ] Publicar somente após autorização do atleta.
 
-## NEXT — T09 Corrigir slider em zero e validar acessibilidade — SPEC-09
+## Concluída localmente — T09 Corrigir slider em zero e validar acessibilidade — SPEC-09
 
-- Corrigir trilho e botão em todos os extremos.
-- Preservar zero como valor válido no estado e no envio.
-- Validar toque, mouse, teclado, contraste e tamanhos móveis.
+- [x] Corrigir trilho e botão em todos os extremos.
+- [x] Preservar zero como valor válido no estado e no envio.
+- [x] Ampliar área de toque, contraste e foco visível.
+- [x] Validar mouse, teclado, mínimo, máximo, retorno a zero e recarga.
+- [x] Validar visualmente em layout móvel.
+- [ ] Publicar somente após autorização do atleta.
+
+## NEXT — T10 Criar glossário contextual e centralizado — SPEC-10
+
+- Centralizar os termos técnicos e suas definições.
+- Adicionar explicação curta junto às métricas e área completa pesquisável.
+- Garantir abertura por toque, teclado e leitor de tela.
+- Validar consistência dos termos e funcionamento móvel.
 - Não publicar até autorização do atleta.
-
-## Depois
-
-- T10 Criar glossário contextual e centralizado — SPEC-10.
 
 Regra: trabalhar somente na tarefa marcada como `NEXT`.

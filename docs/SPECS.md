@@ -80,7 +80,7 @@ Aceite:
 
 ## SPEC-09 — Slider do check-in permanece utilizável em zero
 
-Status: planejada — correção de interface
+Status: implementada e validada localmente; publicação pendente de autorização
 
 Todos os controles do check-in devem manter trilho, indicador, botão deslizante, valor e área de toque visíveis quando o valor for zero ou estiver em qualquer extremo. Zero é um valor válido e deve ser enviado e salvo como zero, nunca interpretado como ausente.
 
