@@ -284,7 +284,7 @@ Dependências: SPEC-11 (fase e ponteiro do mesociclo) e SPEC-14 (motor adaptativ
 
 ## SPEC-19 — Tela Hoje essencial e progressiva
 
-Status: concluída localmente; não publicada
+Status: concluída e publicada na versão 25 em 2026-09-08
 
 A tela Hoje deve permitir decidir em poucos segundos sem repetir recuperação, carga e histórico que já aparecem em outros níveis do produto. O primeiro nível mostra somente prontidão, treino de hoje, eventual mudança proposta e a ação correspondente. Recuperação detalhada e check-in ficam disponíveis sob expansão; tendências permanecem na aba Evolução.
 
