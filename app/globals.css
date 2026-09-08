@@ -43,3 +43,21 @@
 .mesocycle-card { padding:17px; border:1px solid #b9d5c4; background:linear-gradient(145deg,#fbfdfb,#edf7f1); }.anchor-highlight { margin:12px 0; padding:10px 12px; color:#254d3a; border-radius:11px; background:#fff; font-size:11px; }.mesocycle-form { margin:12px 0; }.mesocycle-form label { display:flex; flex-direction:column; gap:5px; color:#59665e; font-size:9px; font-weight:800; }.mesocycle-form input { width:100%; height:40px; padding:0 11px; border:1px solid var(--border); border-radius:11px; background:#fff; }
 .context-warning-card { padding:17px; border:1px solid #d9c9c2; background:linear-gradient(145deg,#fdfaf9,#f7efec); box-shadow:0 10px 28px #20362912; }
 .engine-preview-card { padding:17px; border:1px dashed #b9c3d5; background:linear-gradient(145deg,#f9fafd,#eef1f7); }.engine-preview-card .badge { display:inline-flex; align-items:center; gap:4px; color:#33415c; background:#dfe6f2; }.engine-preview-card .badge svg { width:11px; }
+
+/* T17: navegação móvel, leitura e foco acessível. */
+.bottom-nav { grid-template-columns:repeat(4,1fr); }
+.bottom-nav button { min-height:48px; padding:7px 4px; font-size:12px; }
+.bottom-nav button:focus-visible,.install-banner:focus-visible,summary:focus-visible,button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible { outline:3px solid #edc961; outline-offset:2px; }
+.connection-strip small,.readiness-topline,.metric span,.metric small,.week-load-summary,.week-workout-title small,.week-workout-title>span,.suggestion-meta,.suggestion-status,.week-message,.simple-feedback small,.training-details,.chart-legend,.data-source,.analysis-note { font-size:12px; }
+.muted-copy,.simple-feedback p,.learning-card p,.learning-card li,.recovery-overview>p,.change-note p,.steps,.workout-summary span { font-size:14px; }
+.week-workout-title strong,.simple-feedback strong,.checkin-field>span { font-size:14px; }
+.info-trigger { width:44px; height:44px; }
+.info-trigger.light { width:36px; height:36px; }
+@media (max-width:370px) {
+  .metric-grid,.recovery-signals { grid-template-columns:1fr 1fr; }
+  .goal-row,.proposal-comparison,.forecast-route,.decision-flow { grid-template-columns:1fr; }
+  .proposal-comparison>svg,.forecast-route>svg,.decision-flow>svg { transform:rotate(90deg); justify-self:center; }
+}
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; }
+}

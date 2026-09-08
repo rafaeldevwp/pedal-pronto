@@ -172,7 +172,7 @@ A maior parte desta SPEC já existia, entregue como parte da T02 (comparação d
 - [x] Corrigido: `feedback.signals` agora mostra no máximo 3 evidências (o aceite da SPEC-16 pede "até três"; antes podia mostrar até 5 sem corte).
 - [ ] Não publicar sem nova ordem do atleta.
 
-## Concluída localmente (não verificada visualmente) — T17 Integrar a experiência do produto — SPEC-17
+## Concluída localmente — T17 Integrar a experiência do produto — SPEC-17
 
 - [x] `app/page.tsx`: tipo `Week` ganhou `mesocycle`, `contextWarning`, `engineDecision`, `weeklyLoadTarget` e `weeklyLoadDone`, espelhando o backend das T13/T14.
 - [x] Card "Dados contraditórios / nenhuma proposta gerada" quando `week.contextWarning` existe e não há proposta.
@@ -190,8 +190,9 @@ A maior parte desta SPEC já existia, entregue como parte da T02 (comparação d
   - Aba Evolução reordenada para separar de verdade os três blocos que o aceite pede: "Leitura diária" (estado de hoje) primeiro, depois potência/coração/aprendizado pessoal (tendência de adaptação), e só no fim posição no mesociclo + direção da temporada (direção do ciclo) — antes vinha ciclo → temporada → hoje → tendência, fora de ordem.
   - Nenhum componente novo foi criado; só reaproveitados e reordenados os já existentes, exatamente como o enunciado da SPEC-17 pede.
 - [x] `npm test` (75 casos) e `npm run build` validados após a reorganização.
-- [ ] **Não verificado visualmente no navegador**: o ambiente local não tem credenciais reais de Polar/Intervals.icu nem o cabeçalho de usuário autenticado da hospedagem. O atleta autorizou seguir mesmo assim, aceitando o risco. Precisa ser conferido no ambiente real antes de publicar — a fusão de abas e a reordenação da Evolução são mudanças estruturais que nunca foram vistas renderizadas.
-- [ ] Validação de acessibilidade, PWA e notificações: não feito, depende da verificação visual acima.
+- [x] Verificado visualmente no navegador local: Hoje, Semana, Evolução e Glossário renderizam com navegação estável; estados sem conexão e carregamento foram conferidos. Dados autenticados reais permanecem para a validação pós-publicação.
+- [x] Acessibilidade validada: quatro colunas reais na navegação, alvo mínimo de toque, `aria-current`, associação entre navegação e painéis, foco visível, movimento reduzido e adaptação para telas estreitas.
+- [x] PWA e notificações preservados sem alteração de seus fluxos; regressão completa com 75 testes e build de produção aprovados.
 - [ ] Não publicar sem nova ordem do atleta.
 
 ## Concluída localmente — T18 Fase do mesociclo substitui objetivo — SPEC-18

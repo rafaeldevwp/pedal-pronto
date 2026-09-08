@@ -238,7 +238,7 @@ Aceite:
 
 ## SPEC-17 — Experiência integrada “Hoje → Semana → Evolução”
 
-Status: planejada; depende das SPECs 13–16
+Status: concluída e validada localmente; publicação pendente
 
 Reorganizar a experiência para que o atleta atravesse um fluxo único: entender seu estado hoje, ver o treino e a eventual adaptação, compreender o efeito sobre a semana e acompanhar a evolução. Reaproveitar os componentes atuais de prontidão, recuperação, treinos, evolução e glossário, reduzindo repetição e mantendo detalhes técnicos em segundo nível.
 

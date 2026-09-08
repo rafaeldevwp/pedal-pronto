@@ -639,7 +639,7 @@ export default function Home() {
         )}
       </header>
       {tab === 'hoje' && (
-        <section className="connection-strip">
+        <section className="connection-strip" aria-live="polite">
           <div>
             <Link2 size={18} />
             <span>
@@ -666,7 +666,7 @@ export default function Home() {
       )}
       {tab === 'hoje' && (
         <>
-          <section className={`readiness-card status-${status}`}>
+          <section id="panel-hoje" className={`readiness-card status-${status}`} aria-labelledby="readiness-title" aria-live="polite">
             <div className="readiness-topline">
               <Badge className="status-badge">
                 PRONTIDÃO {status.toUpperCase()}
@@ -691,7 +691,7 @@ export default function Home() {
                 <small>/ 5</small>
               </div>
               <div>
-                <h2>{result?.title || 'Avaliando recuperação'}</h2>
+                <h2 id="readiness-title">{result?.title || 'Avaliando recuperação'}</h2>
                 <p>
                   {result?.summary ||
                     'Cruzando sono, tendência e carga recente.'}
@@ -833,7 +833,7 @@ export default function Home() {
         </>
       )}
       {tab === 'hoje' && (
-        <section className="panel-stack">
+        <section className="panel-stack" aria-label="Recuperação e check-in de hoje">
           {result && (
             <Card className={`recovery-overview status-${status}`}>
               <div className="recovery-title">
@@ -970,11 +970,11 @@ export default function Home() {
         </section>
       )}
       {tab === 'treinos' && (
-        <section className="panel-stack">
+        <section id="panel-semana" className="panel-stack" aria-labelledby="week-title">
           <div className="week-summary">
             <div>
               <p className="eyebrow">SEMANA ATUAL</p>
-              <h2>Treinos no Intervals.icu</h2>
+              <h2 id="week-title">Treinos no Intervals.icu</h2>
               {week && (
                 <span className="week-load-summary">
                   Carga realizada {week.weeklyLoadDone} de {week.weeklyLoadTarget} planejados
@@ -1257,7 +1257,7 @@ export default function Home() {
         </section>
       )}
       {tab === 'evolucao' && (
-        <section className="panel-stack">
+        <section id="panel-evolucao" className="panel-stack" aria-label="Evolução do atleta">
           <Card className={`daily-evolution ${dailyEvolution.key}`}>
             <div className="daily-evolution-heading">
               <span className="insight-icon"><Sparkles /></span>
@@ -1423,7 +1423,7 @@ export default function Home() {
         </section>
       )}
       {tab === 'glossario' && (
-        <section className="panel-stack glossary-page">
+        <section id="panel-glossario" className="panel-stack glossary-page" aria-label="Glossário de termos">
           <Card className="glossary-intro">
             <p className="eyebrow">ENTENDA SEUS DADOS</p>
             <h2>Termos técnicos em linguagem simples</h2>
@@ -1482,6 +1482,8 @@ export default function Home() {
         <button
           className={tab === 'hoje' ? 'active' : ''}
           onClick={() => setTab('hoje')}
+          aria-current={tab === 'hoje' ? 'page' : undefined}
+          aria-controls="panel-hoje"
         >
           <Activity />
           <span>Hoje</span>
@@ -1489,6 +1491,8 @@ export default function Home() {
         <button
           className={tab === 'treinos' ? 'active' : ''}
           onClick={() => setTab('treinos')}
+          aria-current={tab === 'treinos' ? 'page' : undefined}
+          aria-controls="panel-semana"
         >
           <Bike />
           <span>Semana</span>
@@ -1496,6 +1500,8 @@ export default function Home() {
         <button
           className={tab === 'evolucao' ? 'active' : ''}
           onClick={() => setTab('evolucao')}
+          aria-current={tab === 'evolucao' ? 'page' : undefined}
+          aria-controls="panel-evolucao"
         >
           <TrendingUp />
           <span>Evolução</span>
@@ -1503,6 +1509,8 @@ export default function Home() {
         <button
           className={tab === 'glossario' ? 'active' : ''}
           onClick={() => { setGlossarySearch(''); setGlossarySelected(''); setTab('glossario'); }}
+          aria-current={tab === 'glossario' ? 'page' : undefined}
+          aria-controls="panel-glossario"
         >
           <BookOpen />
           <span>Glossário</span>
