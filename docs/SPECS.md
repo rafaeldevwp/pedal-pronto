@@ -296,3 +296,97 @@ Aceite:
 - O gráfico de carga de sete dias não é repetido na tela Hoje; sua leitura permanece em Evolução.
 - Alertas, propostas e confirmação explícita para escrita no Intervals.icu não são removidos nem escondidos.
 - Build e testes regressivos permanecem aprovados.
+
+## SPEC-20 — Unificar o ajuste de uma variável (intensidade x repetições)
+
+Status: proposta — aguardando decisão do atleta em pontos específicos (ver abaixo)
+
+Diagnóstico: a regra "amarela reduz só uma variável do treino" está implementada três vezes de forma independente, e uma das cópias diverge de verdade das outras duas: `lib/readiness.ts` (`adaptWorkout`, treino de hoje), `lib/decision-engine.ts` (`reduceIntensity`/`reduceRepetitions`, prévia do motor) e `app/api/week/route.ts` (`futureProposal`, replanejamento futuro). O regex de repetições em `futureProposal` exige `[3-9]x` enquanto os outros dois aceitam `[2-9]x` — a mesma estrutura de treino gera proposta de ajuste hoje mas não gera proposta futura. Ao reduzir repetições, `readiness.ts`/`decision-engine.ts` cortam duração (~10%) e carga (~16%); `futureProposal` preserva a duração inteira e só corta a carga proporcionalmente à razão de repetições (piso 0,72). Também existe uma quarta duplicação menor: o template de "recuperação leve" (nome, 30 min, carga 18, estrutura "10m 45% / 15m 50% / 5m 40%") está escrito à mão tanto no branch vermelha de `adaptWorkout` quanto em `recoveryRecommendation` (`decision-engine.ts`), com nomes ligeiramente diferentes.
+
+Decisões que o atleta precisa tomar antes da implementação:
+
+1. **Duração ao reduzir repetições**: manter a regra de hoje (corta duração ~10% e carga ~16%) ou adotar a regra do replanejamento futuro (duração intacta, só carga cai proporcionalmente)? As duas existem hoje; só uma pode ficar.
+2. **Piso de repetições reconhecido**: `2x` conta como estrutura de intervalos reduzível, ou o mínimo real é `3x` (regra que hoje só vale para o replanejamento futuro)?
+3. Confirmar que a nova função única pode viver em `lib/decision-engine.ts` (onde `preferVolumeReduction` já está) e ser chamada por `lib/readiness.ts` e por `app/api/week/route.ts`, em vez de cada um manter sua própria cópia.
+
+Regra final (após a decisão): existe uma única função exportada de `lib/decision-engine.ts` que recebe treino, fase e classificação e devolve reduzir intensidade, reduzir repetições ou substituir por recuperação leve — com um único regex de repetições, um único regex de intensidade, uma única regra de fator e um único template de recuperação leve. `lib/readiness.ts` (hoje) e `app/api/week/route.ts` (`futureProposal`) passam a chamar essa função em vez de reimplementá-la.
+
+Aceite:
+
+- Um único regex de repetições e um único de intensidade usados nos três pontos de chamada (hoje, prévia do motor, replanejamento futuro).
+- Uma única regra de fator de duração/carga ao reduzir repetições, aplicada igualmente nos três.
+- Template de recuperação leve definido uma vez só, reaproveitado por `readiness.ts` e `decision-engine.ts`.
+- Teste de regressão que aplica a mesma estrutura de treino e a mesma fase pelos três caminhos (hoje, prévia, futuro) e confirma que produzem a mesma ação e o mesmo resultado numérico — hoje esse teste falharia.
+- `npm test` e `npm run build` validados.
+
+Dependências: nenhuma SPEC concluída bloqueia esta. Fazer depois da SPEC-21 simplifica a implementação, porque `readiness.ts` passaria a receber a fase já resolvida em vez de calculá-la sozinho — mas não é obrigatório.
+
+## SPEC-21 — Fechar o contexto unificado (fase e qualidade de dados)
+
+Status: proposta — aguardando decisão do atleta em pontos específicos (ver abaixo)
+
+Diagnóstico: a SPEC-13 unificou o snapshot do atleta, mas dois caminhos ainda escapam dela. Primeiro, a fase do mesociclo é calculada duas vezes por requisição: `lib/context-loader.ts` monta o snapshot chamando `resolveMesocycle`, mas antes disso `lib/readiness.ts` já fez sua própria leitura de `mesocycle_anchor` e seu próprio cálculo via `resolveTodayPhase()`, só para decidir o treino de hoje — mesma tabela, mesma conta, duas consultas e duas chamadas de função por request. Segundo, `lib/context.ts` (`readinessQuality`) decide se a prontidão está atrasada, ausente ou contraditória testando substrings (`warning.includes('expirou')`, `warning.includes('ainda não chegaram')`) contra o texto livre que `lib/readiness.ts` gera em `unavailable()`; se o texto mudar, a classificação cai em silêncio no caso genérico, sem erro. Terceiro, "carga de ontem foi alta para o fitness atual" tem duas fórmulas diferentes: `readiness.ts` usa `yesterdayLoad > ctl * 1.5`, `week/route.ts` usa `yesterdayLoad > Math.max(70, ctl * 1.5)` — o mesmo julgamento responde diferente dependendo de qual arquivo pergunta.
+
+Decisões que o atleta precisa tomar antes da implementação:
+
+1. Confirmar que `runReadiness` passa a receber a fase já resolvida como parâmetro (calculada uma única vez em `context-loader.ts` antes de chamar `runReadiness`), em vez de consultar `mesocycle_anchor` por conta própria — isso muda a assinatura da função.
+2. Confirmar que `ReadinessResult` ganha um código de motivo explícito (ex. `reasonCode: 'atrasado' | 'ausente' | 'contraditório' | 'sessao_expirada'`) para substituir a leitura de texto em `lib/context.ts`.
+3. Qual limiar fica valendo para "carga de ontem alta": `ctl * 1.5` (regra atual de `readiness.ts`) ou `Math.max(70, ctl * 1.5)` (regra atual de `week/route.ts`)?
+
+Aceite:
+
+- `lib/context-loader.ts` resolve a fase do mesociclo uma única vez por requisição e repassa para `runReadiness`; `lib/readiness.ts` não lê mais `mesocycle_anchor` diretamente.
+- `lib/context.ts` classifica a qualidade da prontidão pelo `reasonCode` explícito, sem inspecionar texto.
+- Uma única função em `lib/load-safety.ts` decide "carga de ontem alta", reaproveitada por `readiness.ts` e `week/route.ts`, com o mesmo limiar nos dois lugares.
+- Testes cobrindo: fase resolvida uma única vez por requisição, `reasonCode` correto para os três casos de indisponibilidade (atrasado/ausente/sessão expirada), mesmo resultado de "carga alta" nos dois consumidores para o mesmo CTL/carga.
+- `npm test` e `npm run build` validados.
+
+Dependências: nenhuma SPEC concluída bloqueia esta; toca `lib/readiness.ts`, `lib/context-loader.ts`, `lib/context.ts`, `lib/load-safety.ts` e `app/api/week/route.ts`.
+
+## SPEC-22 — Limpeza estrutural menor
+
+Status: proposta — aguardando decisão do atleta em um ponto (ver abaixo)
+
+Diagnóstico: três achados menores, sem efeito em decisão de treino. Em `app/api/week/route.ts`, a variável `stressed` ("a semana está sob estresse de carga/prontidão?") é calculada duas vezes com o código idêntico — uma vez dentro do `.map()` de `planOutlook` (recalculada a cada item do laço apesar de não depender do item) e de novo fora, para `proposalBuilt`. O tipo `SafetyFlag`/`LoadSafetyFlag` (`{ id: 'acwr_high' | 'ramp_rate_exceeded'; severity: 'moderada' | 'severa' }`) está definido de forma idêntica em três arquivos (`lib/load-safety.ts`, `lib/decision-engine.ts`, `lib/off-day-suggestions.ts`) sem fonte única. E a tabela `mesocycle_phases`, sem uso desde a SPEC-18, continua no schema.
+
+Decisão que o atleta precisa tomar:
+
+1. A tabela `mesocycle_phases` deve continuar existindo sem uso (mais simples, reversível) ou ser removida por migração (mais limpo, mas é uma alteração de schema em produção)?
+
+Aceite:
+
+- `stressed` calculado uma única vez por requisição em `app/api/week/route.ts`, reaproveitado por `planOutlook` e `proposalBuilt`.
+- `SafetyFlag` definido uma única vez em `lib/load-safety.ts` e importado por `lib/decision-engine.ts` e `lib/off-day-suggestions.ts`, sem redefinição local.
+- Decisão sobre `mesocycle_phases` registrada e, se for o caso, migração de remoção criada.
+- `npm test` e `npm run build` validados.
+
+Dependências: nenhuma; independente da SPEC-20 e da SPEC-21, pode ser feita em qualquer ordem, inclusive isolada.
+
+## SPEC-23 — Fase do mesociclo inferida da carga planejada real, sem âncora manual
+
+Status: proposta — direção confirmada pelo atleta em 2026-09-08; detalhes de implementação em aberto (ver abaixo)
+
+Diagnóstico: o atleta monta os ciclos de treino com apoio de IA antes e deixa a progressão pronta no calendário do Intervals.icu — ou seja, a alternância entre semanas de progressão e semanas de recuperação já está implícita na carga/intensidade que ele mesmo planejou semana a semana. `lib/mesocycle.ts` ignora isso completamente: resolve a fase a partir de uma data-âncora cadastrada manualmente pelo atleta dentro do Pedal Pronto (`mesocycle_anchor`) e de uma regra fixa e cega — todo ciclo tem exatamente 4 semanas, a semana 4 é sempre recuperação — sem nunca olhar a carga real planejada no Intervals.icu. O único elo com o Intervals.icu é `parseCyclePointer`, que lê o padrão `C{n}W{n}D{n}` do nome do evento apenas para emitir um aviso de divergência, nunca para corrigir. Isso contraria o princípio já registrado em `PROJECT_MEMORY.md` ("O Intervals.icu continua sendo a fonte oficial do plano") e, desde a T18/SPEC-18, essa fase potencialmente errada decide de verdade o ajuste do treino de hoje (`lib/readiness.ts`) e a proposta futura (`futureProposal`).
+
+Direção confirmada pelo atleta: substituir a fonte da fase. Em vez de âncora manual + regra fixa de 4 semanas, a fase passa a ser inferida comparando a carga planejada da semana atual com a carga planejada das semanas anteriores, já reais no calendário do Intervals.icu — sem exigir nenhum cadastro do atleta.
+
+Decisões que o atleta precisa tomar antes da implementação:
+
+1. **Janela de comparação**: quantas semanas anteriores entram na média de referência (ex.: últimas 3? últimas 4?) — precisa ser grande o suficiente para não confundir uma semana de descanso pontual com o fim de um bloco, mas pequena o suficiente para acompanhar blocos curtos.
+2. **Limiar de queda**: que percentual de queda da carga planejada da semana atual frente à média de referência caracteriza "recuperação" (ex.: abaixo de 70%? 80%?) — abaixo disso é "build"/progressão.
+3. **Sem histórico suficiente** (início de temporada, poucas semanas cadastradas no Intervals.icu): a fase deve cair em "desconhecida" (bloqueia como hoje) ou assumir "build" por padrão, na mesma lógica de segurança já usada quando não havia âncora (regra padrão de progressão)?
+4. **O que fazer com a âncora manual e o ponteiro C/W/D**: viram só uma referência pessoal opcional exibida na aba Evolução (sem decidir mais nada), ou saem completamente da interface? A tabela `mesocycle_anchor` fica sem uso (como `mesocycle_phases` na SPEC-22) ou é removida?
+5. Confirmar que a carga planejada das semanas anteriores é buscada uma única vez por requisição e entra no snapshot unificado (`lib/context.ts`/`lib/context-loader.ts`), reaproveitada por prontidão e semana — em vez de cada consumidor buscar por conta própria.
+
+Regra final (após as decisões 1 e 2): uma função pura em `lib/mesocycle.ts` (ex. `resolvePhaseFromLoad(weeklyPlannedLoads)`) recebe a carga planejada das últimas N semanas (incluindo a atual) e devolve `build`, `recovery` ou `desconhecida`. A busca da carga planejada histórica no Intervals.icu (I/O) fica em `lib/context-loader.ts`, fora da função pura. `lib/readiness.ts`, `lib/decision-engine.ts` e `futureProposal` continuam chamando `preferVolumeReduction(phase)` sem mudança de assinatura — só a origem da `phase` muda.
+
+Aceite:
+
+- `lib/mesocycle.ts` ganha uma função pura testável que decide a fase a partir de uma série de cargas planejadas semanais, sem ler âncora nem tabela de fases.
+- A busca da carga planejada das semanas anteriores acontece uma única vez por requisição, dentro do snapshot unificado, sem chamada duplicada entre prontidão e semana.
+- Nenhuma decisão de treino (hoje ou futura) usa mais a âncora manual para determinar a fase.
+- Decisão sobre a âncora/ponteiro C/W/D (item 4) registrada e refletida na interface.
+- Testes cobrem: queda clara de carga (recuperação), carga estável ou crescente (build), histórico insuficiente (comportamento definido pela decisão 3), e os limiares exatos escolhidos nas decisões 1 e 2.
+- `npm test` e `npm run build` validados.
+
+Dependências: substitui a parte de resolução de fase da SPEC-11 e da SPEC-18 (que continuam válidas em tudo o mais — regras imutáveis, consentimento, `preferVolumeReduction` como função única). Fazer depois da SPEC-21 é natural, já que as duas mexem em como o contexto unificado busca e resolve a fase.

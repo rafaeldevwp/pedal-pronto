@@ -63,6 +63,7 @@ test('snapshot com sessão expirada: prontidão ausente e bloqueia', () => {
     metrics: {},
     updatedAt: '2026-01-12T12:00:00.000Z',
     warning: 'Uma das sessões expirou. Autentique novamente antes de qualquer alteração.',
+    reasonCode: 'sessao_expirada',
   };
   const snapshot = buildAthleteSnapshot({
     readiness: expired,
@@ -82,6 +83,7 @@ test('snapshot com sincronização atrasada do Polar', () => {
     ...baseReadiness,
     classification: 'indisponível',
     warning: 'Dados recentes de sono ou Nightly Recharge ainda não chegaram do Polar.',
+    reasonCode: 'atrasado',
   };
   const snapshot = buildAthleteSnapshot({
     readiness: late,
@@ -113,7 +115,7 @@ test('snapshot com divergência de mesociclo: contraditório e bloqueia mesmo co
 
 test('snapshot nunca inventa valor: campo ausente sempre retorna value null', () => {
   const snapshot = buildAthleteSnapshot({
-    readiness: { ...baseReadiness, classification: 'indisponível', warning: 'Os dados estão ausentes, atrasados ou contraditórios. O treino não foi modificado.' },
+    readiness: { ...baseReadiness, classification: 'indisponível', warning: 'Os dados estão ausentes, atrasados ou contraditórios. O treino não foi modificado.', reasonCode: 'contraditorio' },
     mesocycle: { anchor: null, calculated: null, event: null, phase: 'desconhecida', warning: null },
     goal: null,
     now,

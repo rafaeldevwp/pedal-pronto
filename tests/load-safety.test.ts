@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { calculateAcwr, evaluateLoadSafety } from '../lib/load-safety.ts';
+import { calculateAcwr, evaluateLoadSafety, isYesterdayLoadHigh } from '../lib/load-safety.ts';
 
 const history = (loads: number[], ctlStart = 40) => loads.map((load, index) => ({ date: `d${index}`, load, ctl: ctlStart + index }));
 
@@ -24,4 +24,11 @@ test('ramp rate respeita teto configurável', () => {
 
 test('histórico incompleto não inventa ACWR', () => {
   assert.equal(evaluateLoadSafety(history(Array(20).fill(50)), 6).acwr, undefined);
+});
+
+test('carga de ontem usa um único piso conservador de 70', () => {
+  assert.equal(isYesterdayLoadHigh(69, 20), false);
+  assert.equal(isYesterdayLoadHigh(71, 20), true);
+  assert.equal(isYesterdayLoadHigh(91, 60), true);
+  assert.equal(isYesterdayLoadHigh(90, 60), false);
 });

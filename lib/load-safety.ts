@@ -1,6 +1,10 @@
 export type LoadDay = { date: string; load?: number; ctl?: number };
 export type LoadSafetyFlag = { id: 'acwr_high' | 'ramp_rate_exceeded'; severity: 'moderada' | 'severa' };
 
+export function isYesterdayLoadHigh(load: number, ctl?: number) {
+  return Number.isFinite(ctl) && load > Math.max(70, Number(ctl) * 1.5);
+}
+
 export function calculateAcwr(days: LoadDay[]) {
   const recent = days.slice(-28);
   if (recent.length < 28) return undefined;

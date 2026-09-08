@@ -1,6 +1,7 @@
 import { isWeekKeySourceFor, type StimulusCoverage, type StimulusType } from './stimulus.ts';
+import type { LoadSafetyFlag } from './load-safety.ts';
 
-export type SafetyFlag = { id: 'acwr_high' | 'ramp_rate_exceeded'; severity: 'moderada' | 'severa' };
+export type SafetyFlag = LoadSafetyFlag;
 
 export type DecisionInput = {
   classification: 'verde' | 'amarela' | 'vermelha' | 'indisponível';
@@ -19,7 +20,7 @@ export type EngineDecision = {
   action: 'manter' | 'reduzir_intensidade' | 'reduzir_repeticoes' | 'substituir_recuperacao' | 'suspender';
   stimulusPreserved: string;
   reasons: string[];
-  recommended: { name: string; durationMinutes?: number; load?: number; descriptionChange?: string } | null;
+  recommended: { name: string; durationMinutes?: number; load?: number; description?: string; structure?: string[]; descriptionChange?: string } | null;
   weeklyEffect: string;
 };
 
@@ -31,8 +32,10 @@ function safetyReasons(flags: SafetyFlag[]): string[] {
   );
 }
 
-function reduceIntensity(workout: { name: string; durationMinutes?: number; load?: number; structure?: string[] }) {
-  const text = (workout.structure || []).join('\n');
+export type WorkoutAdjustmentInput = { name: string; durationMinutes?: number; load?: number; description?: string; structure?: string[] };
+
+function reduceIntensity(workout: WorkoutAdjustmentInput) {
+  const text = workout.description ?? (workout.structure || []).join('\n');
   const intensity = text.match(/\b(8[5-9]|9\d|1[0-4]\d)%/);
   if (!intensity) return null;
   const from = Number(intensity[1]), to = Math.max(80, from - 5);
@@ -43,13 +46,14 @@ function reduceIntensity(workout: { name: string; durationMinutes?: number; load
       name: workout.name,
       durationMinutes: workout.durationMinutes,
       load: workout.load ? Math.round(workout.load * 0.9) : undefined,
+      description: text.replace(intensity[0], `${to}%`),
       descriptionChange: `Intensidade principal reduzida de ${from}% para ${to}%; duração preservada.`,
     },
   };
 }
 
-function reduceRepetitions(workout: { name: string; durationMinutes?: number; load?: number; structure?: string[] }) {
-  const text = (workout.structure || []).join('\n');
+function reduceRepetitions(workout: WorkoutAdjustmentInput) {
+  const text = workout.description ?? (workout.structure || []).join('\n');
   const reps = text.match(/\b([2-9]|[1-9]\d)x\b/i);
   if (!reps) return null;
   const from = Number(reps[1]), to = Math.max(2, from - 1);
@@ -60,6 +64,7 @@ function reduceRepetitions(workout: { name: string; durationMinutes?: number; lo
       name: workout.name.replace(new RegExp(`\\b${from}x`, 'i'), `${to}x`),
       durationMinutes: workout.durationMinutes ? Math.round(workout.durationMinutes * 0.9) : undefined,
       load: workout.load ? Math.round(workout.load * 0.84) : undefined,
+      description: text.replace(reps[0], `${to}x`),
       descriptionChange: `Repetições reduzidas de ${from} para ${to}; intensidade preservada.`,
     },
   };
@@ -72,12 +77,27 @@ export function preferVolumeReduction(phase: string): boolean {
   return isProgressionPhase || !isRecoveryPhase;
 }
 
-const recoveryRecommendation = {
+export const recoveryRecommendation = {
   name: 'Recuperação leve — ajuste do motor adaptativo',
   durationMinutes: 30,
   load: 18,
+  description: '- 10m 45%\n- 15m 50%\n- 5m 40%',
   descriptionChange: 'Substituído por recuperação leve (10m 45% · 15m 50% · 5m 40%).',
 };
+
+export function adjustWorkoutPlan(
+  workout: WorkoutAdjustmentInput,
+  classification: 'amarela' | 'vermelha',
+  phase: string,
+  forceVolumeFirst = false,
+) {
+  if (classification === 'vermelha') {
+    return { action: 'substituir_recuperacao' as const, stimulusPreserved: 'nenhum (prioriza recuperação)', recommended: recoveryRecommendation };
+  }
+  return forceVolumeFirst || preferVolumeReduction(phase)
+    ? reduceRepetitions(workout) || reduceIntensity(workout)
+    : reduceIntensity(workout) || reduceRepetitions(workout);
+}
 
 export function decideTraining(input: DecisionInput): EngineDecision {
   if (input.blocked) {
@@ -147,9 +167,7 @@ export function decideTraining(input: DecisionInput): EngineDecision {
   if (protectStimulus) reasons.push(`Hoje é a única sessão prevista para entregar o estímulo de ${input.todayStimulus === 'vo2max' ? 'VO2max' : 'limiar'} nesta semana; a intensidade é preservada e o volume cede primeiro.`);
 
   const preferReduceVolumeFirst = protectStimulus || preferVolumeReduction(input.phase);
-  const picked = preferReduceVolumeFirst
-    ? reduceRepetitions(input.workout) || reduceIntensity(input.workout)
-    : reduceIntensity(input.workout) || reduceRepetitions(input.workout);
+  const picked = adjustWorkoutPlan(input.workout, 'amarela', input.phase, preferReduceVolumeFirst);
 
   if (!picked) {
     reasons.push('A estrutura do treino não tem um padrão reconhecido de repetições ou intensidade para reduzir uma única variável; recomendação conservadora aplicada.');

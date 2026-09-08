@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { decideTraining, preferVolumeReduction, type DecisionInput } from '../lib/decision-engine.ts';
+import { adjustWorkoutPlan, decideTraining, preferVolumeReduction, type DecisionInput } from '../lib/decision-engine.ts';
 
 const base: DecisionInput = {
   classification: 'verde',
@@ -124,4 +124,21 @@ test('não protege estímulo já entregue por outra sessão da semana', () => {
 test('sem coverage/todayStimulus informados, comportamento permanece igual ao de antes', () => {
   const decision = decideTraining({ ...base, classification: 'amarela', phase: 'recovery' });
   assert.equal(decision.action, 'reduzir_intensidade');
+});
+
+test('função única reconhece 2x e reduz duração e carga pela mesma regra', () => {
+  const workout = { name: '2x 12min 92%', durationMinutes: 60, load: 50, description: '- 2x 12min 92%' };
+  const today = adjustWorkoutPlan(workout, 'amarela', 'build');
+  const future = adjustWorkoutPlan(workout, 'amarela', 'build');
+  assert.deepEqual(today, future);
+  assert.equal(today?.action, 'reduzir_repeticoes');
+  assert.equal(today?.recommended.durationMinutes, 54);
+  assert.equal(today?.recommended.load, 42);
+});
+
+test('template de recuperação é único para qualquer caminho vermelho', () => {
+  const result = adjustWorkoutPlan(base.workout!, 'vermelha', 'build');
+  assert.equal(result?.recommended.durationMinutes, 30);
+  assert.equal(result?.recommended.load, 18);
+  assert.match(result?.recommended.description || '', /10m 45%/);
 });

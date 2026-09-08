@@ -1,10 +1,11 @@
 import { ensurePolarSchema, ownerId, recordTrainingDecision, runtime } from '@/lib/polar';
 import { loadAthleteContext } from '@/lib/context-loader';
 import type { Checkin } from '@/lib/readiness';
-import { decideTraining, preferVolumeReduction } from '@/lib/decision-engine';
+import { adjustWorkoutPlan, decideTraining } from '@/lib/decision-engine';
 import { chooseOffDaySuggestion, type SuggestionCategory } from '@/lib/off-day-suggestions';
 import { classifyStimulus, computeStimulusCoverage, describeMissingKeyStimulus, isWeekKeySourceFor, type StimulusCoverage } from '@/lib/stimulus';
 import { assertDayAvailableForCreation, assertEditablePlannedEvent, claimTrainingWrite, completeTrainingWrite, proposalFingerprint } from '@/lib/training-safety';
+import { isYesterdayLoadHigh } from '@/lib/load-safety';
 
 export const dynamic = 'force-dynamic';
 
@@ -238,34 +239,17 @@ function futureProposal(event: Json, phase = 'desconhecida', stimulusCoverage?: 
   const description = String(event.description || '');
   if (description.includes('Ajuste semanal confirmado pelo Pedal Pronto.')) return null;
   const updated = { ...event };
-  const reps = description.match(/\b([3-9]|[1-9]\d)x\b/i);
-  let change = '';
-  let factor = 0.86;
-  const intensity = description.match(/\b(8[5-9]|9\d|1[0-4]\d)%/);
   const protectStimulus = Boolean(stimulusCoverage && isWeekKeySourceFor(stimulusCoverage, classifyStimulus(original)));
-  const preferVolumeFirst = protectStimulus || preferVolumeReduction(phase);
-  const preferIntensity = !preferVolumeFirst;
-  if (reps && (!preferIntensity || !intensity)) {
-    const from = Number(reps[1]);
-    const to = Math.max(2, from - 1);
-    updated.description = description.replace(reps[0], `${to}x`);
-    updated.name = String(event.name || '').replace(new RegExp(`\\b${from}x`, 'i'), `${to}x`);
-    change = `Reduzir somente as repetições, de ${from} para ${to}; intensidade e recuperação permanecem iguais.`;
-    factor = Math.max(0.72, to / from);
-  } else {
-    if (!intensity) return null;
-    const from = Number(intensity[1]);
-    const to = Math.max(80, from - 5);
-    updated.description = description.replace(intensity[0], `${to}%`);
-    change = `Reduzir somente a intensidade principal, de ${from}% para ${to}%; duração e recuperações permanecem iguais.`;
-    factor = 0.9;
-  }
+  const adjustment = adjustWorkoutPlan({ ...original, description }, 'amarela', phase, protectStimulus);
+  if (!adjustment) return null;
+  updated.name = adjustment.recommended.name;
+  updated.description = adjustment.recommended.description;
   delete updated.workout_doc;
   delete updated.icu_training_load;
   updated.description = `${updated.description}\n\nAjuste semanal confirmado pelo Pedal Pronto.`;
   const proposed = normalize(updated);
-  proposed.durationMinutes = original.durationMinutes;
-  proposed.load = original.load ? Math.round(original.load * factor) : undefined;
+  proposed.durationMinutes = adjustment.recommended.durationMinutes;
+  proposed.load = adjustment.recommended.load;
   return {
     updated,
     proposal: {
@@ -273,7 +257,7 @@ function futureProposal(event: Json, phase = 'desconhecida', stimulusCoverage?: 
       eventId: original.id,
       date: original.date,
       reason: 'A recuperação ou a carga recente pode comprometer o próximo estímulo. A proposta reduz apenas uma variável, respeitando a fase da semana.',
-      change,
+      change: adjustment.recommended.descriptionChange,
       original: { name: original.name, durationMinutes: original.durationMinutes, load: original.load, structure: original.structure },
       recommended: { name: proposed.name, durationMinutes: proposed.durationMinutes, load: proposed.load, structure: proposed.structure },
     },
@@ -422,14 +406,14 @@ async function context(owner: string, checkin?: Checkin) {
     todayStimulus: todayStimulusType,
   });
   const planOutlook = planned.filter((event) => event.date > today).slice(0, 3).map((event) => {
-    const stressed = ['amarela', 'vermelha'].includes(readiness.classification) || yesterdayLoad > Math.max(70, Number(readiness.metrics.ctl || 0) * 1.5);
+    const stressed = ['amarela', 'vermelha'].includes(readiness.classification) || isYesterdayLoadHigh(yesterdayLoad, readiness.metrics.ctl);
     return {
       id: event.id, date: event.date, name: event.name,
       status: stressed ? 'observar' : 'protegido',
       note: stressed ? 'Pode precisar de ajuste se a recuperação não normalizar. Nenhuma mudança aplicada.' : 'Compatível com a carga atual. Nenhuma mudança proposta.',
     };
   });
-  const stressed = ['amarela', 'vermelha'].includes(readiness.classification) || yesterdayLoad > Math.max(70, Number(readiness.metrics.ctl || 0) * 1.5);
+  const stressed = ['amarela', 'vermelha'].includes(readiness.classification) || isYesterdayLoadHigh(yesterdayLoad, readiness.metrics.ctl);
   const proposalBuilt = stressed && !snapshot.blocked
     ? rawPlanned
         .filter((event: Json) => {

@@ -21,7 +21,8 @@ export async function POST(request: Request) {
     if (body.action === 'confirm_today') {
       if (!body.confirmed || !body.proposalId || !body.operationId)
         return Response.json({ error: 'CONSENT_REQUIRED' }, { status: 400 });
-      return Response.json(await confirmReadinessProposal(owner, body.proposalId, body.operationId, body.checkin));
+      const { snapshot } = await loadAthleteContext(owner, body.checkin);
+      return Response.json(await confirmReadinessProposal(owner, body.proposalId, body.operationId, body.checkin, snapshot.mesocycle.value?.phase || 'desconhecida'));
     }
     const { readiness } = await loadAthleteContext(owner, body.checkin);
     return Response.json(readiness);

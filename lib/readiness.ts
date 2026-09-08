@@ -1,8 +1,7 @@
 import { ensurePolarSchema, recordTrainingDecision, runtime } from '@/lib/polar';
 import { assertEditablePlannedEvent, claimTrainingWrite, completeTrainingWrite, proposalFingerprint } from '@/lib/training-safety';
-import { evaluateLoadSafety, type LoadSafetyFlag } from '@/lib/load-safety';
-import { calculateCyclePointer, resolvePhase } from '@/lib/mesocycle';
-import { preferVolumeReduction } from '@/lib/decision-engine';
+import { evaluateLoadSafety, isYesterdayLoadHigh, type LoadSafetyFlag } from '@/lib/load-safety';
+import { adjustWorkoutPlan } from '@/lib/decision-engine';
 
 type Json = Record<string, any>;
 export type ReadinessResult = {
@@ -54,6 +53,7 @@ export type ReadinessResult = {
   };
   updatedAt: string;
   warning?: string;
+  reasonCode?: 'atrasado' | 'ausente' | 'contraditorio' | 'sessao_expirada';
 };
 
 export type Checkin = {
@@ -132,66 +132,30 @@ function adaptWorkout(event: Json, classification: 'amarela' | 'vermelha', phase
   const oldDuration =
     num(event.moving_time, event.duration, event.workout_doc?.duration) || 0;
   const oldLoad = num(event.icu_training_load, event.load) || 0;
-  if (classification === 'vermelha') {
-    updated.name = 'Recuperação leve — ajuste de prontidão';
-    updated.description =
-      '- 10m 45%\n- 15m 50%\n- 5m 40%\n\nSubstituído automaticamente pelo Pedal Pronto.';
-    delete updated.workout_doc;
-    delete updated.icu_training_load;
-    delete updated.moving_time;
-    return {
-      updated,
-      action: `${oldName} substituído por recuperação leve`,
-      durationMinutes: 30,
-      load: 18,
-    };
-  }
-  const reps = oldDescription.match(/\b([2-9]|[1-9]\d)x\b/i);
-  const intensity = oldDescription.match(/\b(8[5-9]|9\d|1[0-4]\d)%/);
-  const reduceIntensity = () => {
-    if (!intensity) return null;
-    const from = Number(intensity[1]), to = Math.max(80, from - 5);
-    updated.description = oldDescription.replace(intensity[0], `${to}%`);
-    delete updated.workout_doc;
-    delete updated.icu_training_load;
-    return {
-      updated,
-      action: `intensidade reduzida de ${from}% para ${to}%; duração preservada`,
-      durationMinutes: oldDuration ? Math.round(oldDuration / 60) : undefined,
-      load: oldLoad ? Math.round(oldLoad * 0.9) : undefined,
-    };
+  const adjustment = adjustWorkoutPlan({
+    name: oldName,
+    description: oldDescription,
+    durationMinutes: oldDuration ? Math.round(oldDuration / 60) : undefined,
+    load: oldLoad || undefined,
+  }, classification, phase);
+  if (!adjustment) return null;
+  updated.name = adjustment.recommended.name;
+  updated.description = `${adjustment.recommended.description}\n\nAjuste confirmado pelo Pedal Pronto.`;
+  delete updated.workout_doc;
+  delete updated.icu_training_load;
+  if (adjustment.action !== 'reduzir_intensidade') delete updated.moving_time;
+  return {
+    updated,
+    action: adjustment.recommended.descriptionChange,
+    durationMinutes: adjustment.recommended.durationMinutes,
+    load: adjustment.recommended.load,
   };
-  const reduceRepetitions = () => {
-    if (!reps) return null;
-    const from = Number(reps[1]),
-      to = Math.max(2, from - 1);
-    updated.description = oldDescription.replace(reps[0], `${to}x`);
-    updated.name = oldName.replace(new RegExp(`\\b${from}x`, 'i'), `${to}x`);
-    delete updated.workout_doc;
-    delete updated.icu_training_load;
-    delete updated.moving_time;
-    return {
-      updated,
-      action: `repetições reduzidas de ${from} para ${to}; intensidade preservada`,
-      durationMinutes: oldDuration
-        ? Math.round((oldDuration / 60) * 0.9)
-        : undefined,
-      load: oldLoad ? Math.round(oldLoad * 0.84) : undefined,
-    };
-  };
-  return preferVolumeReduction(phase)
-    ? reduceRepetitions() || reduceIntensity()
-    : reduceIntensity() || reduceRepetitions();
-}
-
-async function resolveTodayPhase(owner: string, today: string): Promise<string> {
-  const anchorRow = await runtime.DB.prepare('SELECT anchor_date FROM mesocycle_anchor WHERE owner_id=?').bind(owner).first<{ anchor_date: string }>();
-  return resolvePhase(anchorRow ? calculateCyclePointer(anchorRow.anchor_date, today) : undefined);
 }
 
 export async function runReadiness(
   owner: string,
   checkin?: Checkin,
+  phase = 'desconhecida',
 ): Promise<ReadinessResult> {
   await ensurePolarSchema();
   const connection = await runtime.DB.prepare(
@@ -205,7 +169,6 @@ export async function runReadiness(
   const now = new Date(),
     today = isoDate(now),
     yesterday = isoDate(new Date(now.getTime() - 86400000));
-  const phase = await resolveTodayPhase(owner, today);
   try {
     const [sleepBody, rechargeBody, wellness, activities, events] =
       await Promise.all([
@@ -241,6 +204,7 @@ export async function runReadiness(
       return unavailable(
         'Dados recentes de sono ou Nightly Recharge ainda não chegaram do Polar.',
         workout,
+        'atrasado',
       );
     const priorSleeps = sleeps
         .filter((s) => s.date < latestSleep.date)
@@ -369,7 +333,7 @@ export async function runReadiness(
       form !== undefined && form < -30,
     );
     flag(
-      Boolean(ctl && yesterdayLoad > ctl * 1.5),
+      isYesterdayLoadHigh(yesterdayLoad, ctl),
       `Carga de ontem ${Math.round(yesterdayLoad)} foi alta para o fitness ${Math.round(ctl!)}`,
     );
     flag(
@@ -532,16 +496,18 @@ export async function runReadiness(
       return unavailable(
         'Uma das sessões expirou. Autentique novamente antes de qualquer alteração.',
         null,
+        'sessao_expirada',
       );
     return unavailable(
       'Os dados estão ausentes, atrasados ou contraditórios. O treino não foi modificado.',
       null,
+      'contraditorio',
     );
   }
 }
 
-export async function confirmReadinessProposal(owner: string, proposalId: string, operationId: string, checkin?: Checkin) {
-  const evaluated = await runReadiness(owner, checkin);
+export async function confirmReadinessProposal(owner: string, proposalId: string, operationId: string, checkin?: Checkin, phase = 'desconhecida') {
+  const evaluated = await runReadiness(owner, checkin, phase);
   const proposal = evaluated.proposal;
   if (!proposal || proposal.id !== proposalId) throw new Error('PROPOSAL_CHANGED');
   const [eventBody, activityBody] = await Promise.all([
@@ -553,7 +519,6 @@ export async function confirmReadinessProposal(owner: string, proposalId: string
     ['Ride', 'VirtualRide', 'EBikeRide', 'MountainBikeRide'].includes(activity.type || activity.icu_type),
   );
   assertEditablePlannedEvent(event, activities, proposal.date);
-  const phase = await resolveTodayPhase(owner, proposal.date);
   const adapted = adaptWorkout(event, proposal.classification, phase);
   if (!adapted || proposalFingerprint(event, adapted.updated) !== proposal.id) throw new Error('PROPOSAL_CHANGED');
   const claim = await claimTrainingWrite(owner, operationId, proposal.id);
@@ -578,7 +543,7 @@ function workoutStructure(description: unknown) {
     .filter((line) => line && !line.startsWith('#'))
     .slice(0, 24);
 }
-function unavailable(warning: string, workout: Json | null): ReadinessResult {
+function unavailable(warning: string, workout: Json | null, reasonCode: ReadinessResult['reasonCode']): ReadinessResult {
   return {
     classification: 'indisponível',
     score: 0,
@@ -602,5 +567,6 @@ function unavailable(warning: string, workout: Json | null): ReadinessResult {
     metrics: {},
     updatedAt: new Date().toISOString(),
     warning,
+    reasonCode,
   };
 }

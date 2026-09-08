@@ -31,8 +31,8 @@ export type AthleteSnapshot = {
 function readinessQuality(readiness: ReadinessResult): { quality: FieldQuality; note?: string } {
   if (readiness.classification !== 'indisponível') return { quality: 'válido' };
   const warning = readiness.warning || 'Prontidão indisponível.';
-  if (warning.includes('expirou')) return { quality: 'ausente', note: warning };
-  if (warning.includes('ainda não chegaram')) return { quality: 'atrasado', note: warning };
+  if (readiness.reasonCode === 'atrasado') return { quality: 'atrasado', note: warning };
+  if (readiness.reasonCode === 'sessao_expirada' || readiness.reasonCode === 'ausente') return { quality: 'ausente', note: warning };
   return { quality: 'contraditório', note: warning };
 }
 
@@ -104,4 +104,3 @@ export function buildAthleteSnapshot(input: {
     blockReasons,
   };
 }
-
