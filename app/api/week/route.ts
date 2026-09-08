@@ -216,7 +216,7 @@ const completedWorkout = (activity: Json, history: Json[], planned?: ReturnType<
       message,
       nextStep,
       confidence: signals.length >= 3 ? 'boa' : signals.length === 2 ? 'moderada' : 'limitada',
-      signals,
+      signals: signals.slice(0, 3),
     },
     comparison: similarComparison(activity, history),
     details: {

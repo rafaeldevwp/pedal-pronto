@@ -154,13 +154,19 @@
 - [ ] Modelar lacuna de estímulo (endurance/limiar/VO2max já entregues na semana): depende da mesma taxonomia de estímulo pendente da T14.
 - [ ] Não publicar sem nova ordem do atleta.
 
-## Planejada — T16 Fechar o ciclo pós-treino — SPEC-16
+## Concluída localmente (parcial) — T16 Fechar o ciclo pós-treino — SPEC-16
 
-- [ ] Detectar atividade nova de forma idempotente.
-- [ ] Comparar planejado, realizado e histórico pessoal semelhante.
-- [ ] Produzir feedback simples com confiança e limitações.
-- [ ] Atualizar carga, sinais de segurança e previsão futura.
-- [ ] Criar proposta futura somente quando houver mudança material e exigir confirmação.
+A maior parte desta SPEC já existia, entregue como parte da T02 (comparação de sessões) e da T06 (histórico com resultado vinculado na leitura, sem reescrever registros):
+
+- [x] Detectar atividade nova de forma idempotente: `completedWorkout` recalcula a cada leitura a partir da atividade do Intervals.icu, sem persistir nada — reprocessar a mesma atividade nunca duplica feedback, histórico ou alerta, porque nada é escrito no caminho de leitura.
+- [x] Comparar planejado, realizado e histórico pessoal semelhante (`completedWorkout` + `similarComparison`, já existentes).
+- [x] Dificuldade inferida por sinais combinados (RPE, intensidade, carga por hora, desacoplamento, razão carga real/planejada), nunca por potência ou FC isolada.
+- [x] Métricas ausentes reduzem a confiança (`limitada`/`moderada`/`boa` conforme quantos sinais existem) e não são inventadas.
+- [x] Carga, ACWR, rampa e previsão do próximo treino já se atualizam sozinhos a cada leitura, porque nada fica em cache — uma sessão nova entra em `loadDays`/`activities` na próxima chamada.
+- [x] Proposta futura só é gerada quando a carga real muda a semana materialmente (`stressed`, já existente e reativo à carga real, não só à planejada).
+- [x] Alterações futuras continuam exigindo confirmação explícita (inalterado).
+- [x] Corrigido: `feedback.signals` agora mostra no máximo 3 evidências (o aceite da SPEC-16 pede "até três"; antes podia mostrar até 5 sem corte).
+- [ ] Não publicar sem nova ordem do atleta.
 
 ## Planejada — T17 Integrar a experiência do produto — SPEC-17
 
