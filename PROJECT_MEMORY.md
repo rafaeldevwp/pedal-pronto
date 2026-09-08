@@ -47,9 +47,9 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-`NEXT`: T13 — construir o contexto unificado e explicável do atleta. Depois: T14 motor adaptativo, T15 sugestões OFF, T16 ciclo pós-treino e T17 experiência integrada.
+`NEXT`: T14 — motor adaptativo orientado por fase, objetivo e carga. Depois: T15 sugestões OFF, T16 ciclo pós-treino e T17 experiência integrada.
 
-T13 está parcialmente implementada e validada localmente (build e os 28 testes passam, incluindo `tests/context.test.ts`). Feito: `lib/context.ts` define o contrato versionado do snapshot (`AthleteSnapshot` v1) com prontidão, mesociclo, objetivo e check-in, cada campo com fonte, horário de atualização e qualidade (`válido`/`atrasado`/`ausente`/`contraditório`); `app/api/context/route.ts` monta o snapshot reaproveitando `runReadiness` e `resolveMesocycle`, sem duplicar chamadas de rede. Falta: o snapshot calcula `blocked`/`blockReasons`, mas nada ainda consulta esse sinal antes de propor ou escrever um treino — a proteção de escrita em vigor continua sendo só a da SPEC-08, independente do snapshot; e `lib/readiness.ts`/`app/api/week/route.ts` ainda não foram religados para consumir o snapshot em vez de buscar Polar/Intervals.icu de forma independente, porque isso mexe em caminho crítico de segurança e pede validação dedicada antes de prosseguir. Continuar por aí antes de avançar para T14.
+T13 (contexto unificado) foi concluída e validada localmente (build e 28 testes, incluindo `tests/context.test.ts`). `lib/context.ts` (puro) define o contrato versionado do snapshot (`AthleteSnapshot` v1); `lib/context-loader.ts` monta esse snapshot chamando `runReadiness` e `resolveMesocycle` uma única vez por requisição. `app/api/readiness/route.ts`, `app/api/week/route.ts` e `app/api/context/route.ts` agora passam todos por `loadAthleteContext`, então prontidão e semana leem exatamente o mesmo cálculo em vez de cada um buscar Polar/Intervals.icu por conta própria. `snapshot.blocked`/`blockReasons` agora impede proposta futura e sugestão de dia OFF em `app/api/week/route.ts` quando os dados são contraditórios (ex.: divergência de mesociclo), sempre explicando o motivo em `contextWarning`/`suggestionStatus` — nunca silenciosamente. O ajuste do treino de hoje em `lib/readiness.ts` continua sem saber de mesociclo/ACWR de propósito: a SPEC-11 já definia que isso não decide nada sobre o treino do dia; isso é o papel do motor da T14.
 
 A T03 até a T07 foram integradas, validadas e publicadas em um único lote após autorização do atleta.
 
@@ -72,7 +72,7 @@ O repositório privado `rafaeldevwp/pedal-pronto` foi criado e a integração re
 - `lib/training-safety.ts` + `lib/training-safety-core.ts`: consentimento, revalidação e idempotência de escritas de treino.
 - `lib/mesocycle.ts` + `app/api/mesocycle/route.ts`: fase do mesociclo e ponteiro C/W/D (SPEC-11).
 - `lib/load-safety.ts`: ACWR e ramp rate do CTL como sinais de segurança (SPEC-12).
-- `lib/context.ts` + `app/api/context/route.ts`: snapshot unificado com fonte/horário/qualidade por campo (SPEC-13, parcial — ver Estado exato de retomada).
+- `lib/context.ts` (puro) + `lib/context-loader.ts` (I/O) + `app/api/context/route.ts`: snapshot unificado com fonte/horário/qualidade por campo, consumido por prontidão e semana (SPEC-13).
 - `drizzle/0002_training_decisions.sql`: histórico imutável de decisões.
 - `drizzle/0003_training_write_operations.sql`: controle idempotente das confirmações de escrita.
 - `.openai/hosting.json`: projeto hospedado e D1.

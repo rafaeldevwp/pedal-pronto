@@ -1,5 +1,6 @@
 import { ensurePolarSchema, ownerId, recordTrainingDecision, runtime } from '@/lib/polar';
-import { runReadiness } from '@/lib/readiness';
+import { loadAthleteContext } from '@/lib/context-loader';
+import type { ReadinessResult } from '@/lib/readiness';
 import { assertDayAvailableForCreation, assertEditablePlannedEvent, claimTrainingWrite, completeTrainingWrite, proposalFingerprint } from '@/lib/training-safety';
 
 export const dynamic = 'force-dynamic';
@@ -278,7 +279,7 @@ function futureProposal(event: Json, goal: { objective: string; eventDate?: stri
     },
   };
 }
-function chooseSuggestion(readiness: Awaited<ReturnType<typeof runReadiness>>, activities: Json[], planned: Array<ReturnType<typeof normalize>>, today: string) {
+function chooseSuggestion(readiness: ReadinessResult, activities: Json[], planned: Array<ReturnType<typeof normalize>>, today: string) {
   const recent = activities.slice(-4);
   const hard = recent.filter((a) => Number(a.icu_intensity || a.intensity || 0) >= 75).length;
   const long = recent.some((a) => Number(a.moving_time || 0) >= 2 * 3600);
@@ -308,8 +309,8 @@ async function context(owner: string) {
   const monday = addDays(today, weekday === 0 ? -6 : 1 - weekday);
   const sunday = addDays(monday, 6);
   const historyStart = addDays(today, -120);
-  const [readiness, body, activityBody, historyBody, goalRow] = await Promise.all([
-    runReadiness(owner),
+  const [{ readiness, snapshot }, body, activityBody, historyBody] = await Promise.all([
+    loadAthleteContext(owner),
     intervals(
       `/athlete/${runtime.INTERVALS_ATHLETE_ID}/events?oldest=${monday}&newest=${sunday}&category=WORKOUT&resolve=true`,
     ),
@@ -319,14 +320,8 @@ async function context(owner: string) {
     intervals(
       `/athlete/${runtime.INTERVALS_ATHLETE_ID}/activities?oldest=${historyStart}&newest=${today}&limit=250`,
     ),
-    runtime.DB.prepare('SELECT objective,event_name,event_date,priority FROM athlete_goals WHERE owner_id=?').bind(owner).first<Record<string, string>>(),
   ]);
-  const goal = {
-    objective: goalRow?.objective || 'performance',
-    eventName: goalRow?.event_name || '',
-    eventDate: goalRow?.event_date || '',
-    priority: goalRow?.priority || 'principal',
-  };
+  const goal = readiness.goal || { objective: 'performance', eventName: '', eventDate: '', priority: 'principal' };
   const rawPlanned = (Array.isArray(body) ? body : body?.events || [])
     .filter((event: Json) => event.category === 'WORKOUT')
   const planned = rawPlanned.map(normalize);
@@ -356,7 +351,8 @@ async function context(owner: string) {
   const canSuggest =
     restDay &&
     !hasToday &&
-    ['verde', 'amarela'].includes(readiness.classification);
+    ['verde', 'amarela'].includes(readiness.classification) &&
+    !snapshot.blocked;
   const adaptiveSuggestion = chooseSuggestion(readiness, activities, planned, today);
   const yesterday = addDays(today, -1);
   const yesterdayLoad = activities.filter((a) => activityDate(a) === yesterday).reduce((sum, a) => sum + Number(a.icu_training_load || a.load || 0), 0);
@@ -417,7 +413,7 @@ async function context(owner: string) {
     };
   });
   const stressed = ['amarela', 'vermelha'].includes(readiness.classification) || yesterdayLoad > Math.max(70, Number(readiness.metrics.ctl || 0) * 1.5);
-  const proposalBuilt = stressed
+  const proposalBuilt = stressed && !snapshot.blocked
     ? rawPlanned
         .filter((event: Json) => {
           const date = String(event.start_date_local || event.start_date || '').slice(0, 10);
@@ -482,6 +478,8 @@ async function context(owner: string) {
       weeklyLoadAfter: Math.round(weeklyPlannedLoad - Number(proposal.original.load || 0) + Number(proposal.recommended.load || proposal.original.load || 0)),
     } : null,
     goal,
+    mesocycle: snapshot.mesocycle.value,
+    contextWarning: snapshot.blocked ? snapshot.blockReasons.join(' ') : undefined,
     suggestionStatus: !restDay
       ? 'Sugestões aparecem somente em dias de descanso.'
       : hasToday
@@ -490,7 +488,9 @@ async function context(owner: string) {
           ? 'Recuperação insuficiente: preserve o descanso.'
           : readiness.classification === 'indisponível'
             ? 'Dados incompletos: nenhuma sugestão foi liberada.'
-            : undefined,
+            : snapshot.blocked
+              ? `Dados contraditórios: ${snapshot.blockReasons.join(' ')}`
+              : undefined,
   };
 }
 

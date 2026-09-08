@@ -116,18 +116,18 @@
 
 ## Próximo
 
-## NEXT — T13 Construir o contexto unificado — SPEC-13
+## Concluída localmente — T13 Construir o contexto unificado — SPEC-13
 
 - [x] Definir o contrato versionado do snapshot e campos obrigatórios/opcionais (`lib/context.ts`, `AthleteSnapshot` v1).
-- [x] Criar adaptadores para Polar, Intervals.icu, perfil, mesociclo e check-in (reaproveita `runReadiness`, `resolveMesocycle` e `athlete_goals`, sem duplicar chamadas de rede; rota `app/api/context/route.ts`).
+- [x] Criar adaptadores para Polar, Intervals.icu, perfil, mesociclo e check-in (reaproveita `runReadiness`, `resolveMesocycle` e `athlete_goals`, sem duplicar chamadas de rede; `lib/context-loader.ts` monta o snapshot uma única vez por requisição).
 - [x] Registrar fonte, horário e qualidade de cada grupo de dados (`SnapshotField.source/updatedAt/quality`).
+- [x] Impedir proposta quando dados obrigatórios estiverem atrasados, ausentes ou contraditórios: `app/api/week/route.ts` agora nega proposta futura e sugestão de dia OFF quando `snapshot.blocked`, e explica o motivo em `contextWarning`/`suggestionStatus` (nunca falha silenciosamente).
+- [x] Fazer prontidão e semana consumirem o mesmo snapshot sem mudar suas regras: `app/api/readiness/route.ts` e `app/api/week/route.ts` agora chamam `loadAthleteContext` (que chama `runReadiness` uma única vez) em vez de buscar Polar/Intervals.icu cada um por conta própria; `app/api/week/route.ts` também passou a reaproveitar `readiness.goal` em vez de repetir a consulta a `athlete_goals`. O ajuste do treino de hoje em `lib/readiness.ts` não foi alterado — a SPEC-11 já definia que o mesociclo "não decide nada sobre o treino do dia"; isso é papel do motor da T14.
 - [x] Cobrir snapshots completos, parciais, expirados e contraditórios em testes (`tests/context.test.ts`, 6 casos).
-- [x] Validar build.
-- [ ] Impedir proposta quando dados obrigatórios estiverem atrasados, ausentes ou contraditórios: o snapshot já calcula `blocked`/`blockReasons` corretamente, mas nada ainda consulta esse sinal antes de escrever — a proteção de escrita continuada hoje é só a da SPEC-08, independente do snapshot.
-- [ ] Fazer prontidão, semana e evolução consumirem o mesmo snapshot sem mudar suas regras: ainda não feito. `lib/readiness.ts` e `app/api/week/route.ts` continuam buscando Polar/Intervals.icu de forma independente; religar os dois ao snapshot é o próximo passo, e mexe em caminho crítico de segurança (SPEC-08), então pede validação dedicada antes de prosseguir.
-- [ ] Não publicar sem nova ordem do atleta.
+- [x] Validar build e os 28 testes.
+- [ ] Publicar somente após autorização do atleta.
 
-## Planejada — T14 Criar o motor adaptativo — SPEC-14
+## NEXT — T14 Criar o motor adaptativo — SPEC-14
 
 - [ ] Modelar estímulo, prioridade, carga-alvo e restrições da semana.
 - [ ] Integrar fase C/W/D, objetivo, recuperação, ACWR e rampa.

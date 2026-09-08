@@ -1,11 +1,13 @@
 import { ownerId } from '@/lib/polar';
-import { confirmReadinessProposal, runReadiness, type Checkin } from '@/lib/readiness';
+import { confirmReadinessProposal, type Checkin } from '@/lib/readiness';
+import { loadAthleteContext } from '@/lib/context-loader';
 export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   const owner = ownerId(request);
   if (!owner)
     return Response.json({ error: 'Não autorizado' }, { status: 401 });
-  return Response.json(await runReadiness(owner));
+  const { readiness } = await loadAthleteContext(owner);
+  return Response.json(readiness);
 }
 export async function POST(request: Request) {
   const owner = ownerId(request);
@@ -21,7 +23,8 @@ export async function POST(request: Request) {
         return Response.json({ error: 'CONSENT_REQUIRED' }, { status: 400 });
       return Response.json(await confirmReadinessProposal(owner, body.proposalId, body.operationId, body.checkin));
     }
-    return Response.json(await runReadiness(owner, body.checkin));
+    const { readiness } = await loadAthleteContext(owner, body.checkin);
+    return Response.json(readiness);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Falha ao processar';
     const status = ['WORKOUT_COMPLETED', 'EVENT_NOT_EDITABLE', 'PROPOSAL_CHANGED'].includes(message) ? 409 : 400;
