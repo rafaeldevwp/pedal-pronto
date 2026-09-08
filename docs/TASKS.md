@@ -127,13 +127,19 @@
 - [x] Validar build e os 28 testes.
 - [ ] Publicar somente após autorização do atleta.
 
-## NEXT — T14 Criar o motor adaptativo — SPEC-14
+## Concluída localmente (parcial) — T14 Criar o motor adaptativo — SPEC-14
 
-- [ ] Modelar estímulo, prioridade, carga-alvo e restrições da semana.
-- [ ] Integrar fase C/W/D, objetivo, recuperação, ACWR e rampa.
-- [ ] Gerar proposta determinística e explicável sem escrita automática.
-- [ ] Reutilizar confirmação, revalidação e idempotência da SPEC-08.
-- [ ] Testar cenários fisiológicos e fases do ciclo com fixtures fixas.
+- [x] Integrar fase C/W/D, objetivo, recuperação, ACWR e rampa (`lib/decision-engine.ts`, função pura `decideTraining`).
+- [x] Gerar proposta determinística e explicável sem escrita automática: retorna `action`, `stimulusPreserved`, `reasons[]` e `recommended`, nunca escreve em nada.
+- [x] Respeitar as regras imutáveis: amarela nunca passa de uma variável mesmo com ACWR/rampa severos; vermelha sempre substitui por recuperação, mesmo em fase de build; verde nunca aumenta, no máximo é tratado como cautela quando a carga agregada está severa.
+- [x] Fase influencia qual variável cede primeiro: build/peak preserva intensidade e reduz volume; recovery/deload preserva duração e reduz intensidade primeiro.
+- [x] Treino concluído é somente leitura: `app/api/week/route.ts` só passa o treino de hoje ao motor quando `status !== 'realizado'`.
+- [x] Dias de descanso fixo e ausência de treino planejado nunca geram proposta.
+- [x] Testar cenários fisiológicos e fases do ciclo com fixtures fixas: `tests/decision-engine.test.ts`, 13 casos (verde, amarela, vermelha, build, recovery, treino-chave próximo, dados bloqueados, descanso, sem treino, estrutura não reconhecida, especificidade protegida).
+- [x] Ligado como campo de leitura `engineDecision` em `app/api/week/route.ts`, usando dados já carregados pelo snapshot (fase, objetivo, safety flags, próximo treino-chave) — sem chamada de rede extra.
+- [ ] Modelar estímulo principal da semana e carga-alvo como conceito próprio (taxonomia de estímulo — endurance/limiar/VO2max): ainda não existe; o motor de hoje decide por sessão isolada, sem saber quais estímulos a semana já entregou. Fica para quando a T15/T16 amadurecerem essa taxonomia.
+- [ ] Reutilizar confirmação, revalidação e idempotência da SPEC-08 para aplicar de fato a recomendação do motor: ainda não existe uma rota de escrita para `engineDecision` — hoje ele é só um campo de leitura/prévia. Ligar isso a `claimTrainingWrite`/`assertEditablePlannedEvent` é o próximo passo, deixado fora desta rodada até haver uma decisão de produto sobre como isso aparece na interface (T17) e uma revisão dedicada do caminho de escrita.
+- [ ] Não publicar sem nova ordem do atleta.
 
 ## Planejada — T15 Evoluir sugestões de dias OFF — SPEC-15
 

@@ -1,6 +1,7 @@
 import { ensurePolarSchema, ownerId, recordTrainingDecision, runtime } from '@/lib/polar';
 import { loadAthleteContext } from '@/lib/context-loader';
 import type { ReadinessResult } from '@/lib/readiness';
+import { decideTraining, type Objective as EngineObjective } from '@/lib/decision-engine';
 import { assertDayAvailableForCreation, assertEditablePlannedEvent, claimTrainingWrite, completeTrainingWrite, proposalFingerprint } from '@/lib/training-safety';
 
 export const dynamic = 'force-dynamic';
@@ -404,6 +405,21 @@ async function context(owner: string) {
           : 'Siga o plano sem aumentar a sessão de hoje.',
     caveat: 'Esta é uma faixa de risco, não uma promessa. A resposta real ao treino e a próxima noite de sono podem mudar a leitura.',
   };
+  const engineObjective: EngineObjective = ['performance', 'resistencia', 'ftp', 'saude'].includes(goal.objective) ? (goal.objective as EngineObjective) : 'performance';
+  const engineEventDays = goal.eventDate ? Math.ceil((new Date(`${goal.eventDate}T12:00:00Z`).getTime() - Date.now()) / 86400000) : undefined;
+  const engineProtectSpecificity = goal.priority === 'principal' && engineEventDays !== undefined && engineEventDays >= 0 && engineEventDays <= 21;
+  const engineDecision = decideTraining({
+    classification: readiness.classification,
+    blocked: snapshot.blocked,
+    phase: snapshot.mesocycle.value?.phase || 'desconhecida',
+    objective: engineObjective,
+    protectSpecificity: engineProtectSpecificity,
+    safetyFlags: readiness.metrics.safetyFlags || [],
+    workout: todaySession && todaySession.status !== 'realizado' ? { name: todaySession.name, durationMinutes: todaySession.durationMinutes, load: todaySession.load, structure: todaySession.structure } : null,
+    isRestDay: restDay,
+    daysToNextKey: daysToKey,
+    forecastRisk: forecastRisk as 'baixo' | 'moderado' | 'alto' | 'indeterminado',
+  });
   const planOutlook = planned.filter((event) => event.date > today).slice(0, 3).map((event) => {
     const stressed = ['amarela', 'vermelha'].includes(readiness.classification) || yesterdayLoad > Math.max(70, Number(readiness.metrics.ctl || 0) * 1.5);
     return {
@@ -480,6 +496,7 @@ async function context(owner: string) {
     goal,
     mesocycle: snapshot.mesocycle.value,
     contextWarning: snapshot.blocked ? snapshot.blockReasons.join(' ') : undefined,
+    engineDecision,
     suggestionStatus: !restDay
       ? 'Sugestões aparecem somente em dias de descanso.'
       : hasToday
