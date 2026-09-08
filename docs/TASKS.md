@@ -75,7 +75,7 @@
 - [x] Adicionar idempotência e registro imutável da decisão confirmada.
 - [x] Cobrir por regressão evento concluído, atividade associada, sincronização atrasada, múltiplas sessões e mudança da proposta.
 - [x] Validar testes e build localmente.
-- [ ] Publicar somente após autorização do atleta.
+- [x] Publicada no lote T08–T12 após autorização do atleta.
 
 ## Concluída localmente — T09 Corrigir slider em zero e validar acessibilidade — SPEC-09
 
@@ -84,7 +84,7 @@
 - [x] Ampliar área de toque, contraste e foco visível.
 - [x] Validar mouse, teclado, mínimo, máximo, retorno a zero e recarga.
 - [x] Validar visualmente em layout móvel.
-- [ ] Publicar somente após autorização do atleta.
+- [x] Publicada no lote T08–T12 após autorização do atleta.
 
 ## Concluída localmente — T10 Criar glossário contextual e centralizado — SPEC-10
 
@@ -94,7 +94,7 @@
 - [x] Organizar verbetes em Recuperação, Carga, Treino e Planejamento.
 - [x] Garantir abertura por toque, teclado e leitor de tela.
 - [x] Validar consistência dos termos, busca e funcionamento móvel.
-- [ ] Publicar somente após autorização do atleta.
+- [x] Publicada no lote T08–T12 após autorização do atleta.
 
 ## Próximo
 
@@ -105,7 +105,7 @@
 - [x] Conferir o padrão do evento e avisar divergências sem corrigir dados.
 - [x] Exibir a âncora atual e permitir edição segura na tela Evolução.
 - [x] Validar viradas de semana/ciclo, fase desconhecida e nomes sem padrão.
-- [ ] Publicar no lote T08–T12.
+- [x] Publicada no lote T08–T12.
 
 ## Concluída localmente — T12 Adicionar ACWR e ramp rate como sinais de segurança — SPEC-12
 
@@ -114,10 +114,10 @@
 - [x] Expor métricas e flags sem automatizar alterações de treino.
 - [x] Mostrar os sinais em linguagem simples no PWA.
 - [x] Cobrir limiares, ausência de dados e regressões em testes.
-- [ ] Publicar no lote T08–T12.
+- [x] Publicada no lote T08–T12.
 
 ## Próximo
 
-- Publicar o lote T08–T12 já autorizado e confirmar a versão online.
+- Aguardando a próxima SPEC priorizada pelo atleta.
 
 Regra: trabalhar somente na tarefa marcada como `NEXT`.

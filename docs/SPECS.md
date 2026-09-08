@@ -50,7 +50,7 @@ Notificar quando um treino futuro entrar em risco. O alerta não aplica mudança
 
 ## SPEC-08 — Consentimento obrigatório antes de alterar o Intervals.icu
 
-Status: implementada e validada localmente; publicação pendente de autorização
+Status: concluída e publicada
 
 Nenhuma avaliação, atualização manual, automação diária ou alerta pode modificar, substituir, cancelar ou criar um treino no Intervals.icu sem uma confirmação explícita do atleta para aquela mudança específica. A regra vale para hoje e para dias futuros e substitui a permissão automática anterior. A avaliação pode gerar uma proposta, mas deve permanecer somente leitura até a confirmação.
 
@@ -80,7 +80,7 @@ Aceite:
 
 ## SPEC-09 — Slider do check-in permanece utilizável em zero
 
-Status: implementada e validada localmente; publicação pendente de autorização
+Status: concluída e publicada
 
 Todos os controles do check-in devem manter trilho, indicador, botão deslizante, valor e área de toque visíveis quando o valor for zero ou estiver em qualquer extremo. Zero é um valor válido e deve ser enviado e salvo como zero, nunca interpretado como ausente.
 
@@ -95,7 +95,7 @@ Aceite:
 
 ## SPEC-10 — Glossário contextual de fisiologia e treinamento
 
-Status: implementada e validada localmente; publicação pendente de autorização
+Status: concluída e publicada
 
 Criar um glossário em linguagem simples para todos os termos técnicos exibidos pelo Pedal Pronto. A explicação deve estar disponível no contexto em que a métrica aparece e também em uma área única de consulta. O objetivo é ajudar atletas leigos a entender o dado sem transformar a métrica isolada em diagnóstico ou ordem de treino.
 
@@ -128,7 +128,7 @@ Aceite:
 
 ## SPEC-11 — Fase do mesociclo e ponteiro de estado C/W/D
 
-Status: implementada e validada localmente; publicação pendente
+Status: concluída e publicada
 
 Resolver a fase do mesociclo (base, build, peak, recovery ou outra nomenclatura) e a posição atual dentro do plano (ciclo, semana, dia) sem depender só do nome do evento no Intervals.icu. Hoje a semana em `app/api/week/route.ts` é agrupada apenas por data corrida, de segunda a domingo; não existe parser de `C{n}W{n}D{n}` nem vínculo com mesociclo ou fase.
 
@@ -152,7 +152,7 @@ Aceite:
 
 ## SPEC-12 — ACWR e ramp rate do CTL como checagem de segurança
 
-Status: implementada e validada localmente; publicação autorizada
+Status: concluída e publicada
 
 Hoje o ramp rate já é lido em `lib/readiness.ts` e exposto em `metrics`, mas nunca entra na função que acumula os flags de severidade — é puramente decorativo, sem peso na classificação verde, amarela ou vermelha.
 

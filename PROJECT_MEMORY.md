@@ -1,6 +1,6 @@
 # Memória do sistema — Pedal Pronto
 
-Atualizado em: 2026-09-07
+Atualizado em: 2026-09-08
 
 ## Produto
 
@@ -47,7 +47,7 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-`NEXT`: publicar o lote autorizado T08–T12 e confirmar a versão online.
+`NEXT`: aguardando a próxima SPEC priorizada pelo atleta.
 
 A T03 até a T07 foram integradas, validadas e publicadas em um único lote após autorização do atleta.
 
@@ -75,6 +75,8 @@ O repositório privado `rafaeldevwp/pedal-pronto` foi criado e a integração re
 ## Publicação
 
 Projeto Sites privado, proprietário único. Antes de publicar: build, commit, envio da fonte, pacote com `dist` + hosting + migrations, salvar versão, publicar versão privada e confirmar sucesso.
+
+O lote T08–T12 foi publicado com sucesso em 2026-09-08.
 
 ## Alterações locais ainda não publicadas
 
