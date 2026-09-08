@@ -141,12 +141,18 @@
 - [ ] Reutilizar confirmação, revalidação e idempotência da SPEC-08 para aplicar de fato a recomendação do motor: ainda não existe uma rota de escrita para `engineDecision` — hoje ele é só um campo de leitura/prévia. Ligar isso a `claimTrainingWrite`/`assertEditablePlannedEvent` é o próximo passo, deixado fora desta rodada até haver uma decisão de produto sobre como isso aparece na interface (T17) e uma revisão dedicada do caminho de escrita.
 - [ ] Não publicar sem nova ordem do atleta.
 
-## Planejada — T15 Evoluir sugestões de dias OFF — SPEC-15
+## Concluída localmente (parcial) — T15 Evoluir sugestões de dias OFF — SPEC-15
 
-- [ ] Criar biblioteca de sessões opcionais e descanso completo.
-- [ ] Selecionar sugestão por contexto, lacuna de estímulo e custo futuro.
-- [ ] Evitar repetição sem justificativa e proteger o próximo treino-chave.
-- [ ] Exibir benefício, carga, risco e confirmação antes de enviar ao Intervals.icu.
+- [x] Criar biblioteca de sessões opcionais e descanso completo (`lib/off-day-suggestions.ts`): descanso, mobilidade, recuperação ativa, técnica/cadência e endurance leve — cinco categorias, contra as três de antes (descanso nunca existia como opção explícita).
+- [x] Selecionar sugestão por contexto: prontidão, ACWR/rampa (a versão anterior não olhava para nenhum sinal de carga), fase do mesociclo, dor/sintomas do check-in, cadência recente e volume/intensidade recentes.
+- [x] Não sugerir intensidade diante de dor, sintomas, ACWR/rampa severos ou treino-chave muito próximo: vira descanso completo ou recuperação ativa, nunca técnica/endurance.
+- [x] Evitar repetir automaticamente a mesma categoria duas vezes seguidas sem justificativa nova, usando o histórico de decisões já existente (`training_decisions`).
+- [x] Exibir benefício, custo de carga e impacto no próximo treino em todo caso — inclusive quando a sugestão é descanso completo, com framing positivo ("parte do plano, não uma falha"), nunca como ausência de resposta.
+- [x] Confirmação antes de enviar ao Intervals.icu: já garantida pelo fluxo `create_suggestion` existente (`assertDayAvailableForCreation` + `claimTrainingWrite`), inalterado.
+- [x] Testes: `tests/off-day-suggestions.test.ts`, 12 casos (5 categorias, dor/sintomas, ACWR severo, treino-chave próximo, fase de recuperação, anti-repetição, framing positivo do descanso).
+- [ ] Considerar check-in (dor/sintomas) e proximidade real do próximo treino-chave (dias/risco) na chamada ao vivo em `app/api/week/route.ts`: o módulo já suporta os dois (testado com fixtures), mas a rota hoje só passa `nextKeyName` como texto — `app/api/week/route.ts` não recebe check-in (só a rota de prontidão recebe), e ligar `daysToKey`/`forecastRisk` reais exigiria reordenar o cálculo do forecast para antes da sugestão. Ficou como próximo passo, não bloqueia o restante.
+- [ ] Modelar lacuna de estímulo (endurance/limiar/VO2max já entregues na semana): depende da mesma taxonomia de estímulo pendente da T14.
+- [ ] Não publicar sem nova ordem do atleta.
 
 ## Planejada — T16 Fechar o ciclo pós-treino — SPEC-16
 

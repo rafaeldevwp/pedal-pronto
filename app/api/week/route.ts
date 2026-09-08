@@ -1,7 +1,7 @@
 import { ensurePolarSchema, ownerId, recordTrainingDecision, runtime } from '@/lib/polar';
 import { loadAthleteContext } from '@/lib/context-loader';
-import type { ReadinessResult } from '@/lib/readiness';
 import { decideTraining, type Objective as EngineObjective } from '@/lib/decision-engine';
+import { chooseOffDaySuggestion, type SuggestionCategory } from '@/lib/off-day-suggestions';
 import { assertDayAvailableForCreation, assertEditablePlannedEvent, claimTrainingWrite, completeTrainingWrite, proposalFingerprint } from '@/lib/training-safety';
 
 export const dynamic = 'force-dynamic';
@@ -280,29 +280,6 @@ function futureProposal(event: Json, goal: { objective: string; eventDate?: stri
     },
   };
 }
-function chooseSuggestion(readiness: ReadinessResult, activities: Json[], planned: Array<ReturnType<typeof normalize>>, today: string) {
-  const recent = activities.slice(-4);
-  const hard = recent.filter((a) => Number(a.icu_intensity || a.intensity || 0) >= 75).length;
-  const long = recent.some((a) => Number(a.moving_time || 0) >= 2 * 3600);
-  const next = planned.find((event) => event.date > today);
-  if (readiness.classification === 'amarela' || hard >= 2 || long) return {
-    name: 'Ativação regenerativa opcional', durationMinutes: 25, load: 12,
-    structure: ['- 8m 42%', '- 12m 48% 90-95rpm', '- 5m 40%'],
-    reason: `A semana já trouxe ${hard >= 2 ? 'estímulos intensos' : long ? 'volume relevante' : 'recuperação parcial'}. Esta opção favorece circulação sem adicionar um novo estímulo.${next ? ` Preserva o próximo treino: ${next.name}.` : ''}`,
-  };
-  const lowCadence = recent.every((a) => Number(a.average_cadence || 0) < 88);
-  if (lowCadence) return {
-    name: 'Técnica de cadência opcional', durationMinutes: 35, load: 20,
-    structure: ['- 10m 48%', '- 4x 2m 55% 95-105rpm, 2m 45%', '- 9m 45%'],
-    reason: `Prontidão favorável e pouco trabalho recente de cadência. O estímulo é técnico e leve, sem competir com a progressão da semana.${next ? ` O treino ${next.name} continua prioritário.` : ''}`,
-  };
-  return {
-    name: 'Endurance leve opcional', durationMinutes: 40, load: 25,
-    structure: ['- 10m 48%', '- 25m 58-62%', '- 5m 42%'],
-    reason: `Recuperação favorável e carga recente controlada. Esta opção acrescenta base aeróbica com baixo custo, sem transformar o descanso em obrigação.${next ? ` Preserva o próximo treino: ${next.name}.` : ''}`,
-  };
-}
-
 async function context(owner: string) {
   await ensurePolarSchema();
   const today = todayInZone();
@@ -354,7 +331,30 @@ async function context(owner: string) {
     !hasToday &&
     ['verde', 'amarela'].includes(readiness.classification) &&
     !snapshot.blocked;
-  const adaptiveSuggestion = chooseSuggestion(readiness, activities, planned, today);
+  const decisionRows = await runtime.DB.prepare(
+    `SELECT id,decision_date,workout_date,source,status,original_json,recommended_json,effective_json,reason,created_at
+     FROM training_decisions WHERE owner_id=? ORDER BY created_at DESC LIMIT 20`,
+  ).bind(owner).all<Json>();
+  const parseStored = (value?: string) => {
+    try { return value ? JSON.parse(value) : null; } catch { return null; }
+  };
+  const recentSuggestionCategories = (decisionRows.results || [])
+    .filter((row) => row.source === 'sugestao_off')
+    .slice(0, 2)
+    .map((row) => parseStored(row.recommended_json)?.category)
+    .filter(Boolean) as SuggestionCategory[];
+  const recentActivities = activities.slice(-4);
+  const nextPlanned = planned.find((event) => event.date > today);
+  const adaptiveSuggestion = chooseOffDaySuggestion({
+    classification: readiness.classification,
+    safetyFlags: readiness.metrics.safetyFlags || [],
+    phase: snapshot.mesocycle.value?.phase || 'desconhecida',
+    recentHardCount: recentActivities.filter((a) => Number(a.icu_intensity || a.intensity || 0) >= 75).length,
+    recentLong: recentActivities.some((a) => Number(a.moving_time || 0) >= 2 * 3600),
+    lowCadence: recentActivities.length > 0 && recentActivities.every((a) => Number(a.average_cadence || 0) < 88),
+    nextKeyName: nextPlanned?.name,
+    recentSuggestionCategories,
+  });
   const yesterday = addDays(today, -1);
   const yesterdayLoad = activities.filter((a) => activityDate(a) === yesterday).reduce((sum, a) => sum + Number(a.icu_training_load || a.load || 0), 0);
   const todaySession = events.find((event: Json) => event.date === today);
@@ -450,13 +450,6 @@ async function context(owner: string) {
         workoutDate: proposal.date,
       }
     : null;
-  const decisionRows = await runtime.DB.prepare(
-    `SELECT id,decision_date,workout_date,source,status,original_json,recommended_json,effective_json,reason,created_at
-     FROM training_decisions WHERE owner_id=? ORDER BY created_at DESC LIMIT 20`,
-  ).bind(owner).all<Json>();
-  const parseStored = (value?: string) => {
-    try { return value ? JSON.parse(value) : null; } catch { return null; }
-  };
   const decisionHistory = (decisionRows.results || []).map((row) => {
     const completedActivity = history.find((activity: Json) => activityDate(activity) === row.workout_date);
     return {
