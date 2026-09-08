@@ -6,8 +6,6 @@ const base: DecisionInput = {
   classification: 'verde',
   blocked: false,
   phase: 'desconhecida',
-  objective: 'performance',
-  protectSpecificity: false,
   safetyFlags: [],
   workout: { name: '4x 8min 92%', durationMinutes: 60, load: 55, structure: ['- 15m 50%', '- 4x 8min 92%, 4min 50%', '- 10m 45%'] },
   isRestDay: false,
@@ -50,15 +48,21 @@ test('vermelha sempre substitui por recuperação, mesmo em fase de build', () =
 });
 
 test('fase de build prefere reduzir repetições e preservar intensidade', () => {
-  const decision = decideTraining({ ...base, classification: 'amarela', phase: 'C2W2 Build', objective: 'saude' });
+  const decision = decideTraining({ ...base, classification: 'amarela', phase: 'build' });
   assert.equal(decision.action, 'reduzir_repeticoes');
   assert.equal(decision.stimulusPreserved, 'intensidade');
 });
 
-test('fase de recovery/deload prefere reduzir intensidade e preservar duração', () => {
-  const decision = decideTraining({ ...base, classification: 'amarela', phase: 'Recovery', objective: 'ftp' });
+test('fase de recovery prefere reduzir intensidade e preservar duração', () => {
+  const decision = decideTraining({ ...base, classification: 'amarela', phase: 'recovery' });
   assert.equal(decision.action, 'reduzir_intensidade');
   assert.equal(decision.stimulusPreserved, 'duração');
+});
+
+test('sem âncora configurada (fase desconhecida) segue a regra padrão de progressão', () => {
+  const decision = decideTraining({ ...base, classification: 'amarela', phase: 'desconhecida' });
+  assert.equal(decision.action, 'reduzir_repeticoes');
+  assert.equal(decision.stimulusPreserved, 'intensidade');
 });
 
 test('proximidade do treino-chave com risco alto aparece nas justificativas', () => {
@@ -82,32 +86,25 @@ test('estrutura sem repetições nem intensidade reconhecível vira recuperaçã
   assert.equal(decision.action, 'substituir_recuperacao');
 });
 
-test('especificidade protegida evita reduzir intensidade mesmo em objetivo de resistência', () => {
-  const decision = decideTraining({ ...base, classification: 'amarela', objective: 'resistencia', protectSpecificity: true });
-  assert.equal(decision.action, 'reduzir_intensidade');
-});
-
-test('preferVolumeReduction: build/peak sempre prefere reduzir volume, mesmo com especificidade protegida', () => {
-  assert.equal(preferVolumeReduction('C2W2 Build', 'ftp', true), true);
-  assert.equal(preferVolumeReduction('Peak', 'performance', false), true);
+test('preferVolumeReduction: build/peak sempre prefere reduzir volume', () => {
+  assert.equal(preferVolumeReduction('C2W2 Build'), true);
+  assert.equal(preferVolumeReduction('Peak'), true);
 });
 
 test('preferVolumeReduction: recovery/deload nunca prefere reduzir volume', () => {
-  assert.equal(preferVolumeReduction('Recovery', 'resistencia', false), false);
-  assert.equal(preferVolumeReduction('deload', 'saude', false), false);
+  assert.equal(preferVolumeReduction('Recovery'), false);
+  assert.equal(preferVolumeReduction('deload'), false);
 });
 
-test('preferVolumeReduction: fora de fase reconhecida, segue a regra do objetivo e da especificidade', () => {
-  assert.equal(preferVolumeReduction('desconhecida', 'resistencia', false), true);
-  assert.equal(preferVolumeReduction('desconhecida', 'resistencia', true), false);
-  assert.equal(preferVolumeReduction('desconhecida', 'performance', false), false);
+test('preferVolumeReduction: fase desconhecida (sem âncora) segue a regra padrão de progressão', () => {
+  assert.equal(preferVolumeReduction('desconhecida'), true);
 });
 
 const emptyCoverage = { endurance: 'pendente' as const, limiar: 'pendente' as const, vo2max: 'pendente' as const, recuperacao: 'pendente' as const };
 
 test('protege intensidade quando o treino de hoje é a única fonte de VO2max da semana, mesmo em fase de recovery', () => {
   const decision = decideTraining({
-    ...base, classification: 'amarela', phase: 'Recovery', objective: 'ftp',
+    ...base, classification: 'amarela', phase: 'recovery',
     stimulusCoverage: emptyCoverage, todayStimulus: 'vo2max',
   });
   assert.equal(decision.action, 'reduzir_repeticoes');
@@ -118,13 +115,13 @@ test('protege intensidade quando o treino de hoje é a única fonte de VO2max da
 test('não protege estímulo já entregue por outra sessão da semana', () => {
   const covered = { ...emptyCoverage, vo2max: 'entregue' as const };
   const decision = decideTraining({
-    ...base, classification: 'amarela', phase: 'Recovery', objective: 'ftp',
+    ...base, classification: 'amarela', phase: 'recovery',
     stimulusCoverage: covered, todayStimulus: 'vo2max',
   });
   assert.equal(decision.action, 'reduzir_intensidade');
 });
 
 test('sem coverage/todayStimulus informados, comportamento permanece igual ao de antes', () => {
-  const decision = decideTraining({ ...base, classification: 'amarela', phase: 'Recovery', objective: 'ftp' });
+  const decision = decideTraining({ ...base, classification: 'amarela', phase: 'recovery' });
   assert.equal(decision.action, 'reduzir_intensidade');
 });

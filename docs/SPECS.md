@@ -254,25 +254,28 @@ Aceite:
 
 ## SPEC-18 — Fase do mesociclo substitui objetivo como orientador de carga
 
-Status: proposta; bloqueada por decisões do atleta (ver perguntas abertas) antes de virar TASK
+Status: concluída localmente
 
-Hoje o "objetivo" da temporada (`performance`/`resistência`/`ftp`/`saúde`, salvo em `athlete_goals` junto com evento, data e prioridade) decide, em três lugares independentes, qual variável do treino cede primeiro quando a prontidão pede cautela — reduzir intensidade ou reduzir repetições/volume. Os três lugares divergem entre si: `lib/readiness.ts` (`adaptWorkout`), que decide de fato a adaptação do treino de hoje, usa só objetivo e "especificidade protegida" (dias até o evento principal) e não sabe nada sobre a fase do mesociclo; `lib/decision-engine.ts` (`preferVolumeReduction`), usado pela prévia do motor adaptativo e pelo replanejamento futuro que já escreve no Intervals.icu, cruza fase do mesociclo com objetivo, e a fase já sobrepõe o objetivo quando é de progressão (build/peak) ou de recuperação; e o texto "objetivo de X considerado" mais o mapa de nomes do objetivo (`objectiveNames`) estão copiados em três arquivos, sem fonte única. Ou seja: já existe hoje uma inconsistência real — o treino de hoje ignora a fase do mesociclo, mas o replanejamento futuro não.
+Hoje o "objetivo" da temporada (`performance`/`resistência`/`ftp`/`saúde`, salvo em `athlete_goals` junto com evento, data e prioridade) decide, em três lugares independentes, qual variável do treino cede primeiro quando a prontidão pede cautela — reduzir intensidade ou reduzir repetições/volume. Os três lugares divergem entre si: `lib/readiness.ts` (`adaptWorkout`), que decide de fato a adaptação do treino de hoje, usa só objetivo e "especificidade protegida" (dias até o evento principal) e não sabe nada sobre a fase do mesociclo; `lib/decision-engine.ts` (`preferVolumeReduction`), usado pela prévia do motor adaptativo e pelo replanejamento futuro que já escreve no Intervals.icu, cruza fase do mesociclo com objetivo; e o texto "objetivo de X considerado" mais o mapa de nomes do objetivo (`objectiveNames`) estão copiados em três arquivos, sem fonte única.
 
-Com a decisão de que os ciclos já definidos no Intervals.icu (nome do evento `C{n}W{n}D{n}` mais a fase cadastrada em `mesocycle_phases`, SPEC-11) passam a ser a referência principal de "que tipo de treino cabe agora", o campo isolado de objetivo fica redundante para essa decisão específica. A regra proposta é: a fase do mesociclo vira a única fonte usada para decidir qual variável cede primeiro, tanto em `lib/readiness.ts` (hoje) quanto em `lib/decision-engine.ts`/`futureProposal` (futuro), unificando os três lugares na mesma regra — hoje essa regra só existe em `lib/decision-engine.ts`, faltando aplicá-la também em `readiness.ts`.
+Decisões do atleta que fecham esta SPEC:
 
-Perguntas em aberto, bloqueiam virar TASK:
+1. **Objetivo vira puramente narrativo.** O campo "objetivo" (e evento/data/prioridade) continua existindo só na tela "Direção da temporada" (aba Evolução), como contexto da temporada — deixa de influenciar qualquer decisão de treino. `lib/readiness.ts`, `lib/decision-engine.ts` e `futureProposal` param de ler `objetivo` para decidir intensidade vs. volume, e o texto associado a ele some das justificativas de treino (ele nunca foi, de qualquer forma, uma "incentivo automático a treinar mais" — ver `docs/DESIGN.md`, seção Vocabulário — então isso só reforça o princípio já declarado).
+2. **"Especificidade protegida" é removida por completo.** Não vira uma fase nomeada nem continua como cálculo separado por data de evento — o conceito inteiro (reduzir volume antes da intensidade nos 21 dias antes de um evento principal) deixa de existir.
+3. **A fase deixa de ser cadastrada manualmente.** O mapa de fases por ciclo/semana (`mesocycle_phases`, editado à mão na tela Evolução) é substituído por uma regra fixa e automática, aplicada a partir da semana do ciclo (`W`, sempre 1 a 4, já calculada pela âncora): semanas 1, 2 e 3 são fase de progressão ("build" — protege intensidade, cede volume primeiro); semana 4 é fase de recuperação ("recovery" — protege duração, cede intensidade primeiro). Fase só continua "desconhecida" quando não há âncora configurada (não há como calcular a semana); a partir do momento em que existe âncora, a fase é sempre determinística — nunca mais bloqueia nem pede cadastro manual.
+4. **O teto de rampa do CTL (`rampRateLimit`, SPEC-12) não muda** — continua na mesma tabela/tela, independente de tudo isso.
 
-1. O campo "objetivo" (performance/resistência/ftp/saúde) some completamente do app — tabela, rota `/api/profile`, tela "Direção da temporada" — ou continua existindo só como contexto narrativo da temporada, sem decidir mais nada?
-2. "Especificidade protegida" (reduzir volume antes da intensidade nos 21 dias antes de um evento principal, hoje calculada a partir de `eventDate`/`priority`) também vira responsabilidade da fase do mesociclo — por exemplo, uma fase chamada "peak" ou "taper" no seu mapa de fases já significaria isso — ou continua existindo separadamente, com sua própria data de evento, como hoje?
-3. Quando a fase está "desconhecida" (sem âncora configurada, ou sem fase cadastrada para aquele ciclo/semana), o que decide qual variável reduzir primeiro? Um padrão fixo, ou isso deveria bloquear a proposta e pedir para você cadastrar a fase antes?
-4. `athlete_goals`/`/api/profile` também guardam o teto de rampa do CTL (`rampRateLimit`, SPEC-12) — isso é independente de objetivo e deve continuar existindo do jeito que está, não importa a resposta das perguntas acima.
+Regra final: existe uma única função, `preferVolumeReduction(phase)`, chamada por `lib/readiness.ts` (treino de hoje, que passa a considerar fase pela primeira vez), `lib/decision-engine.ts` (prévia do motor) e `futureProposal` (replanejamento futuro aplicado) — hoje são três decisões independentes, com apenas uma delas enxergando fase. `objectiveNames` e toda menção a objetivo somem dessas três funções, não são só deduplicadas.
 
-Aceite, provisório e dependente das respostas acima:
+Aceite:
 
-- Existe uma única função usada para decidir "reduzir intensidade ou reduzir volume primeiro", chamada por `lib/readiness.ts`, `lib/decision-engine.ts` e `futureProposal` — hoje são três decisões independentes, uma delas cega para a fase.
-- O treino de hoje (`lib/readiness.ts`) passa a considerar a fase do mesociclo pela primeira vez.
-- `objectiveNames` deixa de estar duplicado em três arquivos.
-- Ciclo/semana sem fase cadastrada segue exatamente a regra escolhida na pergunta 3, sem suposição silenciosa.
-- Testes cobrem a fase decidindo sozinha e o caso de fase desconhecida.
+- `lib/mesocycle.ts` calcula a fase (`build`/`recovery`/`desconhecida`) a partir só da semana do ciclo, sem tabela de fases cadastrada manualmente; `mesocycle_phases` para de ser lida ou escrita em qualquer rota (a tabela em si não é apagada, só fica sem uso).
+- A tela de mesociclo (aba Evolução) perde o campo de edição manual de fase; a fase aparece só como informação calculada.
+- `preferVolumeReduction` passa a receber só `phase`, sem objetivo nem especificidade protegida.
+- `lib/readiness.ts` (`adaptWorkout`, `runReadiness`, `confirmReadinessProposal`) usa a fase do mesociclo (calculada com uma leitura própria da âncora) para decidir intensidade vs. volume no treino de hoje — antes disso, o treino de hoje nunca soube de mesociclo.
+- Nenhuma leitura de `athlete_goals` acontece mais em `lib/readiness.ts`, `lib/decision-engine.ts` ou `futureProposal`; a rota `/api/profile` e a tela "Direção da temporada" continuam existindo e funcionando exatamente como hoje, só que sem efeito em nenhuma decisão de treino.
+- O card "Objetivo considerado" que aparecia na aba Hoje some, porque deixou de refletir algo real.
+- Testes cobrem: `resolveMesocycle`/fase por semana (1-3 build, 4 recovery, sem âncora desconhecida); `preferVolumeReduction(phase)` com a assinatura nova; `adaptWorkout`/`runReadiness` decidindo por fase, não por objetivo.
+- `npm test` e `npm run build` validados.
 
-Dependências: SPEC-11 (fase e ponteiro do mesociclo) e SPEC-14 (motor adaptativo, onde `preferVolumeReduction` já existe) já concluídas; esta SPEC consolida e remove a duplicação/divergência entre elas e o caminho de hoje (`lib/readiness.ts`).
+Dependências: SPEC-11 (fase e ponteiro do mesociclo) e SPEC-14 (motor adaptativo, onde `preferVolumeReduction` já existe) já concluídas; esta SPEC consolida, remove a divergência entre elas e o caminho de hoje (`lib/readiness.ts`), e desfaz parte da SPEC-01 (uso de objetivo para decidir carga) e da SPEC-11 (mapa manual de fases).

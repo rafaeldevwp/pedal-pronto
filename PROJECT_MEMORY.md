@@ -47,7 +47,9 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-T13 a T17 estão todas concluídas localmente (build e 72 testes), fechando o roteiro completo do esboço "Pedal Pronto 2.0". Resumo do que cada uma entregou:
+T13 a T18 estão todas concluídas localmente (build e 75 testes), fechando o roteiro completo do esboço "Pedal Pronto 2.0" mais um ajuste de harmonização (T18) pedido pelo atleta depois. Resumo do que cada uma entregou:
+
+- **T18** (depois da T17, a pedido do atleta): o campo "objetivo" (performance/resistência/ftp/saúde) parou de decidir qualquer coisa — vira puramente contexto narrativo na tela "Direção da temporada" (aba Evolução). "Especificidade protegida" (reduzir volume perto de um evento principal, calculada por data) foi removida por completo, sem substituto. O mapa manual de fases por ciclo/semana (`mesocycle_phases`, editado à mão) foi substituído por uma regra fixa e automática: semanas 1-3 do ciclo são fase de progressão ("build", protege intensidade), semana 4 é recuperação ("recovery", protege duração) — a fase nunca mais fica "desconhecida" a menos que não haja âncora configurada. `lib/readiness.ts` (o ajuste do treino de **hoje**, publicado) passou a considerar a fase do mesociclo pela primeira vez, usando a mesma função `preferVolumeReduction` que já era usada só para o motor adaptativo e o replanejamento futuro — as três decisões que antes divergiam (uma cega para fase) agora são uma só. `athlete_goals`/`/api/profile` continuam existindo exatamente como antes, incluindo o teto de rampa do CTL; só pararam de influenciar decisões de treino.
 
 - **T13**: `lib/context.ts` (puro) define o snapshot versionado (`AthleteSnapshot` v1); `lib/context-loader.ts` monta esse snapshot chamando `runReadiness`/`resolveMesocycle` uma única vez por requisição; `app/api/readiness/route.ts` e `app/api/week/route.ts` passam por `loadAthleteContext` em vez de buscar Polar/Intervals.icu cada um por conta própria; `snapshot.blocked` impede proposta futura e sugestão OFF quando os dados são contraditórios, sempre explicando o motivo.
 - **T14**: `lib/decision-engine.ts` (`decideTraining`) decide fase+ACWR/rampa+objetivo de forma determinística. Por decisão do atleta, o motor só atua em dia planejado futuro — nunca no dia de hoje, que continua sob a proposta já publicada em `lib/readiness.ts` — reaproveitando `preferVolumeReduction` dentro de `futureProposal` (`app/api/week/route.ts`), que já tem todo o fluxo de escrita da SPEC-08. `lib/stimulus.ts` classifica cada sessão em endurance/limiar/vo2max/recuperação e resume a cobertura da semana; quando o dia sendo avaliado é a única fonte prevista de limiar/VO2max da semana, intensidade é preservada e volume cede primeiro, custe o que custar de fase/objetivo.
@@ -76,10 +78,10 @@ O repositório privado `rafaeldevwp/pedal-pronto` foi criado e a integração re
 - `app/api/profile/route.ts`: objetivo da temporada.
 - `lib/polar.ts`: ambiente, identidade e estrutura D1.
 - `lib/training-safety.ts` + `lib/training-safety-core.ts`: consentimento, revalidação e idempotência de escritas de treino.
-- `lib/mesocycle.ts` + `app/api/mesocycle/route.ts`: fase do mesociclo e ponteiro C/W/D (SPEC-11).
+- `lib/mesocycle.ts` + `app/api/mesocycle/route.ts`: fase do mesociclo (calculada automaticamente pela semana do ciclo, sem mapa manual desde a T18) e ponteiro C/W/D (SPEC-11).
 - `lib/load-safety.ts`: ACWR e ramp rate do CTL como sinais de segurança (SPEC-12).
 - `lib/context.ts` (puro) + `lib/context-loader.ts` (I/O) + `app/api/context/route.ts`: snapshot unificado com fonte/horário/qualidade por campo, consumido por prontidão e semana (SPEC-13).
-- `lib/decision-engine.ts`: motor adaptativo puro (`decideTraining`, `preferVolumeReduction`) — fase, objetivo, ACWR/rampa e estímulo-chave decidem a proposta (SPEC-14).
+- `lib/decision-engine.ts`: motor adaptativo puro (`decideTraining`, `preferVolumeReduction`) — fase, ACWR/rampa e estímulo-chave decidem a proposta; objetivo não entra mais nessa decisão desde a T18 (SPEC-14).
 - `lib/off-day-suggestions.ts`: biblioteca de 5 categorias de sugestão para dias OFF, contextual e sem repetição sem motivo (SPEC-15).
 - `lib/stimulus.ts`: classifica sessões em endurance/limiar/vo2max/recuperação e resume a cobertura semanal — usado por T14 e T15.
 - `drizzle/0002_training_decisions.sql`: histórico imutável de decisões.
@@ -99,4 +101,5 @@ O lote T08–T12 foi publicado com sucesso em 2026-09-08.
 - SPEC-15/T15: sugestões OFF variadas, contextuais e compatíveis com o plano. Concluída localmente.
 - SPEC-16/T16: feedback pós-treino, atualização de carga e impacto futuro. Concluída localmente.
 - SPEC-17/T17: experiência integrada de Hoje, Semana e Evolução. Concluída localmente, mas nunca verificada visualmente num navegador e sem o redesenho completo de hierarquia que a SPEC pede.
-- Todas as cinco (T13–T17) foram implementadas nesta ordem; publicar somente mediante ordem explícita — e, no caso da T17, só depois de conferir a interface no ambiente real.
+- SPEC-18/T18: fase do mesociclo substitui objetivo como orientador de carga; especificidade protegida removida; mapa manual de fases removido em favor de regra fixa por semana. Concluída localmente.
+- Todas as seis (T13–T18) foram implementadas nesta ordem; publicar somente mediante ordem explícita — e, no caso da T17/T18, só depois de conferir a interface no ambiente real.

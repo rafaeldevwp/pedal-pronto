@@ -1,7 +1,7 @@
 import { ensurePolarSchema, ownerId, recordTrainingDecision, runtime } from '@/lib/polar';
 import { loadAthleteContext } from '@/lib/context-loader';
 import type { Checkin } from '@/lib/readiness';
-import { decideTraining, preferVolumeReduction, type Objective as EngineObjective } from '@/lib/decision-engine';
+import { decideTraining, preferVolumeReduction } from '@/lib/decision-engine';
 import { chooseOffDaySuggestion, type SuggestionCategory } from '@/lib/off-day-suggestions';
 import { classifyStimulus, computeStimulusCoverage, describeMissingKeyStimulus, isWeekKeySourceFor, type StimulusCoverage } from '@/lib/stimulus';
 import { assertDayAvailableForCreation, assertEditablePlannedEvent, claimTrainingWrite, completeTrainingWrite, proposalFingerprint } from '@/lib/training-safety';
@@ -233,10 +233,7 @@ const completedWorkout = (activity: Json, history: Json[], planned?: ReturnType<
   };
 };
 
-const objectiveNames: Record<string, string> = { performance: 'performance geral', resistencia: 'resistência', ftp: 'potência/FTP', saude: 'saúde e consistência' };
-
-function futureProposal(event: Json, goal: { objective: string; eventDate?: string; priority?: string }, phase = 'desconhecida', stimulusCoverage?: StimulusCoverage) {
-  const objective = goal.objective || 'performance';
+function futureProposal(event: Json, phase = 'desconhecida', stimulusCoverage?: StimulusCoverage) {
   const original = normalize(event);
   const description = String(event.description || '');
   if (description.includes('Ajuste semanal confirmado pelo Pedal Pronto.')) return null;
@@ -245,10 +242,8 @@ function futureProposal(event: Json, goal: { objective: string; eventDate?: stri
   let change = '';
   let factor = 0.86;
   const intensity = description.match(/\b(8[5-9]|9\d|1[0-4]\d)%/);
-  const eventDays = goal.eventDate ? Math.ceil((new Date(`${goal.eventDate}T12:00:00Z`).getTime() - Date.now()) / 86400000) : undefined;
-  const protectSpecificity = goal.priority === 'principal' && eventDays !== undefined && eventDays >= 0 && eventDays <= 21;
   const protectStimulus = Boolean(stimulusCoverage && isWeekKeySourceFor(stimulusCoverage, classifyStimulus(original)));
-  const preferVolumeFirst = protectStimulus || preferVolumeReduction(phase, (['performance', 'resistencia', 'ftp', 'saude'].includes(objective) ? objective : 'performance') as EngineObjective, protectSpecificity);
+  const preferVolumeFirst = protectStimulus || preferVolumeReduction(phase);
   const preferIntensity = !preferVolumeFirst;
   if (reps && (!preferIntensity || !intensity)) {
     const from = Number(reps[1]);
@@ -277,7 +272,7 @@ function futureProposal(event: Json, goal: { objective: string; eventDate?: stri
       id: proposalFingerprint(event, updated),
       eventId: original.id,
       date: original.date,
-      reason: `A recuperação ou a carga recente pode comprometer o próximo estímulo. A proposta protege o objetivo de ${objectiveNames[objective] || objectiveNames.performance}${protectSpecificity ? ` e a especificidade da meta principal em ${eventDays} dias` : ''}, reduzindo apenas uma variável.`,
+      reason: 'A recuperação ou a carga recente pode comprometer o próximo estímulo. A proposta reduz apenas uma variável, respeitando a fase da semana.',
       change,
       original: { name: original.name, durationMinutes: original.durationMinutes, load: original.load, structure: original.structure },
       recommended: { name: proposed.name, durationMinutes: proposed.durationMinutes, load: proposed.load, structure: proposed.structure },
@@ -303,7 +298,6 @@ async function context(owner: string, checkin?: Checkin) {
       `/athlete/${runtime.INTERVALS_ATHLETE_ID}/activities?oldest=${historyStart}&newest=${today}&limit=250`,
     ),
   ]);
-  const goal = readiness.goal || { objective: 'performance', eventName: '', eventDate: '', priority: 'principal' };
   const rawPlanned = (Array.isArray(body) ? body : body?.events || [])
     .filter((event: Json) => event.category === 'WORKOUT')
   const planned = rawPlanned.map(normalize);
@@ -415,15 +409,10 @@ async function context(owner: string, checkin?: Checkin) {
     checkin: checkin ? { dor: checkin.dor, sintomas: checkin.sintomas, fadiga: checkin.fadiga } : undefined,
     stimulusGapNote: describeMissingKeyStimulus(stimulusCoverage, todayStimulusType),
   });
-  const engineObjective: EngineObjective = ['performance', 'resistencia', 'ftp', 'saude'].includes(goal.objective) ? (goal.objective as EngineObjective) : 'performance';
-  const engineEventDays = goal.eventDate ? Math.ceil((new Date(`${goal.eventDate}T12:00:00Z`).getTime() - Date.now()) / 86400000) : undefined;
-  const engineProtectSpecificity = goal.priority === 'principal' && engineEventDays !== undefined && engineEventDays >= 0 && engineEventDays <= 21;
   const engineDecision = decideTraining({
     classification: readiness.classification,
     blocked: snapshot.blocked,
     phase: snapshot.mesocycle.value?.phase || 'desconhecida',
-    objective: engineObjective,
-    protectSpecificity: engineProtectSpecificity,
     safetyFlags: readiness.metrics.safetyFlags || [],
     workout: todaySession && todaySession.status !== 'realizado' ? { name: todaySession.name, durationMinutes: todaySession.durationMinutes, load: todaySession.load, structure: todaySession.structure } : null,
     isRestDay: restDay,
@@ -447,7 +436,7 @@ async function context(owner: string, checkin?: Checkin) {
           const date = String(event.start_date_local || event.start_date || '').slice(0, 10);
           return date > today && ![0, 3, 5].includes(dayNumber(date));
         })
-        .map((event: Json) => futureProposal(event, goal, snapshot.mesocycle.value?.phase || 'desconhecida', stimulusCoverage))
+        .map((event: Json) => futureProposal(event, snapshot.mesocycle.value?.phase || 'desconhecida', stimulusCoverage))
         .find(Boolean)
     : null;
   const weeklyPlannedLoad = planned.reduce((sum, event) => sum + Number(event.load || 0), 0);
@@ -498,7 +487,6 @@ async function context(owner: string, checkin?: Checkin) {
       weeklyLoadBefore: Math.round(weeklyPlannedLoad),
       weeklyLoadAfter: Math.round(weeklyPlannedLoad - Number(proposal.original.load || 0) + Number(proposal.recommended.load || proposal.original.load || 0)),
     } : null,
-    goal,
     mesocycle: snapshot.mesocycle.value,
     contextWarning: snapshot.blocked ? snapshot.blockReasons.join(' ') : undefined,
     engineDecision,
@@ -560,7 +548,7 @@ export async function POST(request: Request) {
         return Response.json({ error: 'A proposta não está mais disponível. Atualize os dados.' }, { status: 409 });
       const eventsBody = await intervals(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/events?oldest=${state.monday}&newest=${state.sunday}&category=WORKOUT&resolve=true`);
       const source = (Array.isArray(eventsBody) ? eventsBody : eventsBody?.events || []).find((event: Json) => Number(event.id) === Number(state.proposal.eventId));
-      const recalculated = source ? futureProposal(source, state.goal, state.mesocycle?.phase || 'desconhecida', state.stimulusCoverage) : null;
+      const recalculated = source ? futureProposal(source, state.mesocycle?.phase || 'desconhecida', state.stimulusCoverage) : null;
       if (!recalculated || recalculated.proposal.id !== body.proposalId || recalculated.proposal.id !== state.proposal.id)
         return Response.json({ error: 'PROPOSAL_CHANGED' }, { status: 409 });
       const activityBody = await intervals(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/activities?oldest=${state.proposal.date}&newest=${state.proposal.date}&limit=40`);

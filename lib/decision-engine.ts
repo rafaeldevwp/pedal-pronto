@@ -1,14 +1,11 @@
 import { isWeekKeySourceFor, type StimulusCoverage, type StimulusType } from './stimulus.ts';
 
 export type SafetyFlag = { id: 'acwr_high' | 'ramp_rate_exceeded'; severity: 'moderada' | 'severa' };
-export type Objective = 'performance' | 'resistencia' | 'ftp' | 'saude';
 
 export type DecisionInput = {
   classification: 'verde' | 'amarela' | 'vermelha' | 'indisponível';
   blocked: boolean;
   phase: string;
-  objective: Objective;
-  protectSpecificity: boolean;
   safetyFlags: SafetyFlag[];
   workout: { name: string; durationMinutes?: number; load?: number; structure?: string[] } | null;
   isRestDay: boolean;
@@ -24,10 +21,6 @@ export type EngineDecision = {
   reasons: string[];
   recommended: { name: string; durationMinutes?: number; load?: number; descriptionChange?: string } | null;
   weeklyEffect: string;
-};
-
-const objectiveNames: Record<Objective, string> = {
-  performance: 'performance geral', resistencia: 'resistência', ftp: 'potência/FTP', saude: 'saúde e consistência',
 };
 
 function safetyReasons(flags: SafetyFlag[]): string[] {
@@ -72,11 +65,11 @@ function reduceRepetitions(workout: { name: string; durationMinutes?: number; lo
   };
 }
 
-export function preferVolumeReduction(phase: string, objective: Objective, protectSpecificity: boolean): boolean {
+export function preferVolumeReduction(phase: string): boolean {
   const phaseLower = phase.toLowerCase();
   const isRecoveryPhase = /recovery|deload|recupera/.test(phaseLower);
   const isProgressionPhase = /build|peak|choque|carga/.test(phaseLower);
-  return isProgressionPhase || (!isRecoveryPhase && !protectSpecificity && (objective === 'resistencia' || objective === 'saude'));
+  return isProgressionPhase || !isRecoveryPhase;
 }
 
 const recoveryRecommendation = {
@@ -120,9 +113,7 @@ export function decideTraining(input: DecisionInput): EngineDecision {
     ? `Fase ${input.phase}: em progressão, a intensidade-alvo é preservada quando possível e o volume é o primeiro a ceder.`
     : isRecoveryPhase
       ? `Fase ${input.phase}: de recuperação, o volume é reduzido primeiro para favorecer a absorção do bloco anterior.`
-      : input.phase === 'desconhecida'
-        ? 'Fase do mesociclo não cadastrada: aplicamos a regra padrão do objetivo.'
-        : `Fase ${input.phase}: sem regra específica cadastrada, aplicamos a regra padrão do objetivo.`;
+      : 'Sem âncora de mesociclo configurada: aplicamos a regra padrão de progressão (volume cede primeiro).';
 
   if (input.classification === 'vermelha') {
     const reasons = ['Prontidão vermelha: recuperação insuficiente hoje.', ...safetyReasons(input.safetyFlags)];
@@ -151,12 +142,11 @@ export function decideTraining(input: DecisionInput): EngineDecision {
   ];
   if (input.daysToNextKey !== undefined && input.daysToNextKey <= 1 && input.forecastRisk === 'alto')
     reasons.push('O próximo treino-chave está a menos de 24 horas; preservar a recuperação de hoje protege esse estímulo.');
-  reasons.push(`Objetivo de ${objectiveNames[input.objective]} considerado.`);
 
   const protectStimulus = Boolean(input.stimulusCoverage && input.todayStimulus && isWeekKeySourceFor(input.stimulusCoverage, input.todayStimulus));
   if (protectStimulus) reasons.push(`Hoje é a única sessão prevista para entregar o estímulo de ${input.todayStimulus === 'vo2max' ? 'VO2max' : 'limiar'} nesta semana; a intensidade é preservada e o volume cede primeiro.`);
 
-  const preferReduceVolumeFirst = protectStimulus || preferVolumeReduction(input.phase, input.objective, input.protectSpecificity);
+  const preferReduceVolumeFirst = protectStimulus || preferVolumeReduction(input.phase);
   const picked = preferReduceVolumeFirst
     ? reduceRepetitions(input.workout) || reduceIntensity(input.workout)
     : reduceIntensity(input.workout) || reduceRepetitions(input.workout);

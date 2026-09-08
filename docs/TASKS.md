@@ -189,6 +189,21 @@ A maior parte desta SPEC já existia, entregue como parte da T02 (comparação d
 - [ ] Validação de acessibilidade, PWA e notificações: não feito, depende da verificação visual acima.
 - [ ] Não publicar sem nova ordem do atleta.
 
-Ordem obrigatória: T13 → T14 → T15 → T16 → T17. Trabalhar e validar uma tarefa por vez; publicar apenas mediante ordem explícita.
+## Concluída localmente — T18 Fase do mesociclo substitui objetivo — SPEC-18
+
+- [x] `lib/mesocycle.ts`: `resolvePhase(calculated)` deriva a fase só da semana (`1-3` build, `4` recovery, sem âncora desconhecida); `resolveMesocycle` não recebe mais mapa de fases.
+- [x] `app/api/mesocycle/route.ts`: `GET`/`PUT` não leem nem escrevem mais `mesocycle_phases`; só a âncora é editável. A tabela em si não foi apagada, só ficou sem uso (nenhuma migração de remoção).
+- [x] `lib/context-loader.ts`: parou de consultar `mesocycle_phases`.
+- [x] `lib/decision-engine.ts`: `preferVolumeReduction(phase)` perdeu os parâmetros `objective`/`protectSpecificity`; `DecisionInput` também; nenhuma menção a objetivo nas justificativas do motor.
+- [x] `lib/readiness.ts`: `adaptWorkout(event, classification, phase)` usa `preferVolumeReduction` em vez do objetivo — **o treino de hoje passa a considerar a fase do mesociclo pela primeira vez**. `runReadiness`/`confirmReadinessProposal` resolvem a fase com leitura própria da âncora (`resolveTodayPhase`), sem ler `athlete_goals`. Campo `goal` removido de `ReadinessResult` — objetivo não decide mais nada aqui.
+- [x] `app/api/week/route.ts`: `futureProposal` perdeu o parâmetro `goal`; `engineDecision` não recebe mais objetivo/especificidade protegida; campo `goal` removido da resposta.
+- [x] UI (`app/page.tsx`): card "Objetivo considerado" (aba Hoje) removido — não refletia mais nada real. Editor manual de fase (aba Evolução) removido — a fase agora é só exibida, calculada automaticamente pela âncora. Texto do card "Direção da temporada" atualizado para deixar explícito que o objetivo é só contexto, não decide nada.
+- [x] `athlete_goals`/`/api/profile`/tela "Direção da temporada" continuam existindo exatamente como antes, incluindo o teto de rampa do CTL — só pararam de influenciar decisões de treino.
+- [x] Testes atualizados: `tests/mesocycle.test.ts` (fase por semana, sem cadastro manual), `tests/decision-engine.test.ts` (assinatura nova de `preferVolumeReduction`, cenários de build/recovery/desconhecida sem objetivo).
+- [x] `npm test` (75 casos) e `npm run build` validados.
+- [ ] Não verificado visualmente no navegador (mesma limitação de ambiente da T17).
+- [ ] Não publicar sem nova ordem do atleta.
+
+Ordem obrigatória: T13 → T14 → T15 → T16 → T17 → T18. Trabalhar e validar uma tarefa por vez; publicar apenas mediante ordem explícita.
 
 Regra: trabalhar somente na tarefa marcada como `NEXT`.

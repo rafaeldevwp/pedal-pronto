@@ -1,5 +1,4 @@
 export type CyclePointer = { cycle: number; week: number; day: number };
-export type PhaseMap = Record<string, string>;
 
 const DAY_MS = 86_400_000;
 
@@ -21,7 +20,12 @@ export function parseCyclePointer(name: string): CyclePointer | undefined {
   return match ? { cycle: Number(match[1]), week: Number(match[2]), day: Number(match[3]) } : undefined;
 }
 
-export function resolveMesocycle(anchor: string | undefined, date: string, phases: PhaseMap, eventName = '') {
+export function resolvePhase(calculated: CyclePointer | undefined): string {
+  if (!calculated) return 'desconhecida';
+  return calculated.week === 4 ? 'recovery' : 'build';
+}
+
+export function resolveMesocycle(anchor: string | undefined, date: string, eventName = '') {
   const calculated = anchor ? calculateCyclePointer(anchor, date) : undefined;
   const event = parseCyclePointer(eventName);
   const matches = calculated && event
@@ -31,7 +35,7 @@ export function resolveMesocycle(anchor: string | undefined, date: string, phase
     anchor: anchor || null,
     calculated: calculated || null,
     event: event || null,
-    phase: calculated ? phases[`${calculated.cycle}:${calculated.week}`] || 'desconhecida' : 'desconhecida',
+    phase: resolvePhase(calculated),
     warning: matches === false ? `O ponteiro calculado C${calculated!.cycle}W${calculated!.week}D${calculated!.day} diverge do evento C${event!.cycle}W${event!.week}D${event!.day}. Nenhuma correção foi aplicada.` : null,
   };
 }

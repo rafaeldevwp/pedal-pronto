@@ -79,7 +79,6 @@ type Result = {
   };
   updatedAt: string;
   warning?: string;
-  goal?: { objective: string; eventName?: string; eventDate?: string; priority: string; guidance: string };
 };
 type WeekWorkout = {
   id: number;
@@ -185,7 +184,7 @@ type Week = {
   };
 };
 type AthleteGoal = { objective: string; eventName: string; eventDate: string; priority: string; rampRateLimit: number };
-type Mesocycle = { anchor: string | null; calculated: null | { cycle: number; week: number; day: number }; event: null | { cycle: number; week: number; day: number }; phase: string; warning: string | null; phases: Record<string, string> };
+type Mesocycle = { anchor: string | null; calculated: null | { cycle: number; week: number; day: number }; event: null | { cycle: number; week: number; day: number }; phase: string; warning: string | null };
 type Performance = {
   updatedAt: string;
   activityCount: number;
@@ -309,7 +308,6 @@ export default function Home() {
     [goalSaved, setGoalSaved] = useState(false),
     [mesocycle, setMesocycle] = useState<Mesocycle | null>(null),
     [mesocycleAnchor, setMesocycleAnchor] = useState(''),
-    [mesocyclePhase, setMesocyclePhase] = useState(''),
     [mesocycleSaved, setMesocycleSaved] = useState(false),
     [powerRange, setPowerRange] = useState<'season' | 'recent' | 'all'>('season'),
     [loading, setLoading] = useState(false),
@@ -444,16 +442,12 @@ export default function Home() {
     const value = await response.json() as Mesocycle;
     setMesocycle(value);
     setMesocycleAnchor(value.anchor || '');
-    setMesocyclePhase(value.calculated ? value.phases[`${value.calculated.cycle}:${value.calculated.week}`] || '' : '');
   }
   async function saveMesocycle() {
-    const pointer = mesocycle?.calculated;
-    const phases = pointer && mesocyclePhase ? { [`${pointer.cycle}:${pointer.week}`]: mesocyclePhase } : undefined;
-    const response = await fetch('/api/mesocycle', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ anchor: mesocycleAnchor, phases }) });
+    const response = await fetch('/api/mesocycle', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ anchor: mesocycleAnchor }) });
     if (!response.ok) return;
     const value = await response.json() as Mesocycle;
     setMesocycle(value);
-    setMesocyclePhase(value.calculated ? value.phases[`${value.calculated.cycle}:${value.calculated.week}`] || '' : '');
     setMesocycleSaved(true);
     setTimeout(() => setMesocycleSaved(false), 2200);
   }
@@ -751,15 +745,6 @@ export default function Home() {
                 </div>
               </CardHeader>
               <CardContent>
-                {result?.goal && (
-                  <div className="goal-guidance">
-                    <Sparkles />
-                    <span>
-                      <small>OBJETIVO CONSIDERADO{result.goal.eventName ? ` · ${result.goal.eventName}` : ''}</small>
-                      <strong>{result.goal.guidance}</strong>
-                    </span>
-                  </div>
-                )}
                 {result?.proposal && (
                   <div className="workout-comparison">
                     <div>
@@ -1287,12 +1272,11 @@ export default function Home() {
             </div>
             <p className="anchor-highlight"><strong>Âncora atual:</strong> {mesocycle?.anchor ? new Date(`${mesocycle.anchor}T12:00:00`).toLocaleDateString('pt-BR') : 'não definida'}</p>
             {mesocycle?.warning && <small className="data-warning">{mesocycle.warning}</small>}
-            <div className="goal-row mesocycle-form">
+            <div className="mesocycle-form">
               <label>Início de C1W1D1<input type="date" value={mesocycleAnchor} onChange={(event) => setMesocycleAnchor(event.target.value)} /></label>
-              <label>Fase da semana atual<input value={mesocyclePhase} placeholder="Ex.: base, build, recovery" onChange={(event) => setMesocyclePhase(event.target.value)} /></label>
             </div>
             <Button className="primary-action" disabled={!mesocycleAnchor} onClick={saveMesocycle}>{mesocycleSaved ? <><Check /> Mesociclo salvo</> : 'Salvar posição do plano'}</Button>
-            <small className="analysis-note">Este contexto é informativo e não altera treinos nem decisões de prontidão.</small>
+            <small className="analysis-note">A fase (semanas 1-3 build, semana 4 recovery) é calculada automaticamente a partir da âncora e decide qual variável do treino cede primeiro quando a prontidão pede cautela.</small>
           </Card>
           <Card className="goal-card">
             <div className="goal-heading">
@@ -1302,7 +1286,7 @@ export default function Home() {
               </div>
               <Badge variant="outline">Guia do plano</Badge>
             </div>
-            <p className="muted-copy">A prontidão decide o que cabe hoje; este objetivo impede que ajustes diários desviem sua evolução.</p>
+            <p className="muted-copy">Contexto da sua temporada. A prontidão e a fase do mesociclo decidem o treino do dia — este objetivo não altera nenhuma decisão.</p>
             <div className="goal-form">
               <label>Objetivo
                 <select value={goal.objective} onChange={(event) => setGoal({ ...goal, objective: event.target.value })}>

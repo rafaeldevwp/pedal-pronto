@@ -1,6 +1,8 @@
 import { ensurePolarSchema, recordTrainingDecision, runtime } from '@/lib/polar';
 import { assertEditablePlannedEvent, claimTrainingWrite, completeTrainingWrite, proposalFingerprint } from '@/lib/training-safety';
 import { evaluateLoadSafety, type LoadSafetyFlag } from '@/lib/load-safety';
+import { calculateCyclePointer, resolvePhase } from '@/lib/mesocycle';
+import { preferVolumeReduction } from '@/lib/decision-engine';
 
 type Json = Record<string, any>;
 export type ReadinessResult = {
@@ -52,10 +54,8 @@ export type ReadinessResult = {
   };
   updatedAt: string;
   warning?: string;
-  goal?: { objective: string; eventName?: string; eventDate?: string; priority: string; guidance: string };
 };
 
-type Objective = 'performance' | 'resistencia' | 'ftp' | 'saude';
 export type Checkin = {
   fadiga?: number;
   dor?: number;
@@ -64,9 +64,6 @@ export type Checkin = {
   motivacao?: number;
   sintomas?: number;
   tempoDisponivel?: number;
-};
-const objectiveNames: Record<Objective, string> = {
-  performance: 'performance geral', resistencia: 'resistência', ftp: 'potência/FTP', saude: 'saúde e consistência',
 };
 
 const zone = 'America/Sao_Paulo';
@@ -128,7 +125,7 @@ const intervals = async (path: string, init?: RequestInit) => {
   return r.status === 204 ? null : r.json();
 };
 
-function adaptWorkout(event: Json, classification: 'amarela' | 'vermelha', objective: Objective, protectSpecificity = false) {
+function adaptWorkout(event: Json, classification: 'amarela' | 'vermelha', phase: string) {
   const updated = { ...event };
   const oldName = String(event.name || 'Treino planejado');
   const oldDescription = String(event.description || '');
@@ -159,7 +156,7 @@ function adaptWorkout(event: Json, classification: 'amarela' | 'vermelha', objec
     delete updated.icu_training_load;
     return {
       updated,
-      action: `intensidade reduzida de ${from}% para ${to}%; duração preservada para sustentar o objetivo de ${objectiveNames[objective]}`,
+      action: `intensidade reduzida de ${from}% para ${to}%; duração preservada`,
       durationMinutes: oldDuration ? Math.round(oldDuration / 60) : undefined,
       load: oldLoad ? Math.round(oldLoad * 0.9) : undefined,
     };
@@ -175,16 +172,21 @@ function adaptWorkout(event: Json, classification: 'amarela' | 'vermelha', objec
     delete updated.moving_time;
     return {
       updated,
-      action: `repetições reduzidas de ${from} para ${to}; intensidade preservada para sustentar o objetivo de ${objectiveNames[objective]}`,
+      action: `repetições reduzidas de ${from} para ${to}; intensidade preservada`,
       durationMinutes: oldDuration
         ? Math.round((oldDuration / 60) * 0.9)
         : undefined,
       load: oldLoad ? Math.round(oldLoad * 0.84) : undefined,
     };
   };
-  return !protectSpecificity && (objective === 'resistencia' || objective === 'saude')
-    ? reduceIntensity() || reduceRepetitions()
-    : reduceRepetitions() || reduceIntensity();
+  return preferVolumeReduction(phase)
+    ? reduceRepetitions() || reduceIntensity()
+    : reduceIntensity() || reduceRepetitions();
+}
+
+async function resolveTodayPhase(owner: string, today: string): Promise<string> {
+  const anchorRow = await runtime.DB.prepare('SELECT anchor_date FROM mesocycle_anchor WHERE owner_id=?').bind(owner).first<{ anchor_date: string }>();
+  return resolvePhase(anchorRow ? calculateCyclePointer(anchorRow.anchor_date, today) : undefined);
 }
 
 export async function runReadiness(
@@ -198,19 +200,12 @@ export async function runReadiness(
     .bind(owner)
     .first<{ access_token: string }>();
   if (!connection) throw new Error('POLAR_NOT_CONNECTED');
-  const goalRow = await runtime.DB.prepare(
-    'SELECT objective,event_name,event_date,priority FROM athlete_goals WHERE owner_id=?',
-  ).bind(owner).first<Record<string, string>>();
   const safetySettings = await runtime.DB.prepare('SELECT ramp_rate_limit FROM athlete_safety_settings WHERE owner_id=?').bind(owner).first<{ ramp_rate_limit: number }>();
   const rampLimit = safetySettings?.ramp_rate_limit ?? 6;
-  const objective = (['performance', 'resistencia', 'ftp', 'saude'].includes(goalRow?.objective || '') ? goalRow!.objective : 'performance') as Objective;
-  const eventDays = goalRow?.event_date
-    ? Math.ceil((new Date(`${goalRow.event_date}T12:00:00Z`).getTime() - Date.now()) / 86400000)
-    : undefined;
-  const protectSpecificity = goalRow?.priority === 'principal' && eventDays !== undefined && eventDays >= 0 && eventDays <= 21;
   const now = new Date(),
     today = isoDate(now),
     yesterday = isoDate(new Date(now.getTime() - 86400000));
+  const phase = await resolveTodayPhase(owner, today);
   try {
     const [sleepBody, rechargeBody, wellness, activities, events] =
       await Promise.all([
@@ -416,8 +411,7 @@ export async function runReadiness(
       evidence.push(
         'Sono, recuperação autonômica e carga estão dentro da tendência individual.',
       );
-    evidence.push(`Objetivo de ${objectiveNames[objective]} considerado; boa prontidão nunca aumenta a sessão automaticamente.`);
-    if (protectSpecificity) evidence.push(`Meta principal em ${eventDays} dias: especificidade preservada e volume reduzido antes da intensidade quando necessário.`);
+    evidence.push('Boa prontidão nunca aumenta a sessão automaticamente.');
     const priorBad = recharges
       .filter((r) => r.date < latestRecharge.date)
       .slice(-1)
@@ -455,7 +449,7 @@ export async function runReadiness(
     }).format(now);
     const restDay = ['Wed', 'Fri', 'Sun'].includes(weekday);
     const adapted = workout && classification !== 'verde' && !restDay && !todayCompleted
-      ? adaptWorkout(workout, classification, objective, protectSpecificity)
+      ? adaptWorkout(workout, classification, phase)
       : null;
     const recommended = adapted ? {
       name: String(adapted.updated.name),
@@ -518,23 +512,6 @@ export async function runReadiness(
         safetyFlags: loadSafety.flags,
       },
       updatedAt: new Date().toISOString(),
-      goal: {
-        objective,
-        eventName: goalRow?.event_name || undefined,
-        eventDate: goalRow?.event_date || undefined,
-        priority: goalRow?.priority || 'principal',
-        guidance: classification === 'vermelha'
-          ? `A segurança prevalece sobre o objetivo de ${objectiveNames[objective]}.`
-          : protectSpecificity
-            ? `Meta principal em ${eventDays} dias: preservamos a especificidade e moderamos primeiro o volume.`
-          : objective === 'resistencia'
-            ? 'Preservamos duração quando possível e moderamos a intensidade.'
-            : objective === 'ftp'
-              ? 'Preservamos a intensidade-alvo quando possível e moderamos as repetições.'
-              : objective === 'saude'
-                ? 'Priorizamos consistência e baixo risco de fadiga excessiva.'
-                : 'Preservamos o estímulo principal com o menor ajuste necessário.',
-      },
     };
     await runtime.DB.prepare(
       'INSERT INTO readiness_runs (owner_id,run_date,classification,changed,report_json,created_at) VALUES (?,?,?,?,?,?)',
@@ -576,11 +553,8 @@ export async function confirmReadinessProposal(owner: string, proposalId: string
     ['Ride', 'VirtualRide', 'EBikeRide', 'MountainBikeRide'].includes(activity.type || activity.icu_type),
   );
   assertEditablePlannedEvent(event, activities, proposal.date);
-  const eventDays = evaluated.goal?.eventDate
-    ? Math.ceil((new Date(`${evaluated.goal.eventDate}T12:00:00Z`).getTime() - Date.now()) / 86400000)
-    : undefined;
-  const protectSpecificity = evaluated.goal?.priority === 'principal' && eventDays !== undefined && eventDays >= 0 && eventDays <= 21;
-  const adapted = adaptWorkout(event, proposal.classification, ((evaluated.goal?.objective || 'performance') as Objective), protectSpecificity);
+  const phase = await resolveTodayPhase(owner, proposal.date);
+  const adapted = adaptWorkout(event, proposal.classification, phase);
   if (!adapted || proposalFingerprint(event, adapted.updated) !== proposal.id) throw new Error('PROPOSAL_CHANGED');
   const claim = await claimTrainingWrite(owner, operationId, proposal.id);
   if (claim.repeated) return claim.response;
