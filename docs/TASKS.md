@@ -183,9 +183,14 @@ A maior parte desta SPEC já existia, entregue como parte da T02 (comparação d
   - Quando `result` ainda não carregou (`!result`), a aba Recuperação não renderizava nada além do check-in — sem indicação de carregamento, de Polar desconectado ou de falha. Agora mostra um card com a causa provável (carregando / Polar desconectado / falha) e a ação certa para cada caso (aguardar / conectar / tentar novamente).
   - Quando `week` ainda não carregou (`!week`), a aba Treinos mostrava a lista vazia sem explicação. Agora mostra uma mensagem com a mesma lógica de causa provável.
   - A aba Evolução já tratava bem esses casos antes (`performance?.warning`, textos de fallback em cada card) — nenhuma mudança foi necessária lá.
-- [x] `npm test` (72 casos) e `npm run build` validados após cada mudança.
-- [ ] **Não verificado visualmente no navegador**: o ambiente local não tem credenciais reais de Polar/Intervals.icu nem o cabeçalho de usuário autenticado da hospedagem, e o atleta confirmou que não vale a pena insistir nisso aqui. Precisa ser conferido no ambiente real antes de publicar — inclusive o botão `asChild` novo (mesmo padrão já usado em outro botão existente da tela, mas nunca visto renderizado nesta sessão).
-- [ ] Redesenho completo da hierarquia Hoje/Semana/Evolução (reestruturação de layout, não só os textos/estados acima): não feito, por decisão deliberada — mudanças de layout maiores sem conseguir ver o resultado renderizado são um risco desnecessário num app pessoal já em uso real. As telas continuam com a mesma estrutura de antes.
+- [x] Redesenho da hierarquia Hoje → Semana → Evolução, autorizado pelo atleta mesmo sem verificação visual possível neste ambiente:
+  - As abas "Hoje" e "Recuperação" foram fundidas numa só ("Hoje"): prontidão + treino do dia, seguidos de recuperação detalhada, check-in e o gráfico de carga crônica/fadiga de 7 dias, tudo na mesma rolagem — antes exigia trocar de aba para ver a decisão de hoje e o motivo por trás dela. `Tab` perdeu o valor `'recuperacao'`; o botão correspondente saiu da navegação inferior (de 5 para 4 abas).
+  - O bloco de aviso duplicado (o mesmo `result.warning` aparecia duas vezes, uma em cada aba) foi consolidado: só o banner do topo da aba Hoje mantém o botão "Reconectar Polar".
+  - Aba "Treinos" renomeada para "Semana" na navegação e no título da tela, para casar com a linguagem "Hoje → Semana → Evolução" da SPEC.
+  - Aba Evolução reordenada para separar de verdade os três blocos que o aceite pede: "Leitura diária" (estado de hoje) primeiro, depois potência/coração/aprendizado pessoal (tendência de adaptação), e só no fim posição no mesociclo + direção da temporada (direção do ciclo) — antes vinha ciclo → temporada → hoje → tendência, fora de ordem.
+  - Nenhum componente novo foi criado; só reaproveitados e reordenados os já existentes, exatamente como o enunciado da SPEC-17 pede.
+- [x] `npm test` (75 casos) e `npm run build` validados após a reorganização.
+- [ ] **Não verificado visualmente no navegador**: o ambiente local não tem credenciais reais de Polar/Intervals.icu nem o cabeçalho de usuário autenticado da hospedagem. O atleta autorizou seguir mesmo assim, aceitando o risco. Precisa ser conferido no ambiente real antes de publicar — a fusão de abas e a reordenação da Evolução são mudanças estruturais que nunca foram vistas renderizadas.
 - [ ] Validação de acessibilidade, PWA e notificações: não feito, depende da verificação visual acima.
 - [ ] Não publicar sem nova ordem do atleta.
 

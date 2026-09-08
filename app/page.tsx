@@ -31,7 +31,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Scatter, ScatterChart, XAxis, YAxis } from 'recharts';
 
-type Tab = 'hoje' | 'recuperacao' | 'treinos' | 'evolucao' | 'glossario';
+type Tab = 'hoje' | 'treinos' | 'evolucao' | 'glossario';
 type InstallPrompt = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: string }>;
@@ -610,13 +610,11 @@ export default function Home() {
           <h1>
             {tab === 'hoje'
               ? 'Bom dia, Rafael'
-              : tab === 'recuperacao'
-                ? 'Sua recuperação'
-                : tab === 'treinos'
-                  ? 'Plano de treinos'
-                  : tab === 'evolucao'
-                    ? 'Sua evolução'
-                    : 'Glossário'}
+              : tab === 'treinos'
+                ? 'Sua semana'
+                : tab === 'evolucao'
+                  ? 'Sua evolução'
+                  : 'Glossário'}
           </h1>
         </div>
         {installPrompt ? (
@@ -834,7 +832,7 @@ export default function Home() {
           </section>
         </>
       )}
-      {tab === 'recuperacao' && (
+      {tab === 'hoje' && (
         <section className="panel-stack">
           {result && (
             <Card className={`recovery-overview status-${status}`}>
@@ -859,11 +857,6 @@ export default function Home() {
                   <RecoveryMetric label="Rampa CTL" value={result.metrics.ramp !== undefined ? `${result.metrics.ramp.toFixed(1)} /sem` : '—'} entryId="rampa" onOpen={openGlossary} />
                 </div>
               </TooltipProvider>
-              {result.warning?.includes('expirou') && (
-                <Button asChild className="primary-action">
-                  <a href="/api/polar/connect">Reconectar Polar</a>
-                </Button>
-              )}
               <Button variant="outline" className="recovery-refresh" onClick={() => { loadReadiness(false); loadWeek(); loadPerformance(); }} disabled={loading}>
                 <RefreshCw className={loading ? 'spin' : ''} /> Atualizar após sincronizar
               </Button>
@@ -1265,58 +1258,6 @@ export default function Home() {
       )}
       {tab === 'evolucao' && (
         <section className="panel-stack">
-          <Card className="mesocycle-card">
-            <div className="goal-heading">
-              <div><p className="eyebrow">POSIÇÃO NO PLANO</p><h2>{mesocycle?.calculated ? `C${mesocycle.calculated.cycle} · W${mesocycle.calculated.week} · D${mesocycle.calculated.day}` : 'Mesociclo ainda não configurado'}</h2></div>
-              <Badge variant="outline">Fase: {mesocycle?.phase || 'desconhecida'}</Badge>
-            </div>
-            <p className="anchor-highlight"><strong>Âncora atual:</strong> {mesocycle?.anchor ? new Date(`${mesocycle.anchor}T12:00:00`).toLocaleDateString('pt-BR') : 'não definida'}</p>
-            {mesocycle?.warning && <small className="data-warning">{mesocycle.warning}</small>}
-            <div className="mesocycle-form">
-              <label>Início de C1W1D1<input type="date" value={mesocycleAnchor} onChange={(event) => setMesocycleAnchor(event.target.value)} /></label>
-            </div>
-            <Button className="primary-action" disabled={!mesocycleAnchor} onClick={saveMesocycle}>{mesocycleSaved ? <><Check /> Mesociclo salvo</> : 'Salvar posição do plano'}</Button>
-            <small className="analysis-note">A fase (semanas 1-3 build, semana 4 recovery) é calculada automaticamente a partir da âncora e decide qual variável do treino cede primeiro quando a prontidão pede cautela.</small>
-          </Card>
-          <Card className="goal-card">
-            <div className="goal-heading">
-              <div>
-                <p className="eyebrow">DIREÇÃO DA TEMPORADA</p>
-                <h2>Onde você quer chegar?</h2>
-              </div>
-              <Badge variant="outline">Guia do plano</Badge>
-            </div>
-            <p className="muted-copy">Contexto da sua temporada. A prontidão e a fase do mesociclo decidem o treino do dia — este objetivo não altera nenhuma decisão.</p>
-            <div className="goal-form">
-              <label>Objetivo
-                <select value={goal.objective} onChange={(event) => setGoal({ ...goal, objective: event.target.value })}>
-                  <option value="performance">Melhorar performance geral</option>
-                  <option value="resistencia">Ganhar resistência</option>
-                  <option value="ftp">Evoluir potência/FTP</option>
-                  <option value="saude">Saúde e consistência</option>
-                </select>
-              </label>
-              <label>Evento ou marco
-                <input value={goal.eventName} placeholder="Ex.: Gran Fondo" onChange={(event) => setGoal({ ...goal, eventName: event.target.value })} />
-              </label>
-              <div className="goal-row">
-                <label>Data
-                  <input type="date" value={goal.eventDate} onChange={(event) => setGoal({ ...goal, eventDate: event.target.value })} />
-                </label>
-                <label>Prioridade
-                  <select value={goal.priority} onChange={(event) => setGoal({ ...goal, priority: event.target.value })}>
-                    <option value="principal">Principal</option>
-                    <option value="secundario">Secundário</option>
-                    <option value="base">Construção de base</option>
-                  </select>
-                </label>
-              </div>
-              <label>Teto semanal de rampa do CTL
-                <input type="number" min="1" max="15" step="0.5" value={goal.rampRateLimit} onChange={(event) => setGoal({ ...goal, rampRateLimit: Number(event.target.value) })} />
-              </label>
-            </div>
-            <Button className="primary-action" onClick={saveGoal}>{goalSaved ? <><Check /> Objetivo salvo</> : 'Salvar direção da temporada'}</Button>
-          </Card>
           <Card className={`daily-evolution ${dailyEvolution.key}`}>
             <div className="daily-evolution-heading">
               <span className="insight-icon"><Sparkles /></span>
@@ -1427,6 +1368,58 @@ export default function Home() {
             )}
           </Card>
           <p className="analysis-note">Tendências comparam períodos, não diagnosticam saúde e não substituem sua percepção durante o treino.</p>
+          <Card className="mesocycle-card">
+            <div className="goal-heading">
+              <div><p className="eyebrow">POSIÇÃO NO PLANO</p><h2>{mesocycle?.calculated ? `C${mesocycle.calculated.cycle} · W${mesocycle.calculated.week} · D${mesocycle.calculated.day}` : 'Mesociclo ainda não configurado'}</h2></div>
+              <Badge variant="outline">Fase: {mesocycle?.phase || 'desconhecida'}</Badge>
+            </div>
+            <p className="anchor-highlight"><strong>Âncora atual:</strong> {mesocycle?.anchor ? new Date(`${mesocycle.anchor}T12:00:00`).toLocaleDateString('pt-BR') : 'não definida'}</p>
+            {mesocycle?.warning && <small className="data-warning">{mesocycle.warning}</small>}
+            <div className="mesocycle-form">
+              <label>Início de C1W1D1<input type="date" value={mesocycleAnchor} onChange={(event) => setMesocycleAnchor(event.target.value)} /></label>
+            </div>
+            <Button className="primary-action" disabled={!mesocycleAnchor} onClick={saveMesocycle}>{mesocycleSaved ? <><Check /> Mesociclo salvo</> : 'Salvar posição do plano'}</Button>
+            <small className="analysis-note">A fase (semanas 1-3 build, semana 4 recovery) é calculada automaticamente a partir da âncora e decide qual variável do treino cede primeiro quando a prontidão pede cautela.</small>
+          </Card>
+          <Card className="goal-card">
+            <div className="goal-heading">
+              <div>
+                <p className="eyebrow">DIREÇÃO DA TEMPORADA</p>
+                <h2>Onde você quer chegar?</h2>
+              </div>
+              <Badge variant="outline">Guia do plano</Badge>
+            </div>
+            <p className="muted-copy">Contexto da sua temporada. A prontidão e a fase do mesociclo decidem o treino do dia — este objetivo não altera nenhuma decisão.</p>
+            <div className="goal-form">
+              <label>Objetivo
+                <select value={goal.objective} onChange={(event) => setGoal({ ...goal, objective: event.target.value })}>
+                  <option value="performance">Melhorar performance geral</option>
+                  <option value="resistencia">Ganhar resistência</option>
+                  <option value="ftp">Evoluir potência/FTP</option>
+                  <option value="saude">Saúde e consistência</option>
+                </select>
+              </label>
+              <label>Evento ou marco
+                <input value={goal.eventName} placeholder="Ex.: Gran Fondo" onChange={(event) => setGoal({ ...goal, eventName: event.target.value })} />
+              </label>
+              <div className="goal-row">
+                <label>Data
+                  <input type="date" value={goal.eventDate} onChange={(event) => setGoal({ ...goal, eventDate: event.target.value })} />
+                </label>
+                <label>Prioridade
+                  <select value={goal.priority} onChange={(event) => setGoal({ ...goal, priority: event.target.value })}>
+                    <option value="principal">Principal</option>
+                    <option value="secundario">Secundário</option>
+                    <option value="base">Construção de base</option>
+                  </select>
+                </label>
+              </div>
+              <label>Teto semanal de rampa do CTL
+                <input type="number" min="1" max="15" step="0.5" value={goal.rampRateLimit} onChange={(event) => setGoal({ ...goal, rampRateLimit: Number(event.target.value) })} />
+              </label>
+            </div>
+            <Button className="primary-action" onClick={saveGoal}>{goalSaved ? <><Check /> Objetivo salvo</> : 'Salvar direção da temporada'}</Button>
+          </Card>
         </section>
       )}
       {tab === 'glossario' && (
@@ -1494,18 +1487,11 @@ export default function Home() {
           <span>Hoje</span>
         </button>
         <button
-          className={tab === 'recuperacao' ? 'active' : ''}
-          onClick={() => setTab('recuperacao')}
-        >
-          <Moon />
-          <span>Recuperação</span>
-        </button>
-        <button
           className={tab === 'treinos' ? 'active' : ''}
           onClick={() => setTab('treinos')}
         >
           <Bike />
-          <span>Treinos</span>
+          <span>Semana</span>
         </button>
         <button
           className={tab === 'evolucao' ? 'active' : ''}
