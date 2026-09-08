@@ -25,6 +25,7 @@ export type OffDayInput = {
   checkin?: { dor?: number; sintomas?: number; fadiga?: number };
   nextKeyName?: string;
   recentSuggestionCategories: SuggestionCategory[];
+  stimulusGapNote?: string;
 };
 
 const templates: Record<Exclude<SuggestionCategory, 'descanso'>, Omit<OffDaySuggestion, 'reason'>> = {
@@ -105,37 +106,39 @@ export function chooseOffDaySuggestion(input: OffDayInput): OffDaySuggestion {
   const keyVeryClose = input.daysToNextKey !== undefined && input.daysToNextKey <= 1 && input.forecastRisk === 'alto';
   const isRecoveryPhase = /recovery|deload|recupera/.test(input.phase.toLowerCase());
 
+  let result: OffDaySuggestion;
   if (painOrSymptoms) {
-    return descansoSuggestion('Dor ou sintomas relevantes no check-in: nenhum estímulo é sugerido hoje, só descanso completo.');
-  }
-
-  const highRisk = severeSafety || input.classification === 'amarela' || input.recentHardCount >= 2 || input.recentLong || keyVeryClose;
-  if (highRisk) {
-    const reasonParts = [
-      input.classification === 'amarela' ? 'A prontidão de hoje pede cautela.' : null,
-      severeSafety ? 'ACWR ou rampa de carga estão elevados.' : null,
-      input.recentHardCount >= 2 ? 'A semana já trouxe mais de um estímulo intenso recente.' : null,
-      input.recentLong ? 'Houve um treino longo recente.' : null,
-      keyVeryClose ? 'O próximo treino-chave está muito próximo e em risco.' : null,
-    ].filter(Boolean) as string[];
-    if (isRecoveryPhase || (severeSafety && keyVeryClose)) {
-      return descansoSuggestion(`${reasonParts.join(' ')} Fase de recuperação ou risco combinado: a opção mais segura é descanso completo.`);
+    result = descansoSuggestion('Dor ou sintomas relevantes no check-in: nenhum estímulo é sugerido hoje, só descanso completo.');
+  } else {
+    const highRisk = severeSafety || input.classification === 'amarela' || input.recentHardCount >= 2 || input.recentLong || keyVeryClose;
+    if (highRisk) {
+      const reasonParts = [
+        input.classification === 'amarela' ? 'A prontidão de hoje pede cautela.' : null,
+        severeSafety ? 'ACWR ou rampa de carga estão elevados.' : null,
+        input.recentHardCount >= 2 ? 'A semana já trouxe mais de um estímulo intenso recente.' : null,
+        input.recentLong ? 'Houve um treino longo recente.' : null,
+        keyVeryClose ? 'O próximo treino-chave está muito próximo e em risco.' : null,
+      ].filter(Boolean) as string[];
+      if (isRecoveryPhase || (severeSafety && keyVeryClose)) {
+        result = descansoSuggestion(`${reasonParts.join(' ')} Fase de recuperação ou risco combinado: a opção mais segura é descanso completo.`);
+      } else {
+        const category = avoidRepeat('recuperacao_ativa', 'mobilidade', input.recentSuggestionCategories);
+        result = build(category, `${reasonParts.join(' ')} Esta opção não adiciona um novo estímulo de treino.`, input.nextKeyName);
+      }
+    } else if (input.lowCadence) {
+      const category = avoidRepeat('tecnica_cadencia', 'endurance_leve', input.recentSuggestionCategories);
+      result = build(category, 'Prontidão favorável e pouco trabalho recente de cadência.', input.nextKeyName);
+    } else {
+      const category = avoidRepeat('endurance_leve', anySafety ? 'mobilidade' : 'tecnica_cadencia', input.recentSuggestionCategories);
+      result = build(
+        category,
+        anySafety
+          ? 'Recuperação favorável, mas sinais de carga moderados sugerem variar em relação à última sugestão.'
+          : 'Recuperação favorável e carga recente controlada.',
+        input.nextKeyName,
+      );
     }
-    const category = avoidRepeat('recuperacao_ativa', 'mobilidade', input.recentSuggestionCategories);
-    return build(category, `${reasonParts.join(' ')} Esta opção não adiciona um novo estímulo de treino.`, input.nextKeyName);
   }
-
-  if (input.lowCadence) {
-    const category = avoidRepeat('tecnica_cadencia', 'endurance_leve', input.recentSuggestionCategories);
-    return build(category, 'Prontidão favorável e pouco trabalho recente de cadência.', input.nextKeyName);
-  }
-
-  const category = avoidRepeat('endurance_leve', anySafety ? 'mobilidade' : 'tecnica_cadencia', input.recentSuggestionCategories);
-  return build(
-    category,
-    anySafety
-      ? 'Recuperação favorável, mas sinais de carga moderados sugerem variar em relação à última sugestão.'
-      : 'Recuperação favorável e carga recente controlada.',
-    input.nextKeyName,
-  );
+  if (input.stimulusGapNote) result = { ...result, reason: `${result.reason} ${input.stimulusGapNote}` };
+  return result;
 }

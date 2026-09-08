@@ -127,7 +127,7 @@
 - [x] Validar build e os 28 testes.
 - [ ] Publicar somente após autorização do atleta.
 
-## Concluída localmente (parcial) — T14 Criar o motor adaptativo — SPEC-14
+## Concluída localmente — T14 Criar o motor adaptativo — SPEC-14
 
 - [x] Integrar fase C/W/D, objetivo, recuperação, ACWR e rampa (`lib/decision-engine.ts`, função pura `decideTraining`).
 - [x] Gerar proposta determinística e explicável sem escrita automática: retorna `action`, `stimulusPreserved`, `reasons[]` e `recommended`, nunca escreve em nada.
@@ -138,11 +138,13 @@
 - [x] Testar cenários fisiológicos e fases do ciclo com fixtures fixas: `tests/decision-engine.test.ts`, 13 casos (verde, amarela, vermelha, build, recovery, treino-chave próximo, dados bloqueados, descanso, sem treino, estrutura não reconhecida, especificidade protegida).
 - [x] Ligado como campo de leitura `engineDecision` em `app/api/week/route.ts`, usando dados já carregados pelo snapshot (fase, objetivo, safety flags, próximo treino-chave) — sem chamada de rede extra.
 - [x] Reutilizar confirmação, revalidação e idempotência da SPEC-08: decidido com o atleta que o motor só atua em dia planejado futuro (mesmo alvo do replanejamento semanal já existente), nunca competindo com a proposta de hoje do `readiness.ts`. Em vez de criar uma rota de escrita nova e concorrente, extraí `preferVolumeReduction(phase, objective, protectSpecificity)` de `lib/decision-engine.ts` e passei a reaproveitá-la dentro de `futureProposal` (`app/api/week/route.ts`), que já usa o fluxo de escrita inteiro da SPEC-08 (`claimTrainingWrite`, `assertEditablePlannedEvent`, `proposalFingerprint`). A fase real do mesociclo agora decide, também na proposta futura de verdade, se reduzir volume ou intensidade primeiro — antes só o objetivo decidia isso.
-- [ ] Modelar estímulo principal da semana e carga-alvo como conceito próprio (taxonomia de estímulo — endurance/limiar/VO2max): ainda não existe; o motor de hoje decide por sessão isolada, sem saber quais estímulos a semana já entregou. Fica para quando a T15/T16 amadurecerem essa taxonomia.
-- [x] Testes: `preferVolumeReduction` cobre build/peak, recovery/deload e fase desconhecida (3 casos novos em `tests/decision-engine.test.ts`).
+- [x] Modelar estímulo principal da semana como conceito próprio: `lib/stimulus.ts` classifica cada sessão em `endurance`/`limiar`/`vo2max`/`recuperacao` a partir de duração e intensidade (sem chamada nova ao Intervals.icu — reaproveita `structure`, já buscado), e `computeStimulusCoverage` resume a semana em `entregue`/`planejado`/`pendente` por tipo. Simplificação assumida conscientemente: não é a "dose acumulada em minutos por zona" do esboço original (isso pediria buscar `icu_zone_times` por atividade, uma chamada nova ao Intervals.icu) — é uma classificação por sessão inteira, mais simples e ainda assim informativa.
+- [x] Quando o treino de hoje é a única fonte prevista de limiar/VO2max da semana, o motor passa a preservar a intensidade e ceder o volume primeiro, não importa a fase ou o objetivo — e diz isso explicitamente na justificativa.
+- [x] Carga-alvo: não modelada como número único; o proxy que já existe (`weeklyPlannedLoad`/`weeklyLoadBefore`/`weeklyLoadAfter` em `app/api/week/route.ts`) continua sendo a referência de carga da semana.
+- [x] Testes: `preferVolumeReduction` cobre build/peak, recovery/deload e fase desconhecida; mais 3 casos de proteção de estímulo-chave (`tests/decision-engine.test.ts`); `lib/stimulus.ts` tem 11 casos próprios (`tests/stimulus.test.ts`).
 - [ ] Não publicar sem nova ordem do atleta.
 
-## Concluída localmente (parcial) — T15 Evoluir sugestões de dias OFF — SPEC-15
+## Concluída localmente — T15 Evoluir sugestões de dias OFF — SPEC-15
 
 - [x] Criar biblioteca de sessões opcionais e descanso completo (`lib/off-day-suggestions.ts`): descanso, mobilidade, recuperação ativa, técnica/cadência e endurance leve — cinco categorias, contra as três de antes (descanso nunca existia como opção explícita).
 - [x] Selecionar sugestão por contexto: prontidão, ACWR/rampa (a versão anterior não olhava para nenhum sinal de carga), fase do mesociclo, dor/sintomas do check-in, cadência recente e volume/intensidade recentes.
@@ -152,7 +154,8 @@
 - [x] Confirmação antes de enviar ao Intervals.icu: já garantida pelo fluxo `create_suggestion` existente (`assertDayAvailableForCreation` + `claimTrainingWrite`), inalterado.
 - [x] Testes: `tests/off-day-suggestions.test.ts`, 12 casos (5 categorias, dor/sintomas, ACWR severo, treino-chave próximo, fase de recuperação, anti-repetição, framing positivo do descanso).
 - [x] Check-in (dor/sintomas) e proximidade real do próximo treino-chave (dias/risco) agora chegam de verdade em `app/api/week/route.ts`: o cálculo da sugestão foi movido para depois do `forecast` (que já calcula `daysToKey`/`forecastRisk`), e o check-in passou a viajar como query string em `GET /api/week` (`loadWeek()` no cliente) e no corpo do `POST` de `create_suggestion`/`apply_proposal`, sempre com o mesmo valor em ambos os lados para a revalidação da SPEC-08 não divergir do que foi mostrado.
-- [ ] Modelar lacuna de estímulo (endurance/limiar/VO2max já entregues na semana): depende da mesma taxonomia de estímulo pendente da T14.
+- [x] Modelar lacuna de estímulo: quando limiar e/ou VO2max ainda estão pendentes na semana (nem entregues, nem planejados), a sugestão de dia OFF passa a citar isso na justificativa — sem transformar a sugestão em algo mais intenso, já que um dia OFF nunca deveria tentar "compensar" um estímulo-chave que falta.
+- [x] Testes: 2 casos novos em `tests/off-day-suggestions.test.ts` confirmando que a lacuna aparece na justificativa sem mudar a categoria escolhida.
 - [ ] Não publicar sem nova ordem do atleta.
 
 ## Concluída localmente (parcial) — T16 Fechar o ciclo pós-treino — SPEC-16

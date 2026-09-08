@@ -1,3 +1,5 @@
+import { isWeekKeySourceFor, type StimulusCoverage, type StimulusType } from './stimulus.ts';
+
 export type SafetyFlag = { id: 'acwr_high' | 'ramp_rate_exceeded'; severity: 'moderada' | 'severa' };
 export type Objective = 'performance' | 'resistencia' | 'ftp' | 'saude';
 
@@ -12,6 +14,8 @@ export type DecisionInput = {
   isRestDay: boolean;
   daysToNextKey?: number;
   forecastRisk?: 'baixo' | 'moderado' | 'alto' | 'indeterminado';
+  stimulusCoverage?: StimulusCoverage;
+  todayStimulus?: StimulusType;
 };
 
 export type EngineDecision = {
@@ -149,7 +153,10 @@ export function decideTraining(input: DecisionInput): EngineDecision {
     reasons.push('O próximo treino-chave está a menos de 24 horas; preservar a recuperação de hoje protege esse estímulo.');
   reasons.push(`Objetivo de ${objectiveNames[input.objective]} considerado.`);
 
-  const preferReduceVolumeFirst = preferVolumeReduction(input.phase, input.objective, input.protectSpecificity);
+  const protectStimulus = Boolean(input.stimulusCoverage && input.todayStimulus && isWeekKeySourceFor(input.stimulusCoverage, input.todayStimulus));
+  if (protectStimulus) reasons.push(`Hoje é a única sessão prevista para entregar o estímulo de ${input.todayStimulus === 'vo2max' ? 'VO2max' : 'limiar'} nesta semana; a intensidade é preservada e o volume cede primeiro.`);
+
+  const preferReduceVolumeFirst = protectStimulus || preferVolumeReduction(input.phase, input.objective, input.protectSpecificity);
   const picked = preferReduceVolumeFirst
     ? reduceRepetitions(input.workout) || reduceIntensity(input.workout)
     : reduceIntensity(input.workout) || reduceRepetitions(input.workout);

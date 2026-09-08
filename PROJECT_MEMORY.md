@@ -47,9 +47,15 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-`NEXT`: T14 — motor adaptativo orientado por fase, objetivo e carga. Depois: T15 sugestões OFF, T16 ciclo pós-treino e T17 experiência integrada.
+`NEXT`: T16 — fechar o ciclo pós-treino (já quase toda entregue por T02/T06, ver TASKS.md). Depois: T17 experiência integrada (parcial, falta verificação visual).
 
-T13 (contexto unificado) foi concluída e validada localmente (build e 28 testes, incluindo `tests/context.test.ts`). `lib/context.ts` (puro) define o contrato versionado do snapshot (`AthleteSnapshot` v1); `lib/context-loader.ts` monta esse snapshot chamando `runReadiness` e `resolveMesocycle` uma única vez por requisição. `app/api/readiness/route.ts`, `app/api/week/route.ts` e `app/api/context/route.ts` agora passam todos por `loadAthleteContext`, então prontidão e semana leem exatamente o mesmo cálculo em vez de cada um buscar Polar/Intervals.icu por conta própria. `snapshot.blocked`/`blockReasons` agora impede proposta futura e sugestão de dia OFF em `app/api/week/route.ts` quando os dados são contraditórios (ex.: divergência de mesociclo), sempre explicando o motivo em `contextWarning`/`suggestionStatus` — nunca silenciosamente. O ajuste do treino de hoje em `lib/readiness.ts` continua sem saber de mesociclo/ACWR de propósito: a SPEC-11 já definia que isso não decide nada sobre o treino do dia; isso é o papel do motor da T14.
+T13, T14 e T15 estão concluídas e validadas localmente (build e 72 testes). T13: `lib/context.ts` (puro) define o snapshot versionado (`AthleteSnapshot` v1); `lib/context-loader.ts` monta esse snapshot chamando `runReadiness`/`resolveMesocycle` uma única vez por requisição; `app/api/readiness/route.ts` e `app/api/week/route.ts` passam por `loadAthleteContext` em vez de buscar Polar/Intervals.icu cada um por conta própria; `snapshot.blocked` impede proposta futura e sugestão OFF quando os dados são contraditórios, sempre explicando o motivo.
+
+T14: `lib/decision-engine.ts` (`decideTraining`) decide fase+ACWR/rampa+objetivo de forma determinística. Em vez de uma rota de escrita nova (que competiria com a proposta de hoje já publicada em `lib/readiness.ts`), decidido com o atleta que o motor só atua em dia futuro — `preferVolumeReduction` foi extraída e reaproveitada dentro de `futureProposal` (`app/api/week/route.ts`), que já tem todo o fluxo de escrita da SPEC-08. `lib/stimulus.ts` classifica cada sessão em endurance/limiar/vo2max/recuperação (por duração+intensidade, sem chamada nova ao Intervals.icu) e resume a cobertura da semana; quando hoje (ou o dia futuro sendo replanejado) é a única fonte prevista de limiar/VO2max da semana, intensidade é preservada e volume cede primeiro, custe o que custar de fase/objetivo.
+
+T15: `lib/off-day-suggestions.ts` tem 5 categorias (antes 3), considera ACWR/rampa/fase/dor/sintomas (antes não considerava carga nem fase), evita repetir categoria sem motivo, e cita a lacuna de estímulo da semana na justificativa quando existe. Check-in e proximidade real do próximo treino-chave agora chegam de verdade em `app/api/week/route.ts` (antes só em fixtures de teste) — check-in viaja como query string no GET e no corpo do POST, sempre simétrico para a revalidação da SPEC-08 não divergir.
+
+Único gap consciente que sobrou: carga-alvo não é um número único modelado à parte; o proxy que já existia (`weeklyPlannedLoad` etc.) continua sendo a referência.
 
 A T03 até a T07 foram integradas, validadas e publicadas em um único lote após autorização do atleta.
 
@@ -73,6 +79,9 @@ O repositório privado `rafaeldevwp/pedal-pronto` foi criado e a integração re
 - `lib/mesocycle.ts` + `app/api/mesocycle/route.ts`: fase do mesociclo e ponteiro C/W/D (SPEC-11).
 - `lib/load-safety.ts`: ACWR e ramp rate do CTL como sinais de segurança (SPEC-12).
 - `lib/context.ts` (puro) + `lib/context-loader.ts` (I/O) + `app/api/context/route.ts`: snapshot unificado com fonte/horário/qualidade por campo, consumido por prontidão e semana (SPEC-13).
+- `lib/decision-engine.ts`: motor adaptativo puro (`decideTraining`, `preferVolumeReduction`) — fase, objetivo, ACWR/rampa e estímulo-chave decidem a proposta (SPEC-14).
+- `lib/off-day-suggestions.ts`: biblioteca de 5 categorias de sugestão para dias OFF, contextual e sem repetição sem motivo (SPEC-15).
+- `lib/stimulus.ts`: classifica sessões em endurance/limiar/vo2max/recuperação e resume a cobertura semanal — usado por T14 e T15.
 - `drizzle/0002_training_decisions.sql`: histórico imutável de decisões.
 - `drizzle/0003_training_write_operations.sql`: controle idempotente das confirmações de escrita.
 - `.openai/hosting.json`: projeto hospedado e D1.

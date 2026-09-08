@@ -68,6 +68,19 @@ test('descanso completo é apresentado com benefício positivo, nunca como falha
   assert.match(suggestion.benefit, /parte do plano, não uma falha/);
 });
 
+test('menciona lacuna de estímulo da semana quando fornecida, sem mudar a categoria escolhida', () => {
+  const withoutNote = chooseOffDaySuggestion(base);
+  const withNote = chooseOffDaySuggestion({ ...base, stimulusGapNote: 'A semana ainda não entregou nem tem planejado o estímulo de limiar e VO2max.' });
+  assert.equal(withNote.category, withoutNote.category);
+  assert.match(withNote.reason, /limiar e VO2max/);
+});
+
+test('mesmo com dor/sintomas (vira descanso), a lacuna de estímulo ainda aparece na justificativa', () => {
+  const suggestion = chooseOffDaySuggestion({ ...base, checkin: { dor: 6 }, stimulusGapNote: 'A semana ainda não entregou nem tem planejado o estímulo de VO2max.' });
+  assert.equal(suggestion.category, 'descanso');
+  assert.match(suggestion.reason, /VO2max/);
+});
+
 test('toda sugestão explica benefício, custo de carga e impacto no próximo treino', () => {
   for (const input of [
     base,

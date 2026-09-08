@@ -102,3 +102,29 @@ test('preferVolumeReduction: fora de fase reconhecida, segue a regra do objetivo
   assert.equal(preferVolumeReduction('desconhecida', 'resistencia', true), false);
   assert.equal(preferVolumeReduction('desconhecida', 'performance', false), false);
 });
+
+const emptyCoverage = { endurance: 'pendente' as const, limiar: 'pendente' as const, vo2max: 'pendente' as const, recuperacao: 'pendente' as const };
+
+test('protege intensidade quando o treino de hoje é a única fonte de VO2max da semana, mesmo em fase de recovery', () => {
+  const decision = decideTraining({
+    ...base, classification: 'amarela', phase: 'Recovery', objective: 'ftp',
+    stimulusCoverage: emptyCoverage, todayStimulus: 'vo2max',
+  });
+  assert.equal(decision.action, 'reduzir_repeticoes');
+  assert.equal(decision.stimulusPreserved, 'intensidade');
+  assert.ok(decision.reasons.some((reason) => reason.includes('única sessão prevista')));
+});
+
+test('não protege estímulo já entregue por outra sessão da semana', () => {
+  const covered = { ...emptyCoverage, vo2max: 'entregue' as const };
+  const decision = decideTraining({
+    ...base, classification: 'amarela', phase: 'Recovery', objective: 'ftp',
+    stimulusCoverage: covered, todayStimulus: 'vo2max',
+  });
+  assert.equal(decision.action, 'reduzir_intensidade');
+});
+
+test('sem coverage/todayStimulus informados, comportamento permanece igual ao de antes', () => {
+  const decision = decideTraining({ ...base, classification: 'amarela', phase: 'Recovery', objective: 'ftp' });
+  assert.equal(decision.action, 'reduzir_intensidade');
+});
