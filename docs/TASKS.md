@@ -453,3 +453,14 @@ Fecha o último item aberto da T22.
 - [x] `npm test` (79) e `npm run build` validados.
 - [ ] Efeito só na publicação: até lá as tabelas seguem inertes no banco de produção.
 - [ ] Não publicar sem nova ordem do atleta.
+
+## Concluída localmente — T37 Corrigir dois vieses da comparação — SPEC-37
+
+- [x] Decisão do atleta: corrigir os dois.
+- [x] Mediana aceita desacoplamento zero; os três consumidores também — sem isso a correção ficava pela metade, e foi o teste que mostrou.
+- [x] `activityMetric` separa desacoplamento ausente de zero real.
+- [x] Confiança conta métricas comparáveis, não métricas que variaram.
+- [x] Comparação extraída para `lib/activity-comparison.ts`, fora do alcance de `cloudflare:workers`, com 5 testes.
+- [x] Mutação: cada viés reintroduzido derruba o teste correspondente.
+- [x] `npm test` (84) e `npm run build` validados.
+- [ ] Não publicar sem nova ordem do atleta.

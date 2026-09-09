@@ -7,6 +7,7 @@ import { classifyStimulus, computeStimulusCoverage, describeMissingKeyStimulus, 
 import { assertDayAvailableForCreation, assertEditablePlannedEvent, claimTrainingWrite, completeTrainingWrite, proposalFingerprint } from '@/lib/training-safety';
 import { isYesterdayLoadHigh } from '@/lib/load-safety';
 import { pairActivitiesWithPlanned } from '@/lib/week-plan';
+import { activityDate, activityIntensity, activityMinutes, similarComparison } from '@/lib/activity-comparison';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,101 +62,6 @@ const normalize = (event: Json) => ({
     .filter((line) => /^[-*]/.test(line)),
   status: 'planejado' as const,
 });
-const activityDate = (activity: Json) =>
-  String(activity.start_date_local || activity.start_date || '').slice(0, 10);
-const activityMinutes = (activity: Json) =>
-  Math.round(Number(activity.moving_time || activity.elapsed_time || 0) / 60) ||
-  undefined;
-const activityIntensity = (activity: Json) => {
-  const value = Number(activity.icu_intensity || activity.intensity || 0);
-  return value > 2 ? value / 100 : value;
-};
-const activityModality = (activity: Json) =>
-  String(activity.type || activity.icu_type || '').includes('Virtual') ? 'indoor' : 'outdoor';
-const activityMetric = (activity: Json) => {
-  const durationHours = Number(activity.moving_time || activity.elapsed_time || 0) / 3600;
-  const load = Number(activity.icu_training_load || activity.load || 0);
-  const power = Number(activity.average_watts || activity.weighted_average_watts || 0);
-  const heartRate = Number(activity.average_heartrate || activity.average_hr || 0);
-  return {
-    power, heartRate,
-    cadence: Number(activity.average_cadence || 0),
-    rpe: Number(activity.perceived_exertion || activity.rpe || 0),
-    intensity: activityIntensity(activity),
-    decoupling: Math.abs(Number(activity.decoupling || activity.aerobic_decoupling || 0)),
-    efficiency: Number(activity.efficiency_factor || activity.power_hr_ratio || (power && heartRate ? power / heartRate : 0)),
-    loadPerHour: durationHours && load ? load / durationHours : 0,
-  };
-};
-const median = (values: number[]) => {
-  const sorted = values.filter((value) => Number.isFinite(value) && value > 0).sort((a, b) => a - b);
-  if (!sorted.length) return undefined;
-  const middle = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
-};
-const pct = (current: number, baseline?: number) => baseline && current ? ((current / baseline) - 1) * 100 : undefined;
-const similarComparison = (activity: Json, history: Json[]) => {
-  const duration = activityMinutes(activity) || 0;
-  const intensity = activityIntensity(activity);
-  const modality = activityModality(activity);
-  const currentDate = activityDate(activity);
-  const candidates = history
-    .filter((candidate) => {
-      const candidateDuration = activityMinutes(candidate) || 0;
-      const candidateIntensity = activityIntensity(candidate);
-      return activityDate(candidate) < currentDate &&
-        activityModality(candidate) === modality &&
-        candidateDuration >= duration * 0.75 && candidateDuration <= duration * 1.25 &&
-        (!intensity || !candidateIntensity || Math.abs(candidateIntensity - intensity) <= 0.1);
-    })
-    .sort((a, b) => {
-      const aDistance = Math.abs((activityMinutes(a) || 0) - duration) + Math.abs(activityIntensity(a) - intensity) * 100;
-      const bDistance = Math.abs((activityMinutes(b) || 0) - duration) + Math.abs(activityIntensity(b) - intensity) * 100;
-      return aDistance - bDistance;
-    })
-    .slice(0, 8);
-  const group = `${candidates.length} ${modality === 'indoor' ? 'pedais indoor' : 'pedais ao ar livre'} de duração e intensidade parecidas nos últimos 120 dias`;
-  if (candidates.length < 3) return {
-    headline: 'Ainda faltam treinos parecidos',
-    message: 'O histórico ainda não permite afirmar se esta sessão foi melhor ou pior que o seu padrão.',
-    group,
-    confidence: 'limitada',
-    evidence: ['São necessários pelo menos 3 treinos pessoais comparáveis.'],
-    caveat: 'Tipo, duração e intensidade reduzem diferenças, mas percurso, clima e equipamento também influenciam.',
-  };
-  const current = activityMetric(activity);
-  const baselines = Object.fromEntries(Object.keys(current).map((key) => [key, median(candidates.map((candidate) => activityMetric(candidate)[key as keyof ReturnType<typeof activityMetric>]))])) as Record<keyof ReturnType<typeof activityMetric>, number | undefined>;
-  const powerChange = pct(current.power, baselines.power);
-  const hrChange = pct(current.heartRate, baselines.heartRate);
-  const efficiencyChange = pct(current.efficiency, baselines.efficiency);
-  const cadenceChange = pct(current.cadence, baselines.cadence);
-  const loadChange = pct(current.loadPerHour, baselines.loadPerHour);
-  const evidence: string[] = [];
-  if (powerChange !== undefined) evidence.push(`Potência ${Math.abs(powerChange).toFixed(0)}% ${powerChange >= 0 ? 'acima' : 'abaixo'} do padrão semelhante.`);
-  if (hrChange !== undefined) evidence.push(`Esforço do coração ${Math.abs(hrChange).toFixed(0)}% ${hrChange >= 0 ? 'acima' : 'abaixo'} do padrão.`);
-  if (cadenceChange !== undefined && Math.abs(cadenceChange) >= 3) evidence.push(`Cadência ${Math.abs(cadenceChange).toFixed(0)}% ${cadenceChange >= 0 ? 'acima' : 'abaixo'} do habitual.`);
-  if (current.decoupling && baselines.decoupling) evidence.push(`Variação cardíaca ${current.decoupling.toFixed(1)}%, ante ${baselines.decoupling.toFixed(1)}% no grupo.`);
-  if (current.rpe && baselines.rpe) evidence.push(`Sensação ${current.rpe}/10, ante ${baselines.rpe.toFixed(1)}/10 no grupo.`);
-  if (loadChange !== undefined) evidence.push(`Carga por hora ${Math.abs(loadChange).toFixed(0)}% ${loadChange >= 0 ? 'maior' : 'menor'}.`);
-  const efficientSignals = Number((efficiencyChange || 0) >= 3) + Number((powerChange || 0) >= 3 && (hrChange || 0) <= 2) + Number(Boolean(current.decoupling && baselines.decoupling && current.decoupling <= baselines.decoupling));
-  const demandingSignals = Number((powerChange || 0) <= -4 && (hrChange || 0) >= 3) + Number(Boolean(current.decoupling && baselines.decoupling && current.decoupling >= baselines.decoupling + 2)) + Number(Boolean(current.rpe && baselines.rpe && current.rpe >= baselines.rpe + 2));
-  const comparableMetrics = [powerChange, hrChange, efficiencyChange, cadenceChange, loadChange, current.decoupling && baselines.decoupling, current.rpe && baselines.rpe].filter((value) => value !== undefined && value !== 0).length;
-  let headline = 'Dentro do seu padrão';
-  let message = 'O conjunto dos dados ficou próximo ao que costuma acontecer em sessões semelhantes.';
-  if (efficientSignals >= 2) {
-    headline = 'Mais eficiente que o habitual';
-    message = 'Você entregou um resultado melhor com esforço cardíaco controlado em comparação com seus pedais parecidos.';
-  } else if (demandingSignals >= 2) {
-    headline = 'Mais difícil que o habitual';
-    message = 'Mais de um sinal mostra que esta sessão custou mais ao corpo do que pedais semelhantes.';
-  }
-  return {
-    headline, message, group,
-    confidence: candidates.length >= 6 && comparableMetrics >= 4 ? 'boa' : 'moderada',
-    evidence: evidence.slice(0, 4),
-    caveat: 'É uma comparação pessoal, não um diagnóstico; percurso, clima, equipamento e qualidade dos sensores podem mudar o resultado.',
-  };
-};
 const completedWorkout = (activity: Json, history: Json[], planned?: ReturnType<typeof normalize>) => {
   const actualLoad = Number(activity.icu_training_load || activity.load || 0);
   const plannedLoad = Number(planned?.load || 0);

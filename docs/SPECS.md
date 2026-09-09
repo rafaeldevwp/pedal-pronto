@@ -771,3 +771,28 @@ Aceite:
 - [x] `npm test` (79) e `npm run build` validados.
 
 Ressalva operacional: a migração só tem efeito quando o pacote de publicação for aplicado. Até lá as tabelas continuam no banco de produção, inertes.
+
+## SPEC-37 — Corrigir dois vieses da comparação com pedais semelhantes
+
+Status: implementada e validada localmente em 2026-09-09; **não publicada**
+
+Decisão do atleta em 2026-09-09: corrigir os dois.
+
+A aba Semana compara cada pedal concluído com os pedais parecidos do próprio atleta e devolve um veredito ("Mais eficiente que o habitual", "Mais difícil que o habitual") com um nível de confiança. Dois detalhes do cálculo distorciam esse veredito.
+
+**Viés 1 — desacoplamento zero sumia da linha de base.** A mediana descartava todo valor zero, o que faz sentido para potência, frequência cardíaca e cadência: ali zero significa sensor ausente. Para o desacoplamento, zero é o melhor resultado possível — o coração não subiu ao longo do pedal. Descartá-lo puxava a linha de base para cima e fazia o pedal de hoje parecer melhor do que foi. A mediana ganhou `allowZero`, usado só no desacoplamento.
+
+Corrigir a mediana não bastava: os três lugares que consomem o desacoplamento — a evidência escrita, o sinal de eficiência e o sinal de exigência — testavam `baselines.decoupling &&`, e uma linha de base zero é falsy. O viés voltava pela porta dos fundos. Foi o teste que apontou isso. Junto veio uma distinção que faltava: `activityMetric` transformava campo ausente e zero real no mesmo `0`; agora devolve `undefined` para ausente.
+
+**Viés 2 — pedalar igual à própria média reduzia a confiança.** A contagem de métricas comparáveis descartava variação de exatamente 0%. Mas 0% não é falta de dado, é o dado: você repetiu seu padrão. Quanto mais consistente o atleta, menor a confiança relatada — exatamente o contrário do certo. A contagem passa a contar métricas comparáveis, não métricas que mudaram.
+
+O bloco de comparação saiu de `app/api/week/route.ts` para `lib/activity-comparison.ts`. A rota importa `cloudflare:workers` e não carrega no runner de testes; o módulo novo é puro e carrega.
+
+Aceite:
+
+- [x] `median` aceita zero no desacoplamento e continua descartando-o nas demais métricas.
+- [x] Evidência, sinal de eficiência, sinal de exigência e contagem tratam linha de base zero como linha de base.
+- [x] `activityMetric` separa desacoplamento ausente de desacoplamento zero.
+- [x] Confiança conta métricas comparáveis, não métricas que variaram.
+- [x] `lib/activity-comparison.ts` extraído; 5 testes novos, os dois vieses mortos por mutação.
+- [x] `npm test` (84) e `npm run build` validados.
