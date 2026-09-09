@@ -47,7 +47,7 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-**Ponto de retomada (2026-09-09): T24 a T30 estão implementadas e validadas localmente, aguardando ordem de publicação. A T25 é a que mais urge. Em aberto: se ACWR e rampa deveriam influenciar a prontidão do dia (contradição no texto da SPEC-12) e o destino das tabelas sem uso (`mesocycle_phases`, `mesocycle_anchor`).**
+**Ponto de retomada (2026-09-09): T24 a T38 estão implementadas e validadas localmente, aguardando ordem de publicação — são 17 commits sem publicar, e a produção continua na versão 25 com o bug da T25 no ar. A T25 é a que mais urge. As duas questões que estavam em aberto foram decididas pelo atleta e fechadas: ACWR e rampa passaram a pesar na cor do dia (T33) e as tabelas sem uso saíram por migração (T36). Próximo passo combinado: auditar o que nunca foi olhado — fluxo OAuth do Polar, `public/sw.js`, glossário e a matemática da curva de potência em `app/api/performance/route.ts`.**
 
 T19 foi concluída e publicada na versão 25 em 2026-09-08. A tela Hoje foi reduzida ao essencial: prontidão e treino permanecem visíveis; conexão saudável deixou de ocupar espaço; recuperação e check-in foram consolidados sob expansão; o gráfico de carga deixou de ser repetido nessa tela e continua em Evolução. Nenhuma regra de decisão ou escrita no Intervals.icu mudou.
 
@@ -163,7 +163,7 @@ E o **histórico do dia era sobrescrito**: `runReadiness` gravava em `readiness_
 
 Corrigido: leitura não grava mais; `recordReadinessRun` grava explicitamente uma linha por dia; o check-in viaja em toda avaliação; e `checkinRef` eliminou uma defasagem de closure que deixaria o timer preso ao valor inicial para sempre. Sem mudança de schema.
 
-Lacuna consciente: a suíte não alcança isso — os testes cobrem só os núcleos puros, e `lib/readiness.ts` depende do D1 e do alias `@/`, que o runner não resolve. A verificação foi estrutural mais navegador. Um duplo de D1 nos testes fica como tarefa própria.
+Lacuna consciente na época: a suíte não alcançava isso — os testes cobriam só os núcleos puros, e `lib/readiness.ts` depende do D1 e do alias `@/`, que o runner não resolve. A verificação foi estrutural mais navegador. **Fechada na T38/SPEC-38**: `npm run test:workers` roda dentro do workerd com um D1 real, e o comportamento do check-in tem teste que falha se alguém o desfizer.
 
 ## Identidade visual: verde-floresta dá lugar a branco e lilás (T24/SPEC-24, 2026-09-09)
 
@@ -182,3 +182,19 @@ Verificado visualmente no Chromium local nas quatro abas. Ressalva: sem credenci
 Em 2026-09-08, durante esta sessão (Claude Code), foi detectado que o mesmo repositório estava sendo editado em paralelo por outra via — provavelmente o atleta interagindo diretamente pelo ambiente ChatGPT/Codex/Sites que originou o projeto (`.openai/hosting.json`, `@openai/sites-vite-plugin`, domínio `chatgpt.site`). A T19 ("Tela Hoje essencial e progressiva", SPEC-19) foi implementada, publicada na versão 25 e registrada no `docs/TASKS.md`/`docs/SPECS.md` sem que esta sessão soubesse — uma leitura anterior desses arquivos, na mesma conversa, não continha T19. Isso causou uma colisão real de numeração ao propor as SPECs de consolidação (a numeração planejada como SPEC-19/20/21 teve que virar SPEC-20/21/22 depois de reconciliar os arquivos).
 
 Implicação prática: antes de propor ou implementar qualquer tarefa nova neste projeto, releia `docs/TASKS.md` e `docs/SPECS.md` na hora (não confie em leitura de início de sessão), porque o atleta pode estar trabalhando em paralelo por outra ferramenta no mesmo repositório. O Claude Code também não tem acesso ao mecanismo real de publicação no Sites (sem CLI, sem remote `sites` configurado, sem credenciais) — só consegue validar build/testes localmente e (com autorização) empurrar para o GitHub privado (`origin`).
+
+## Segunda leva de correções e a primeira rede de proteção (T31 a T38, 2026-09-09)
+
+Oito tarefas seguidas, todas por decisão explícita do atleta em resposta a perguntas curtas. O fio condutor: o sistema tinha razões escritas nas SPECs que o código não cumpria, e telas que mostravam mais do que ajudava.
+
+**O que saiu da tela.** A aba Evolução tinha um campo de ciclo e um objetivo de temporada que duplicavam informação que o atleta já mantém em outro lugar — o código `C{n}W{n}D{n}` no nome do treino e a meta no próprio Intervals.icu. Os dois saíram. Números e gráficos técnicos foram para trás de "Ver números e gráficos"; a leitura da semana, para trás de "Ver leitura da semana". A prévia do motor adaptativo (T35) saiu inteira: mostrava uma decisão que nada consumia.
+
+**O que passou a valer.** ACWR e rampa de CTL só apareciam como texto — a SPEC-12 descrevia num parágrafo que deveriam pesar na cor do dia, e o aceite da mesma SPEC dizia o contrário. O atleta decidiu: pesam (T33). No piso de duas séries, a redução passou a cortar intensidade em vez de não fazer nada (T34). As tabelas de mesociclo sem uso saíram por migração (T36).
+
+**Dois vieses na comparação com pedais semelhantes (T37).** Desacoplamento zero era descartado da linha de base como se fosse sensor ausente, quando é o melhor resultado possível; e a confiança do veredito contava métricas que *variaram* em vez de métricas *comparáveis*, então repetir o próprio padrão derrubava a confiança relatada. Corrigir a mediana não bastou: os três consumidores logo abaixo também tratavam linha de base zero como ausência. Foi o teste que apontou a metade que faltava.
+
+**A rede de proteção (T38).** `lib/readiness.ts` — o arquivo que decide a cor do dia — estava sem teste porque importa `cloudflare:workers`. Agora há dois runners: `npm test` (84 testes puros) e `npm run test:workers` (10 testes dentro do workerd, com D1 real). Cada mudança recente tem um teste que falha se alguém a desfizer, verificado por mutação.
+
+**Observação registrada, ainda sem decisão do atleta:** um único sinal percebido no check-in nunca muda a cor do dia — fadiga 9/10 sozinha, sem nenhum outro flag, dá verde, porque a classificação exige dois flags para amarela ou dois severos para vermelha. Dor e sintomas escapam disso por terem override próprio. Pode ser o desenho certo (um sinal isolado é ruído), mas é uma escolha que nunca foi discutida.
+
+Módulos novos: `lib/week-plan.ts` (pareamento atividade↔planejado), `lib/intervals.ts`, `lib/activity-comparison.ts`. Os três existem porque as rotas importam `cloudflare:workers` e não carregam no runner — extrair código puro é o que o torna testável.
