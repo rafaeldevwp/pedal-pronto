@@ -415,3 +415,13 @@ Achado na auditoria da lógica de feedback e comparação, pedida pelo atleta em
 - [x] Seis testes novos, validados por mutação.
 - [x] `npm test` (94) e `npm run build` validados.
 - [ ] Não publicar sem nova ordem do atleta.
+
+## Concluída localmente — T33 Carga acumulada pesa na cor do dia — SPEC-33
+
+- [x] Decisão do atleta: ACWR e rampa elevados devem influenciar a prontidão, não só explicar.
+- [x] Os dois flags entram na contagem de `flag(...)` em `lib/readiness.ts`, somando como os demais sinais.
+- [x] Evidência informa o valor e o significado.
+- [x] `npm test` (94) e `npm run build` validados.
+- [ ] Sem cobertura automatizada — mesma lacuna da SPEC-25.
+- [ ] Conferir na prática depois de publicar: a expectativa é ver mais dias amarelos durante blocos pesados.
+- [ ] Não publicar sem nova ordem do atleta.

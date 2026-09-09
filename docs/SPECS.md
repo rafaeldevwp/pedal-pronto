@@ -686,3 +686,25 @@ Observações registradas, **não corrigidas**, por serem estatísticas e mudá-
 - `median` descarta valores `<= 0`, então um desacoplamento legítimo de 0% fica fora da linha de base e a puxa para cima.
 - `comparableMetrics` exclui variações de exatamente 0, então pedalar precisamente na média reduz a confiança relatada.
 - Dentro do cálculo das linhas de base, `activityMetric` é recomputado uma vez por métrica em vez de uma vez por atividade — oito vezes mais chamadas. Irrelevante no volume atual (no máximo oito candidatos).
+
+## SPEC-33 — Carga acumulada passa a pesar na cor do dia
+
+Status: implementada e validada localmente em 2026-09-09; **não publicada**
+
+Decisão do atleta em 2026-09-09, respondendo à ambiguidade registrada na SPEC-29: ACWR e rampa do CTL elevados **devem** influenciar a prontidão do dia, não apenas explicá-la.
+
+Isso resolve a contradição interna da SPEC-12, que num parágrafo mandava somar os dois flags à composição de severidade do semáforo e no aceite dizia "nenhuma mudança de comportamento na decisão de treino do dia". O código seguia o aceite. Agora segue o parágrafo, por decisão explícita.
+
+Regra: os dois flags entram na função `flag(...)` como qualquer outro sinal — somam à contagem, não substituem nada. ACWR severo (acima de 1,5) conta como severo; ACWR moderado (acima de 1,3) e rampa acima do teto contam como sinal comum.
+
+Efeito prático, dito sem rodeio: dias com sono e HRV bons mas carga acumulada alta podem passar a sair **amarelos**. Dois sinais bastam para amarela, então basta o ACWR moderado somar a um outro sinal qualquer. E ACWR severo somado a outro sinal severo leva a vermelha. Em bloco pesado o app vai pedir cautela com mais frequência do que pedia antes.
+
+Aceite:
+
+- [x] ACWR e rampa entram na contagem de flags de `lib/readiness.ts`.
+- [x] A severidade do ACWR acompanha a que `evaluateLoadSafety` já calculava (severa acima de 1,5).
+- [x] A evidência mostrada ao atleta diz o número e o que ele significa, não só o rótulo.
+- [x] Nenhuma regra imutável muda: amarela continua alterando no máximo uma variável, verde nunca aumenta a sessão.
+- [x] `npm test` (94) e `npm run build` validados.
+
+Ressalva registrada: como a suíte não alcança `lib/readiness.ts` (depende do D1 e do alias `@/`), esta mudança **não tem cobertura automatizada**. É a mesma lacuna da SPEC-25, e o quinto ponto em aberto — adotar vitest com pool de Workers — segue sem decisão.

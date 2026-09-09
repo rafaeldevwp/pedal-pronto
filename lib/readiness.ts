@@ -333,6 +333,19 @@ export async function runReadiness(
       isYesterdayLoadHigh(yesterdayLoad, ctl),
       `Carga de ontem ${Math.round(yesterdayLoad)} foi alta para o fitness ${Math.round(ctl!)}`,
     );
+    // SPEC-33: por decisão do atleta, carga acumulada passa a pesar na cor do dia. Antes ACWR e
+    // rampa só apareciam como texto; agora somam à contagem de flags como qualquer outro sinal —
+    // é o que a SPEC-12 descrevia num parágrafo e o aceite dela contradizia.
+    const acwrFlag = loadSafety.flags.find((item) => item.id === 'acwr_high');
+    flag(
+      Boolean(acwrFlag),
+      `ACWR ${loadSafety.acwr?.toFixed(2)} — carga dos últimos 7 dias ${acwrFlag?.severity === 'severa' ? 'muito acima' : 'acima'} da média recente`,
+      acwrFlag?.severity === 'severa',
+    );
+    flag(
+      loadSafety.flags.some((item) => item.id === 'ramp_rate_exceeded'),
+      `Fitness subindo ${loadSafety.rampRate?.toFixed(1)} pontos na semana, acima do teto de ${loadSafety.rampLimit}`,
+    );
     flag(
       Boolean(checkin?.fadiga !== undefined && checkin.fadiga >= 7),
       `Fadiga percebida ${checkin?.fadiga}/10`,
