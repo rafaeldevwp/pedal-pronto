@@ -277,7 +277,7 @@ Direção original, registrada em 2026-09-08: ele monta os ciclos com apoio de I
 - [ ] `npm test` e `npm run build` validados.
 - [ ] Não publicar sem nova ordem do atleta.
 
-Estado das quatro propostas em 2026-09-09: T20 e T21 estão concluídas no código; T22 só depende da decisão sobre `mesocycle_phases`; **T23 é a única com trabalho de implementação inteiro pela frente**, e continua bloqueada pelas suas quatro decisões em aberto. T23 substitui a parte de resolução de fase da T11/T18, que continuam válidas em tudo o mais.
+Estado em 2026-09-09: T20 e T21 concluídas no código; T22 só depende da decisão sobre `mesocycle_phases`; **T23 foi cancelada e substituída pela T28**, que resolve o mesmo problema lendo o código do nome do treino — as quatro decisões listadas acima não precisam mais ser tomadas.
 
 ## Concluída localmente — T24 Identidade visual em branco e lilás — SPEC-24
 
