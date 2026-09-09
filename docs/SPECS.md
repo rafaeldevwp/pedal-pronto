@@ -586,4 +586,26 @@ Aceite:
 
 Contexto que dimensiona o risco, verificado no código: os flags de ACWR e rampa **não** entram na função `flag(...)` que classifica verde/amarela/vermelha, e não alcançam nenhum caminho de escrita. Eles alimentam a prévia do motor (somente leitura), as sugestões de dia OFF e os textos de justificativa. Um limiar mal calibrado aqui incomoda, não coloca treino em risco.
 
+## SPEC-30 — O gráfico vazio explica a própria ausência
+
+Status: implementada e validada localmente em 2026-09-09; **não publicada**
+
+Diagnóstico: o gráfico coração × potência aparecia vazio com a mensagem "Precisamos de ao menos dois pedais com potência e frequência cardíaca" — que repete a regra sem dizer qual das duas está faltando nos dados do atleta. Ele perguntou por que estava vazio se o histórico existe no Intervals.icu, e a resposta exigiria abrir os dados dele.
+
+Em vez de depender de uma investigação com credenciais, o app passou a responder sozinho. `app/api/performance/route.ts` expõe `cardioCoverage` — total de pedais dos últimos 42 dias, quantos trazem potência, quantos trazem frequência cardíaca e quantos trazem as duas na mesma atividade — e o estado vazio mostra esses números.
+
+Assim a distinção que importa fica visível na hora: **dado ausente** (o atleta pedala sem cinta ou sem medidor) ou **leitura errada de campo** (os pedais têm tudo e o app não enxerga). Sem isso, as duas hipóteses pareciam iguais na tela.
+
+Aceite:
+
+- [x] O estado vazio informa números reais, não a regra genérica.
+- [x] Distingue "nenhum pedal no período" de "pedais sem os dois campos".
+- [x] Texto sem erro de concordância no singular.
+- [x] O gráfico continua exigindo dois pontos; nada na regra mudou.
+- [x] `npm test` (88) e `npm run build` validados; verificado no navegador.
+
+Vale para a mesma família de problemas: um estado vazio que só repete o requisito não ajuda ninguém a sair dele.
+
+## SPEC-29 — nota de continuidade
+
 Ambiguidade registrada, **não resolvida**: o texto da SPEC-12 se contradiz. Um parágrafo diz que os dois flags "participam da composição de severidade do semáforo do mesmo jeito que os flags já existentes"; o aceite da mesma SPEC diz "nenhuma mudança de comportamento na decisão de treino do dia". O código seguiu o aceite — sinal apenas. Decidir se ACWR e rampa **deveriam** influenciar a prontidão do dia é pergunta de produto em aberto, separada desta SPEC.

@@ -194,6 +194,7 @@ type Performance = {
   powerViews: Record<'season' | 'recent' | 'all', Array<{ seconds: number; label: string; current?: number; previous?: number; change?: number }>>;
   powerSource: string;
   cardio: Array<{ date: string; watts: number; heartRate: number; efficiency: number; decoupling?: number }>;
+  cardioCoverage: { rides: number; withPower: number; withHeartRate: number; withBoth: number };
   efficiencyChange?: number;
   cardioHeadline: string;
   learning: {
@@ -1266,7 +1267,16 @@ export default function Home() {
                 </ScatterChart>
               </ChartContainer>
             ) : (
-              <p className="empty-insight">Precisamos de ao menos dois pedais com potência e frequência cardíaca.</p>
+              <p className="empty-insight">
+                {!performance ? 'Carregando seus pedais…'
+                  : performance.cardioCoverage.rides === 0
+                    ? 'Nenhum pedal registrado nos últimos 42 dias.'
+                    : <>
+                        Nos últimos 42 dias: {performance.cardioCoverage.rides} {performance.cardioCoverage.rides === 1 ? 'pedal' : 'pedais'},
+                        sendo {performance.cardioCoverage.withPower} com potência, {performance.cardioCoverage.withHeartRate} com frequência
+                        cardíaca e {performance.cardioCoverage.withBoth} com as duas na mesma atividade. O gráfico precisa de pelo menos dois com ambas.
+                      </>}
+              </p>
             )}
             {performance?.efficiencyChange !== undefined && (
               <div className="efficiency-note">

@@ -150,6 +150,16 @@ export async function GET(request: Request) {
       .filter(Boolean)
       .slice(-12);
     const cardioList = cardio as Array<{ date: string; watts: number; heartRate: number; efficiency: number; decoupling?: number }>;
+    // O gráfico exige potência e FC na mesma atividade. Quando vem vazio, isto diz qual das duas
+    // falta, em vez de deixar o atleta adivinhar se o problema é dado ausente ou leitura errada.
+    const cardioCoverage = {
+      rides: recent.length,
+      withPower: recent.filter((activity) => num(activity.average_watts, activity.weighted_average_watts)).length,
+      withHeartRate: recent.filter((activity) => num(activity.average_heartrate, activity.average_hr)).length,
+      withBoth: recent.filter((activity) =>
+        num(activity.average_watts, activity.weighted_average_watts) && num(activity.average_heartrate, activity.average_hr),
+      ).length,
+    };
     const half = Math.floor(cardioList.length / 2);
     const early = average(cardioList.slice(0, half).map((point) => point.efficiency));
     const late = average(cardioList.slice(half).map((point) => point.efficiency));
@@ -233,7 +243,7 @@ export async function GET(request: Request) {
         all: curveSet(allTime),
       },
       powerSource: seasonPower.some((point) => point.current) ? 'Curvas oficiais do Intervals.icu' : 'Atividades disponíveis no Intervals.icu',
-      cardio: cardioList, efficiencyChange, cardioHeadline, learning,
+      cardio: cardioList, cardioCoverage, efficiencyChange, cardioHeadline, learning,
       warning: recent.length < 4 ? 'Poucas atividades recentes: interprete as tendências com cautela.' : undefined,
     });
   } catch (error) {

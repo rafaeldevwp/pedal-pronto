@@ -47,7 +47,7 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-**Ponto de retomada (2026-09-09): T24, T25, T26, T27, T28 e T29 estão implementadas e validadas localmente, aguardando ordem de publicação. A T25 é a que mais urge. Em aberto: se ACWR e rampa deveriam influenciar a prontidão do dia (contradição no texto da SPEC-12), a investigação do gráfico coração × potência vazio, e o destino das tabelas sem uso (`mesocycle_phases`, `mesocycle_anchor`).**
+**Ponto de retomada (2026-09-09): T24 a T30 estão implementadas e validadas localmente, aguardando ordem de publicação. A T25 é a que mais urge. Em aberto: se ACWR e rampa deveriam influenciar a prontidão do dia (contradição no texto da SPEC-12) e o destino das tabelas sem uso (`mesocycle_phases`, `mesocycle_anchor`).**
 
 T19 foi concluída e publicada na versão 25 em 2026-09-08. A tela Hoje foi reduzida ao essencial: prontidão e treino permanecem visíveis; conexão saudável deixou de ocupar espaço; recuperação e check-in foram consolidados sob expansão; o gráfico de carga deixou de ser repetido nessa tela e continua em Evolução. Nenhuma regra de decisão ou escrita no Intervals.icu mudou.
 

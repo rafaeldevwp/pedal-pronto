@@ -370,11 +370,15 @@ O texto da SPEC-12 se contradiz: um parágrafo diz que os dois flags participam 
 
 - [ ] Decisão do atleta: ACWR e rampa elevados deveriam puxar a prontidão do dia para amarela, ou continuam apenas explicando?
 
-## Investigação — coração × potência aparece vazio
+## Concluída localmente — T30 O gráfico vazio explica a própria ausência — SPEC-30
 
-- [ ] Confirmar com o atleta se os pedais dos últimos 42 dias têm potência e frequência cardíaca na mesma atividade.
-- [ ] O gráfico exige `average_watts` (ou `weighted_average_watts`) **e** `average_heartrate` (ou `average_hr`) no mesmo registro, em atividades do tipo Ride, dentro de 42 dias. Faltando um, não desenha.
-- [ ] Só vira SPEC depois de saber se é dado ausente ou leitura errada de campo.
+O atleta perguntou por que coração × potência aparece vazio se o histórico existe no Intervals.icu. Em vez de depender de uma investigação com as credenciais dele, o app passou a se autodiagnosticar.
+
+- [x] `app/api/performance/route.ts` expõe `cardioCoverage`: total de pedais dos últimos 42 dias, quantos têm potência, quantos têm FC e quantos têm as duas na mesma atividade.
+- [x] O estado vazio diz o número exato de cada caso em vez de repetir a exigência genérica.
+- [x] Frase construída para não quebrar concordância no singular ("1 com potência", não "1 têm potência").
+- [x] Verificado no navegador com cenário simulado; `npm test` (88) e `npm run build` validados.
+- [ ] Não publicar sem nova ordem do atleta.
 
 ## Fora de alcance com a infraestrutura atual — cobertura de `lib/readiness.ts`
 
