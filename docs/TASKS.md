@@ -433,3 +433,12 @@ Achado na auditoria da lógica de feedback e comparação, pedida pelo atleta em
 - [x] Testes: `2x` com e sem intensidade reconhecível; `3x` inalterado.
 - [x] `npm test` (95) e `npm run build` validados.
 - [ ] Não publicar sem nova ordem do atleta.
+
+## Concluída localmente — T35 Remover a prévia do motor adaptativo — SPEC-35
+
+- [x] Decisão do atleta: sai da tela e do código.
+- [x] Card, campo `engineDecision` e tipo do cliente removidos.
+- [x] `decideTraining`, `DecisionInput`, `EngineDecision` e `safetyReasons` removidos; 16 testes saíram junto (95 → 79).
+- [x] `adjustWorkoutPlan`, `preferVolumeReduction` e o template de recuperação permanecem — são usados pelo treino de hoje e pelo replanejamento.
+- [x] `npm test` (79) e `npm run build` validados.
+- [ ] Não publicar sem nova ordem do atleta.

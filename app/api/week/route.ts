@@ -1,7 +1,7 @@
 import { ensurePolarSchema, ownerId, recordTrainingDecision, runtime } from '@/lib/polar';
 import { loadAthleteContext } from '@/lib/context-loader';
 import type { Checkin } from '@/lib/readiness';
-import { adjustWorkoutPlan, decideTraining } from '@/lib/decision-engine';
+import { adjustWorkoutPlan } from '@/lib/decision-engine';
 import { chooseOffDaySuggestion, type SuggestionCategory } from '@/lib/off-day-suggestions';
 import { classifyStimulus, computeStimulusCoverage, describeMissingKeyStimulus, isWeekKeySourceFor, type StimulusCoverage } from '@/lib/stimulus';
 import { assertDayAvailableForCreation, assertEditablePlannedEvent, claimTrainingWrite, completeTrainingWrite, proposalFingerprint } from '@/lib/training-safety';
@@ -396,18 +396,6 @@ async function context(owner: string, checkin?: Checkin, athlete?: AthleteContex
     checkin: checkin ? { dor: checkin.dor, sintomas: checkin.sintomas, fadiga: checkin.fadiga } : undefined,
     stimulusGapNote: describeMissingKeyStimulus(stimulusCoverage, todayStimulusType),
   });
-  const engineDecision = decideTraining({
-    classification: readiness.classification,
-    blocked: snapshot.blocked,
-    phase: snapshot.mesocycle.value?.phase || 'desconhecida',
-    safetyFlags: readiness.metrics.safetyFlags || [],
-    workout: todaySession && todaySession.status !== 'realizado' ? { name: todaySession.name, durationMinutes: todaySession.durationMinutes, load: todaySession.load, structure: todaySession.structure } : null,
-    isRestDay: restDay,
-    daysToNextKey: daysToKey,
-    forecastRisk: forecastRisk as 'baixo' | 'moderado' | 'alto' | 'indeterminado',
-    stimulusCoverage,
-    todayStimulus: todayStimulusType,
-  });
   const stressed = ['amarela', 'vermelha'].includes(readiness.classification) || isYesterdayLoadHigh(yesterdayLoad, readiness.metrics.ctl);
   const planOutlook = planned.filter((event) => event.date > today).slice(0, 3).map((event) => ({
     id: event.id, date: event.date, name: event.name,
@@ -473,7 +461,6 @@ async function context(owner: string, checkin?: Checkin, athlete?: AthleteContex
     } : null,
     mesocycle: snapshot.mesocycle.value,
     contextWarning: snapshot.blocked ? snapshot.blockReasons.join(' ') : undefined,
-    engineDecision,
     stimulusCoverage,
     suggestionStatus: !restDay
       ? 'Sugestões aparecem somente em dias de descanso.'

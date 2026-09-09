@@ -726,3 +726,27 @@ Aceite:
 - [x] `3x` continua reduzindo para `2x`, como antes.
 - [x] Nenhuma justificativa diz mais "de 2 para 2".
 - [x] `npm test` (95) e `npm run build` validados.
+
+## SPEC-35 — Remover a prévia do motor adaptativo
+
+Status: implementada e validada localmente em 2026-09-09; **não publicada**
+
+Decisão do atleta em 2026-09-09: a prévia sai da tela e do código.
+
+O card mostrava o que o motor adaptativo faria e avisava, ele próprio, que não escrevia nada e estava "em desenvolvimento". Era informação sobre o software, não sobre o treino.
+
+Escopo real da remoção, dito às claras porque é maior do que "apagar um card": `decideTraining` era a única consumidora da prévia, então saiu junto, com `DecisionInput`, `EngineDecision` e `safetyReasons`. Isso desfaz a parte de orquestração da SPEC-14 e **remove 16 testes** — a suíte cai de 95 para 79.
+
+O que **não** saiu, porque é usado de verdade pelo treino de hoje e pelo replanejamento futuro: `adjustWorkoutPlan`, `preferVolumeReduction`, `recoveryRecommendation` e as duas funções de redução. A regra de "amarela altera no máximo uma variável" segue intacta, no mesmo lugar, com seus próprios testes.
+
+Nenhuma decisão de treino muda: a prévia nunca escreveu nada nem alimentou outra decisão.
+
+Aceite:
+
+- [x] Card removido da aba Semana.
+- [x] `engineDecision` sai da resposta de `app/api/week/route.ts` e do tipo no cliente.
+- [x] `decideTraining` e seus tipos removidos de `lib/decision-engine.ts`.
+- [x] Testes da função removidos junto; os de `adjustWorkoutPlan` e `preferVolumeReduction` permanecem.
+- [x] `npm test` (79) e `npm run build` validados.
+
+Se um dia a prévia fizer falta, ela está no histórico do git — mas voltar deveria vir acompanhado de um propósito claro, que era justamente o que faltava.

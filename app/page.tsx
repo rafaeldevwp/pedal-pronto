@@ -175,13 +175,6 @@ type Week = {
   contextWarning?: string;
   weeklyLoadTarget: number;
   weeklyLoadDone: number;
-  engineDecision: {
-    action: 'manter' | 'reduzir_intensidade' | 'reduzir_repeticoes' | 'substituir_recuperacao' | 'suspender';
-    stimulusPreserved: string;
-    reasons: string[];
-    recommended: null | { name: string; durationMinutes?: number; load?: number; descriptionChange?: string };
-    weeklyEffect: string;
-  };
 };
 type Mesocycle = { anchor: string | null; calculated: null | { cycle: number; week: number; day: number }; event: null | { cycle: number; week: number; day: number }; phase: string; warning: string | null; reference: null | { date: string; name: string }; inherited: boolean };
 type Performance = {
@@ -1107,22 +1100,6 @@ export default function Home() {
               <ul className="forecast-evidence">{week.forecast.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
               <div className="forecast-guidance"><ShieldCheck /><span><strong>Orientação</strong>{week.forecast.guidance}</span></div>
               <small className="forecast-caveat">Confiança {week.forecast.confidence} · {week.forecast.caveat}</small>
-            </Card>
-          )}
-          {week?.engineDecision && week.engineDecision.action !== 'manter' && week.engineDecision.action !== 'suspender' && (
-            <Card className="engine-preview-card">
-              <div className="proposal-heading">
-                <div>
-                  <p className="eyebrow">LEITURA DO MOTOR ADAPTATIVO · PRÉVIA</p>
-                  <h2>{week.engineDecision.recommended?.name || 'Ajuste sugerido'}</h2>
-                </div>
-                <Badge variant="outline"><Sparkles /> Só leitura</Badge>
-              </div>
-              <ul className="forecast-evidence">{week.engineDecision.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
-              {week.engineDecision.recommended?.descriptionChange && (
-                <div className="proposal-reason"><ShieldCheck /><span><strong>Estímulo preservado: {week.engineDecision.stimulusPreserved}</strong>{week.engineDecision.recommended.descriptionChange}</span></div>
-              )}
-              <small className="proposal-footnote">{week.engineDecision.weeklyEffect} Esta leitura ainda não escreve no Intervals.icu — é só uma prévia do motor adaptativo em desenvolvimento.</small>
             </Card>
           )}
           <Card className="decision-history-card">
