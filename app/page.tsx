@@ -183,7 +183,7 @@ type Week = {
     weeklyEffect: string;
   };
 };
-type Mesocycle = { anchor: string | null; calculated: null | { cycle: number; week: number; day: number }; event: null | { cycle: number; week: number; day: number }; phase: string; warning: string | null };
+type Mesocycle = { anchor: string | null; calculated: null | { cycle: number; week: number; day: number }; event: null | { cycle: number; week: number; day: number }; phase: string; warning: string | null; reference: null | { date: string; name: string }; inherited: boolean };
 type Performance = {
   updatedAt: string;
   activityCount: number;
@@ -304,8 +304,6 @@ export default function Home() {
     [week, setWeek] = useState<Week | null>(null),
     [performance, setPerformance] = useState<Performance | null>(null),
     [mesocycle, setMesocycle] = useState<Mesocycle | null>(null),
-    [mesocycleAnchor, setMesocycleAnchor] = useState(''),
-    [mesocycleSaved, setMesocycleSaved] = useState(false),
     [powerRange, setPowerRange] = useState<'season' | 'recent' | 'all'>('season'),
     [loading, setLoading] = useState(false),
     [creatingSuggestion, setCreatingSuggestion] = useState(false),
@@ -436,18 +434,7 @@ export default function Home() {
   }
   async function loadMesocycle() {
     const response = await fetch('/api/mesocycle');
-    if (!response.ok) return;
-    const value = await response.json() as Mesocycle;
-    setMesocycle(value);
-    setMesocycleAnchor(value.anchor || '');
-  }
-  async function saveMesocycle() {
-    const response = await fetch('/api/mesocycle', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ anchor: mesocycleAnchor }) });
-    if (!response.ok) return;
-    const value = await response.json() as Mesocycle;
-    setMesocycle(value);
-    setMesocycleSaved(true);
-    setTimeout(() => setMesocycleSaved(false), 2200);
+    if (response.ok) setMesocycle(await response.json() as Mesocycle);
   }
   async function createSuggestion() {
     if (
@@ -1207,13 +1194,13 @@ export default function Home() {
               <div><p className="eyebrow">POSIÇÃO NO PLANO</p><h2>{mesocycle?.calculated ? `C${mesocycle.calculated.cycle} · W${mesocycle.calculated.week} · D${mesocycle.calculated.day}` : 'Mesociclo ainda não configurado'}</h2></div>
               <Badge variant="outline">Fase: {mesocycle?.phase || 'desconhecida'}</Badge>
             </div>
-            <p className="anchor-highlight"><strong>Âncora atual:</strong> {mesocycle?.anchor ? new Date(`${mesocycle.anchor}T12:00:00`).toLocaleDateString('pt-BR') : 'não definida'}</p>
+            <p className="anchor-highlight">
+              {mesocycle?.reference
+                ? <><strong>Lido de:</strong> {mesocycle.reference.name}{mesocycle.inherited ? ` (${new Date(`${mesocycle.reference.date}T12:00:00`).toLocaleDateString('pt-BR')}, contagem avançada até hoje)` : ''}</>
+                : <><strong>Sem referência:</strong> nenhum treino recente traz o código C{'{n}'}W{'{n}'}D{'{n}'} no nome.</>}
+            </p>
             {mesocycle?.warning && <small className="data-warning">{mesocycle.warning}</small>}
-            <div className="mesocycle-form">
-              <label>Início de C1W1D1<input type="date" value={mesocycleAnchor} onChange={(event) => setMesocycleAnchor(event.target.value)} /></label>
-            </div>
-            <Button className="primary-action" disabled={!mesocycleAnchor} onClick={saveMesocycle}>{mesocycleSaved ? <><Check /> Mesociclo salvo</> : 'Salvar posição do plano'}</Button>
-            <small className="analysis-note">A fase (semanas 1-3 build, semana 4 recovery) é calculada automaticamente a partir da âncora e decide qual variável do treino cede primeiro quando a prontidão pede cautela.</small>
+            <small className="analysis-note">A fase vem do código no nome do treino no Intervals.icu (semanas 1-3 build, semana 4 recovery) e decide qual variável do treino cede primeiro quando a prontidão pede cautela.</small>
           </Card>
           <details className="today-support">
             <summary>

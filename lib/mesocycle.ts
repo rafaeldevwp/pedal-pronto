@@ -25,6 +25,42 @@ export function resolvePhase(calculated: CyclePointer | undefined): string {
   return calculated.week === 4 ? 'recovery' : 'build';
 }
 
+export type PlannedEvent = { date: string; name: string };
+
+function offsetOf(pointer: CyclePointer) {
+  return (pointer.cycle - 1) * 28 + (pointer.week - 1) * 7 + (pointer.day - 1);
+}
+
+// A data implícita de C1W1D1 num evento que já carrega o código no nome.
+export function anchorFromEvent(pointer: CyclePointer, eventDate: string) {
+  const day = utcDay(eventDate);
+  if (day === undefined) return undefined;
+  return new Date(day - offsetOf(pointer) * DAY_MS).toISOString().slice(0, 10);
+}
+
+// SPEC-28: o atleta já escreve C{n}W{n}D{n} no nome do treino no Intervals.icu, que é a fonte
+// oficial do plano — a fase passa a vir dali, sem âncora cadastrada à mão. Quando o treino de
+// hoje não traz o código, herda o último ciclo conhecido: acha o evento codificado mais recente
+// e avança a contagem de dias até hoje.
+export function resolveMesocycleFromEvents(events: PlannedEvent[], today: string) {
+  const reference = events
+    .filter((event) => event.date <= today && parseCyclePointer(event.name))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .at(-1);
+  const pointer = reference ? parseCyclePointer(reference.name) : undefined;
+  const anchor = pointer && reference ? anchorFromEvent(pointer, reference.date) : undefined;
+  const calculated = anchor ? calculateCyclePointer(anchor, today) : undefined;
+  return {
+    anchor: anchor || null,
+    calculated: calculated || null,
+    event: pointer || null,
+    phase: resolvePhase(calculated),
+    warning: null as string | null,
+    reference: reference ? { date: reference.date, name: reference.name } : null,
+    inherited: Boolean(reference && reference.date !== today),
+  };
+}
+
 export function resolveMesocycle(anchor: string | undefined, date: string, eventName = '') {
   const calculated = anchor ? calculateCyclePointer(anchor, date) : undefined;
   const event = parseCyclePointer(eventName);

@@ -333,14 +333,25 @@ Pedida pelo atleta em 2026-09-09: "a tela de evolução está muito poluída". E
 - [ ] `/api/profile` e `athlete_goals` continuam existindo sem interface. Remover a rota e a tabela é decisão à parte, não feita aqui.
 - [ ] Não publicar sem nova ordem do atleta.
 
-## Proposta — T28 A fase do mesociclo vem do nome do treino — SPEC-28 (a escrever)
+## Concluída localmente — T28 A fase do mesociclo vem do nome do treino — SPEC-28
 
-Direção confirmada pelo atleta em 2026-09-09. Substitui a T23/SPEC-23, que ia inferir a fase pela carga planejada.
+Substitui a T23/SPEC-23, que ia inferir a fase pela carga planejada.
 
 - [x] Decisão do atleta: sem o código `C{n}W{n}D{n}` no nome, herda o último ciclo conhecido.
-- [ ] `resolveMesocycle` passa a receber o nome do evento do dia (hoje é chamada com dois argumentos e o nome fica vazio, então `parseCyclePointer` nunca é alimentado).
-- [ ] A âncora manual sai da interface; `mesocycle_anchor` fica sem uso.
-- [ ] Testes cobrindo leitura do código, herança do último ciclo e ausência total de histórico.
+- [x] `resolveMesocycleFromEvents` e `anchorFromEvent` em `lib/mesocycle.ts`, puras e testadas. `parseCyclePointer` já sabia ler o padrão — só nunca era alimentado.
+- [x] `lib/context-loader.ts` busca 28 dias de eventos uma única vez por requisição e resolve a fase daí; parou de ler `mesocycle_anchor`.
+- [x] `app/api/mesocycle/route.ts` virou somente leitura, sem `PUT`.
+- [x] Formulário de âncora removido da tela; no lugar, de qual treino a fase foi lida e se a contagem foi herdada.
+- [x] Testes: código hoje, herança com virada de semana, ausência total de código, eventos futuros ignorados.
+- [x] `npm test` (85) e `npm run build` validados; verificado no navegador.
+- [ ] `mesocycle_anchor` fica sem uso, como `mesocycle_phases`. Remover por migração é a mesma decisão em aberto da T22.
+- [ ] Não publicar sem nova ordem do atleta.
+
+## Pendência — unificar a chamada ao Intervals.icu
+
+`lib/intervals.ts` nasceu na T28 como casa compartilhada, mas `lib/readiness.ts`, `app/api/week/route.ts` e `app/api/performance/route.ts` mantêm cópias próprias do mesmo helper, anteriores a ele.
+
+- [ ] Migrar os três para `intervalsFetch`, sem mudar comportamento.
 
 ## Proposta — T29 ACWR e rampa vêm do Intervals.icu — SPEC-29 (a escrever)
 

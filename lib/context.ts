@@ -1,5 +1,5 @@
 import type { Checkin, ReadinessResult } from '@/lib/readiness';
-import type { resolveMesocycle } from '@/lib/mesocycle';
+import type { resolveMesocycleFromEvents } from '@/lib/mesocycle';
 
 export type FieldQuality = 'válido' | 'atrasado' | 'ausente' | 'contraditório';
 export type SnapshotField<T> = {
@@ -10,7 +10,7 @@ export type SnapshotField<T> = {
   note?: string;
 };
 
-export type MesocycleSnapshotInput = ReturnType<typeof resolveMesocycle> & { anchorUpdatedAt?: string | null };
+export type MesocycleSnapshotInput = ReturnType<typeof resolveMesocycleFromEvents> & { anchorUpdatedAt?: string | null };
 export type GoalSnapshotInput = { objective: string; eventName?: string; eventDate?: string; priority: string; updatedAt?: string | null } | null;
 
 export type AthleteSnapshot = {
@@ -37,9 +37,9 @@ function readinessQuality(readiness: ReadinessResult): { quality: FieldQuality; 
 }
 
 function mesocycleQuality(mesocycle: MesocycleSnapshotInput): { quality: FieldQuality; note?: string } {
-  if (!mesocycle.anchor) return { quality: 'ausente', note: 'Âncora do mesociclo ainda não configurada.' };
+  if (!mesocycle.anchor) return { quality: 'ausente', note: 'Nenhum treino recente traz o código C{n}W{n}D{n} no nome; a fase do mesociclo não pôde ser determinada.' };
   if (mesocycle.warning) return { quality: 'contraditório', note: mesocycle.warning };
-  if (mesocycle.phase === 'desconhecida') return { quality: 'ausente', note: 'Fase não cadastrada para o ciclo e semana atuais.' };
+  if (mesocycle.phase === 'desconhecida') return { quality: 'ausente', note: 'Fase não determinada para o ciclo e semana atuais.' };
   return { quality: 'válido' };
 }
 

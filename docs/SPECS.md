@@ -529,3 +529,32 @@ Aceite:
 - `npm test` e `npm run build` validados.
 
 Dependências: nenhuma. Independente da SPEC-28 (fase pelo nome do treino) e da SPEC-29 (ACWR e rampa vindos do Intervals.icu); pode ser feita antes das duas.
+
+## SPEC-28 — A fase do mesociclo vem do nome do treino
+
+Status: implementada e validada localmente em 2026-09-09; **não publicada**
+
+Diagnóstico: o atleta já escreve o ciclo no nome do treino no Intervals.icu (`C2W3D4 - Tempo`), e o app ignorava isso. A fase vinha de uma data-âncora que ele precisava cadastrar à mão dentro do Pedal Pronto, mais a contagem de dias corridos. Duas fontes para o mesmo fato, uma delas digitada de novo pelo atleta — e desde a T18 é essa fase que decide qual variável do treino cede primeiro quando a prontidão pede cautela.
+
+O achado que fecha o caso: `parseCyclePointer` **já existia** em `lib/mesocycle.ts` e já sabia ler o padrão `C{n}W{n}D{n}`. Só que `resolveMesocycle` era chamada com dois argumentos e o nome do evento nunca chegava — o parser estava pronto e ocioso, servindo apenas para emitir um aviso de divergência que jamais podia disparar.
+
+Decisão do atleta: sem código no nome do treino de hoje, **herda o último ciclo conhecido**.
+
+Regra final: `resolveMesocycleFromEvents(events, hoje)` procura o evento mais recente até hoje cujo nome traga o código, deriva dele a data implícita de C1W1D1 (`anchorFromEvent`) e avança a contagem até hoje com o `calculateCyclePointer` que já existia. Nenhum evento com código deixa a fase explicitamente desconhecida — que continua significando a regra padrão de progressão, como antes.
+
+A busca dos eventos entrou em `lib/context-loader.ts`, uma única vez por requisição, olhando 28 dias para trás — uma volta completa de ciclo basta para achar a última referência.
+
+Aceite:
+
+- [x] A fase vem do código no nome do treino; nenhuma decisão usa mais a âncora manual.
+- [x] Sem código hoje, a contagem avança a partir do último treino codificado, atravessando viradas de semana e de ciclo.
+- [x] Eventos futuros nunca servem de referência para a fase de hoje.
+- [x] `mesocycle_anchor` deixa de ser lida e escrita; a tabela fica sem uso, como `mesocycle_phases`. Nenhuma migração de remoção — mesma decisão em aberto da SPEC-22.
+- [x] `app/api/mesocycle/route.ts` perdeu o `PUT`: não há mais o que cadastrar.
+- [x] A tela mostra de qual treino a fase foi lida e avisa quando a contagem foi herdada, em vez do formulário de âncora.
+- [x] Testes: código no treino de hoje, herança com virada de semana, ausência total de código, e eventos futuros ignorados.
+- [x] `npm test` (85) e `npm run build` validados; verificado no navegador.
+
+**Substitui a SPEC-23**, que pretendia inferir a fase pela tendência de carga planejada. O caminho pelo nome do treino é mais direto, não depende de limiar nenhum e reflete o que o atleta de fato planejou.
+
+Pendência registrada: a chamada ao Intervals.icu agora tem uma casa compartilhada em `lib/intervals.ts`, mas `lib/readiness.ts`, `app/api/week/route.ts` e `app/api/performance/route.ts` seguem com cópias próprias, anteriores a este módulo. Unificar as três é limpeza à parte, não feita aqui para não mexer em caminho que já funciona.
