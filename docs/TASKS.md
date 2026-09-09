@@ -496,3 +496,16 @@ Nenhuma implementada. Ordem sugerida, da que mais engana para a que menos:
 - [x] Mutação: sem a ordenação, 3 testes caem.
 - [x] `npm test` (91), `npm run test:workers` (10) e `npm run build` validados.
 - [ ] Não publicar sem nova ordem do atleta.
+
+## Propostas — auditoria de UI e UX em sete resoluções (2026-09-09)
+
+Nenhuma implementada. Wireframe: <https://claude.ai/code/artifact/4765bebb-34b6-4388-9d8f-70f951d08a28>
+
+A ordem é por dependência, não por gravidade — a escala de tipo sustenta quase todo o resto.
+
+- [ ] **T45 — SPEC-45**: escala de tipo com piso de 12px. 85 declarações abaixo disso hoje, 6 delas em 7px.
+- [ ] **T46 — SPEC-46**: alvos de toque de 44px. 13 abaixo do mínimo; a busca do glossário tem 17px de altura.
+- [ ] **T47 — SPEC-47**: uma ação cheia por tela. Hoje o botão que escreve no Intervals.icu é pixel a pixel igual ao que só recarrega.
+- [ ] **T48 — SPEC-48**: breakpoints em 600 e 960px. O conteúdo trava em 480px mesmo num monitor de 1440.
+- [ ] **T49 — SPEC-49**: glossário navegável. 3,0 telas de rolagem num celular. Casar com a T42, que corrige o conteúdo.
+- [ ] **T50 — SPEC-50**: teste de layout automatizado, para as cinco anteriores não se desfazerem.

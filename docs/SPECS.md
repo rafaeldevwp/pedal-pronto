@@ -936,3 +936,96 @@ A cor do dia exige **dois** sinais para virar amarela, ou dois sinais severos pa
 Há um argumento forte a favor disso: um sinal isolado é ruído, e a regra dos dois sinais é o que impede a tela de oscilar. Há um argumento contra: fadiga 9/10 e motivação 1/10 são coisas que o atleta digitou deliberadamente sobre si mesmo, e ver "verde" depois disso corrói a confiança na leitura.
 
 Três caminhos possíveis: deixar como está; dar override próprio a algum sinal extremo, como dor e sintomas já têm; ou manter a cor e mudar só o texto, reconhecendo o relato sem alterar a decisão.
+
+---
+
+# Auditoria de UI e UX em sete resoluções (2026-09-09)
+
+A pedido do atleta, uma revisão da interface medida no app rodando, com dados realistas injetados em `/api/readiness`, `/api/week`, `/api/performance` e `/api/mesocycle` — não nas telas vazias de quem não conectou o Polar. Quatro abas × sete larguras (320, 360, 390, 430, 768, 1024, 1440), com medição no DOM em vez de impressão visual.
+
+Wireframe proposto, respondendo de verdade a cada largura: <https://claude.ai/code/artifact/4765bebb-34b6-4388-9d8f-70f951d08a28>
+
+**O que está sadio e não precisa de conserto** — vale registrar para ninguém "consertar" o que funciona:
+
+- Nenhuma das quatro abas rola na horizontal, em nenhuma das sete larguras.
+- A barra inferior não cobre conteúdo: com a página no fim, nenhum elemento fica atrás dela.
+- A identidade lilás da SPEC-24 se sustenta; verde, amarela e vermelha seguem exclusivos da prontidão.
+
+O problema não é quebra de layout. É **escala de tipo, densidade de toque, hierarquia de ação e ausência de layout acima de 700px**.
+
+## SPEC-45 — Escala de tipo com piso de 12px
+
+Status: **proposta**, aguardando decisão
+
+Inventário das declarações `font-size` em `app/globals.css`:
+
+| tamanho | declarações |
+| --- | --- |
+| 7px | 6 |
+| 8px | 19 |
+| 9px | 22 |
+| 10px | 24 |
+| 11px | 14 |
+| 12–15px | 32 |
+| 19–27px | 3 |
+
+São **85 declarações abaixo de 12px** contra 3 acima de 15px no arquivo inteiro. O app quase não tem tipo de tamanho médio: ou é título, ou é minúsculo. Onde isso dói mais: as evidências da aba Evolução ficam em 8px — é a lista que explica *por que* o dia é amarelo, no tamanho menos legível da tela. No glossário há 145 declarações renderizadas em 8px. O "/ 5" do score de prontidão está em 7px.
+
+Proposta: seis degraus como tokens — `12 · 14 · 16 · 20 · 26 · 34`. Nada abaixo de 12px. As eyebrows ("TREINO DE HOJE", "SEMANA ATUAL") continuam discretas por peso, cor e `letter-spacing`, não por tamanho.
+
+Esta SPEC vem primeiro porque quase todas as outras se apoiam nela: mexer em layout antes é redesenhar em cima de texto ilegível.
+
+## SPEC-46 — Alvos de toque de 44px
+
+Status: **proposta**, aguardando decisão
+
+Treze alvos abaixo do mínimo de 44×44, distribuídos nas quatro abas. Os piores, todos medidos com `getBoundingClientRect` num iPhone 14:
+
+- **Busca do glossário: 265×17px**, com `padding: 0`. Um campo de texto de dezessete pixels de altura, num app de celular.
+- **`summary` "Como esta leitura é feita": 318×13px.** Treze pixels de altura para abrir a explicação do método.
+- **Seletor de período da Evolução: três botões de 92×29px.**
+- **Botão de recarregar do cabeçalho: 32×32px**, presente nas quatro abas.
+
+Proposta: 44px de altura mínima para botão, link, `summary`, campo e item de lista tocável; 52px para o campo de busca, que é o alvo mais usado do glossário.
+
+## SPEC-47 — Uma ação cheia por tela
+
+Status: **proposta**, aguardando decisão
+
+Na aba Hoje, "Atualizar avaliação" e "Confirmar e enviar ao Intervals.icu" têm exatamente o mesmo fundo (`rgb(139, 92, 240)`), a mesma cor de texto e o mesmo tamanho (`320×46`). Verificado com `getComputedStyle` nos dois.
+
+Um recarrega a leitura. O outro **escreve no calendário do atleta**. A regra imutável mais importante do projeto — nada muda no Intervals.icu sem confirmação explícita para aquela mudança específica — está implementada no código e invisível no desenho.
+
+Proposta: um único botão sólido por tela, sempre o de maior consequência, com o efeito escrito perto dele ("só o botão lilás escreve no seu calendário"). Os demais viram contorno.
+
+## SPEC-48 — Layout de tablet e desktop
+
+Status: **proposta**, aguardando decisão
+
+A largura de `main` foi medida em **480px em 768, 1024 e 1440px** de tela. Existem dois breakpoints no app inteiro: `max-width:370px` e `min-width:700px`. Acima de 700, nada mais acontece — o app é uma coluna de celular encalhada no meio do monitor.
+
+Proposta: três breakpoints reais.
+
+- Até 599px: uma coluna e barra inferior, como hoje.
+- 600 a 959px: métricas em uma linha de quatro; "Programado" e "Recomendado" lado a lado, que é como se comparam; glossário em duas colunas.
+- 960px e acima: a barra inferior vira trilho lateral, e a tela se divide em duas colunas — decisão e treino à esquerda, dados de apoio à direita. Conteúdo limitado a 1180px para a linha de leitura não esticar.
+
+## SPEC-49 — Glossário navegável
+
+Status: **proposta**, aguardando decisão
+
+Medido num iPhone 14: **2.572px de altura, 3,0 telas de rolagem**, 29 termos em cartões brancos idênticos, sem filtro por categoria, com subtítulos em 9px e o campo de busca de 17px da SPEC-46. As categorias existem, mas só como rótulos cinza no meio da rolagem — não dá para pular para uma.
+
+Proposta: busca com altura de toque real, filtro por categoria em chips, e grade de duas a quatro colunas conforme a largura.
+
+Vale casar esta SPEC com a **SPEC-42**, que já registrou que o conteúdo do glossário está desatualizado: "Especificidade" descreve uma regra removida na T18, "ACWR" foi para a tela do dia na T33 sem entrada, e o código `C{n}W{n}D{n}` nunca foi documentado. Mexer na navegação sem corrigir o conteúdo arruma a estante e deixa o livro errado nela.
+
+## SPEC-50 — Teste de layout que roda sozinho
+
+Status: **proposta**, aguardando decisão
+
+Esta auditoria foi feita com um script de Playwright que abre as quatro abas em sete larguras, com as rotas de API interceptadas, e mede: estouro horizontal, alvos abaixo de 44px, texto abaixo de 12px e comprimento de linha.
+
+Proposta: transformar isso em verificação repetível, no mesmo espírito dos testes de mutação já usados no projeto — se alguém reintroduzir um texto de 7px ou um botão de 29px, o teste cai. Sem isso, a próxima tela nova traz os mesmos problemas de volta sem ninguém notar.
+
+É a única das seis que não muda nada na interface. É também a que impede as outras cinco de se desfazerem.

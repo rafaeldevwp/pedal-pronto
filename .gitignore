@@ -37,3 +37,5 @@ next-env.d.ts
 /outputs/
 /work/
 *.tsbuildinfo
+tests/layout/shots/
+tests/layout/report.json
