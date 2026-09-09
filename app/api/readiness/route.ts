@@ -1,5 +1,5 @@
 import { ownerId } from '@/lib/polar';
-import { confirmReadinessProposal, type Checkin } from '@/lib/readiness';
+import { confirmReadinessProposal, recordReadinessRun, type Checkin } from '@/lib/readiness';
 import { loadAthleteContext } from '@/lib/context-loader';
 export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
@@ -25,6 +25,7 @@ export async function POST(request: Request) {
       return Response.json(await confirmReadinessProposal(owner, body.proposalId, body.operationId, body.checkin, snapshot.mesocycle.value?.phase || 'desconhecida'));
     }
     const { readiness } = await loadAthleteContext(owner, body.checkin);
+    await recordReadinessRun(owner, readiness);
     return Response.json(readiness);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Falha ao processar';

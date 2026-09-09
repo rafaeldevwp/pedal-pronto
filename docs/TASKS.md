@@ -294,4 +294,19 @@ Pedida pelo atleta em 2026-09-09 a partir de uma referência visual, aprovada de
 - [ ] Estados com dados reais (proposta pendente, sessões da semana, gráficos, histórico) não verificados — sem credenciais neste ambiente.
 - [ ] Não publicar sem nova ordem do atleta.
 
+## Concluída localmente — T25 O check-in não desaparece da avaliação — SPEC-25
+
+Achado em auditoria pedida pelo atleta em 2026-09-09 ("posso confiar no sistema?").
+
+- [x] `runReadiness` parou de gravar em `readiness_runs`; leitura não escreve histórico.
+- [x] `recordReadinessRun` grava explicitamente, uma linha por atleta por dia (`UPDATE`, `INSERT` só se não existir), chamada só pelo `POST` de avaliação.
+- [x] `loadReadiness` usa `POST` com o check-in em todos os casos — antes o refresh automático (abertura, `visibilitychange` e timer de 3 min) usava `GET` sem check-in e a tela revertia para uma leitura mais permissiva.
+- [x] `checkinRef` elimina a defasagem de closure nos carregadores que rodam dentro de efeitos com dependências fixas.
+- [x] Os três caminhos de confirmação usam a mesma referência, mantendo a simetria que a revalidação da SPEC-08 exige.
+- [x] Verificado no navegador: carregamento e refresh automático enviam o check-in real do `localStorage`, não os defaults.
+- [x] `npm test` (78) e `npm run build` validados.
+- [ ] Sem cobertura automatizada: o runner não alcança `lib/readiness.ts` (depende do D1 e do alias `@/`). Um duplo de D1 nos testes fica como tarefa própria.
+- [ ] Linhas duplicadas de dias anteriores não foram reescritas — não há como saber qual refletia o check-in real.
+- [ ] Não publicar sem nova ordem do atleta.
+
 Regra: trabalhar somente na tarefa marcada como `NEXT`.

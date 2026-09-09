@@ -477,18 +477,6 @@ export async function runReadiness(
       },
       updatedAt: new Date().toISOString(),
     };
-    await runtime.DB.prepare(
-      'INSERT INTO readiness_runs (owner_id,run_date,classification,changed,report_json,created_at) VALUES (?,?,?,?,?,?)',
-    )
-      .bind(
-        owner,
-        today,
-        classification,
-        0,
-        JSON.stringify(result),
-        Date.now(),
-      )
-      .run();
     return result;
   } catch (e) {
     const m = e instanceof Error ? e.message : '';
@@ -536,6 +524,23 @@ export async function confirmReadinessProposal(owner: string, proposalId: string
   });
   return response;
 }
+// SPEC-25: só uma avaliação declarada pelo atleta grava histórico, e só uma linha por dia.
+// Leitura nunca escreve — antes, cada GET gravava uma linha sem check-in e a análise de
+// aprendizado (que lê MAX(id) por dia) passava a enxergar o dia sem a dor/sintomas relatados.
+export async function recordReadinessRun(owner: string, result: ReadinessResult) {
+  if (result.classification === 'indisponível') return;
+  const runDate = isoDate(new Date());
+  const report = JSON.stringify(result);
+  const now = Date.now();
+  const updated = await runtime.DB.prepare(
+    'UPDATE readiness_runs SET classification=?,report_json=?,created_at=? WHERE owner_id=? AND run_date=?',
+  ).bind(result.classification, report, now, owner, runDate).run();
+  if (!updated.meta.changes)
+    await runtime.DB.prepare(
+      'INSERT INTO readiness_runs (owner_id,run_date,classification,changed,report_json,created_at) VALUES (?,?,?,?,?,?)',
+    ).bind(owner, runDate, result.classification, 0, report, now).run();
+}
+
 function workoutStructure(description: unknown) {
   return String(description || '')
     .split(/\r?\n/)

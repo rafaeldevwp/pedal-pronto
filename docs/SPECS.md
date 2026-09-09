@@ -425,3 +425,34 @@ Aceite:
 Limitação da verificação: este ambiente não tem credenciais do Polar nem do Intervals.icu, então só os **estados desconectados** foram vistos. Telas com dados reais — proposta pendente, lista de sessões da semana, gráficos de potência e carga, histórico de decisões — não foram verificadas visualmente e continuam para conferência pós-publicação.
 
 Fora de escopo: nenhuma regra de decisão, texto de justificativa, hierarquia de tela ou fluxo de consentimento mudou. A SPEC-19 (Hoje essencial) e a SPEC-08 (consentimento) seguem valendo sem alteração.
+
+## SPEC-25 — O check-in não pode desaparecer da avaliação nem do histórico
+
+Status: implementada e validada localmente em 2026-09-09; **não publicada**
+
+Diagnóstico, encontrado em auditoria a pedido do atleta. O problema tinha duas metades que se somavam:
+
+**1. A tela voltava atrás sozinha.** `loadReadiness(false)` fazia `GET /api/readiness`, e o `GET` (`route.ts:9`) chamava `loadAthleteContext(owner)` **sem check-in**. Esse caminho rodava na abertura do app, a cada `visibilitychange` e **a cada 3 minutos** por `setInterval`. Como dor, sintomas, fadiga, pernas e motivação entram na contagem de flags de `runReadiness`, a avaliação sem check-in produz sistematicamente uma classificação **mais permissiva**. Na prática: o atleta relatava dor 8, via vermelha e uma proposta de sessão conservadora; três minutos depois, sem tocar em nada, a tela mostrava verde e a proposta sumia. Isso contraria a regra imutável "dor ou doença exigem conduta conservadora" — o app falhava para o lado permissivo.
+
+A trava de consentimento continha o dano: confirmar usava o check-in, `confirmReadinessProposal` recalculava com ele, o fingerprint não batia e a escrita era recusada com `PROPOSAL_CHANGED`. Nenhum treino errado foi escrito no Intervals.icu — mas o atleta via a leitura errada e recebia um erro confuso ao tentar confirmar.
+
+**2. O histórico do dia era sobrescrito.** `runReadiness` gravava em `readiness_runs` a **cada chamada**, inclusive nas leituras. `app/api/performance/route.ts:93` lê `MAX(id) GROUP BY run_date` — a última linha do dia vence. Então qualquer refresh posterior substituía a avaliação com check-in por uma sem, e o aprendizado individual (SPEC-03) passava a associar o dia a uma classificação que ignorava a dor relatada.
+
+Correção:
+
+1. **Leitura não escreve histórico.** `runReadiness` não grava mais. A gravação virou `recordReadinessRun(owner, result)`, explícita, chamada só pelo `POST` de avaliação. `GET /api/readiness` continua existindo e respondendo, mas não toca no histórico.
+2. **Uma linha por dia.** `recordReadinessRun` faz `UPDATE` por `(owner_id, run_date)` e só insere se não houver linha — em vez de acumular uma por carregamento. Resultados `indisponível` não são gravados, como já acontecia antes. Nenhuma mudança de schema.
+3. **O check-in viaja sempre.** `loadReadiness` passou a usar `POST` com o check-in em todos os casos; o parâmetro booleano agora só decide se a Semana também recarrega.
+4. **Fim da defasagem de closure.** Os carregadores rodam dentro de efeitos com dependências fixas (`[]` e `[polarConnected]`), então liam o `checkin` do closure — que ficaria preso ao valor inicial para sempre, inclusive no timer de 3 minutos. Passaram a ler de `checkinRef`. Os três caminhos de confirmação (`confirm_today`, `create_suggestion`, `apply_proposal`) usam a mesma referência, para a revalidação da SPEC-08 enxergar exatamente o check-in que gerou a proposta.
+
+Aceite:
+
+- [x] Nenhum caminho de leitura grava em `readiness_runs`.
+- [x] No máximo uma linha por atleta por dia; a última avaliação do dia é a que vale.
+- [x] Toda avaliação de prontidão carrega o check-in, inclusive a automática.
+- [x] Carregamento inicial e refresh automático verificados no navegador: `POST` com `dor=8, sintomas=6, fadiga=9` vindos do `localStorage`, não os defaults — provando que a referência resolveu a defasagem.
+- [x] `npm test` (78) e `npm run build` validados.
+
+Limitação registrada: a suíte não alcança esta correção. Os testes do projeto cobrem só os núcleos puros (`training-safety-core.ts`, `context.ts`, `decision-engine.ts`); `lib/readiness.ts` depende do D1 e do alias `@/`, que o runner (`node --experimental-strip-types`) não resolve. A verificação foi estrutural mais navegador, não automatizada. Fechar essa lacuna pediria um duplo de D1 nos testes — vale como tarefa própria, não foi feito aqui.
+
+Não corrigido de propósito: linhas duplicadas de dias **anteriores** continuam no banco. Não há como saber retroativamente qual delas refletia o check-in real, então nada foi reescrito.

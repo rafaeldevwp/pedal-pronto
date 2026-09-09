@@ -47,7 +47,7 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-**Ponto de retomada (2026-09-09): a T24 (identidade visual em branco e lilás) foi implementada e validada localmente, aguardando ordem de publicação. Depois dela, a próxima tarefa real é a T23, bloqueada pelas quatro decisões do atleta listadas em `docs/TASKS.md`.** T20 e T21 já estão no código (commit `5755724`); a parte de código da T22 foi fechada em 2026-09-09; da T22 resta só decidir o destino de `mesocycle_phases`. Nada disso foi publicado — a versão 25 é anterior a esse commit, e este ambiente não tem acesso ao mecanismo de publicação do Sites.
+**Ponto de retomada (2026-09-09): a T25 (check-in sumindo da avaliação — correção de segurança) e a T24 (identidade visual em branco e lilás) foram implementadas e validadas localmente, aguardando ordem de publicação. A T25 é a que mais urge publicar. Depois dela, a próxima tarefa real é a T23, bloqueada pelas quatro decisões do atleta listadas em `docs/TASKS.md`.** T20 e T21 já estão no código (commit `5755724`); a parte de código da T22 foi fechada em 2026-09-09; da T22 resta só decidir o destino de `mesocycle_phases`. Nada disso foi publicado — a versão 25 é anterior a esse commit, e este ambiente não tem acesso ao mecanismo de publicação do Sites.
 
 T19 foi concluída e publicada na versão 25 em 2026-09-08. A tela Hoje foi reduzida ao essencial: prontidão e treino permanecem visíveis; conexão saudável deixou de ocupar espaço; recuperação e check-in foram consolidados sob expansão; o gráfico de carga deixou de ser repetido nessa tela e continua em Evolução. Nenhuma regra de decisão ou escrita no Intervals.icu mudou.
 
@@ -138,6 +138,20 @@ O que o código já tinha decidido, e que agora está registrado nas SPECs:
 Fechado nesta sessão, a parte de código da T22: `stressed` passou a ser calculado uma única vez em `app/api/week/route.ts` (as duas cópias eram idênticas e nenhuma dependia do item do laço), e `lib/off-day-suggestions.ts` passou a importar `LoadSafetyFlag` de `lib/load-safety.ts` em vez de redefinir o tipo. Nenhuma decisão de treino muda por causa disso; 78 testes e o build seguem verdes.
 
 Continua em aberto, dependendo do atleta: o destino da tabela `mesocycle_phases` (T22) e as quatro decisões da SPEC-23. Nenhuma migração foi criada e nada do schema foi tocado.
+
+## Correção de segurança: o check-in sumia da avaliação e do histórico (T25/SPEC-25, 2026-09-09)
+
+O achado mais sério de toda a auditoria, encontrado quando o atleta perguntou se podia confiar no sistema. Duas metades somadas:
+
+A tela **revertia sozinha para uma leitura mais permissiva**. O refresh automático — abertura do app, `visibilitychange` e um `setInterval` de 3 minutos — chamava `GET /api/readiness`, que avaliava **sem o check-in**. Como dor, sintomas e fadiga entram na contagem de flags, a avaliação sem check-in classifica sistematicamente mais verde. Na prática: dor 8 relatada, tela vermelha com proposta conservadora, e três minutos depois verde sem proposta, sem o atleta tocar em nada. Contraria a regra imutável de conduta conservadora para dor/doença.
+
+A trava de consentimento segurou o dano — confirmar recalculava com o check-in, o fingerprint divergia e a escrita era recusada com `PROPOSAL_CHANGED`. **Nenhum treino errado foi escrito no Intervals.icu.** Mas o atleta via a leitura errada e levava um erro confuso ao confirmar.
+
+E o **histórico do dia era sobrescrito**: `runReadiness` gravava em `readiness_runs` a cada chamada, inclusive nas leituras, e `performance/route.ts` lê `MAX(id)` por dia — então o último refresh sem check-in virava "a avaliação do dia" para o aprendizado individual (SPEC-03).
+
+Corrigido: leitura não grava mais; `recordReadinessRun` grava explicitamente uma linha por dia; o check-in viaja em toda avaliação; e `checkinRef` eliminou uma defasagem de closure que deixaria o timer preso ao valor inicial para sempre. Sem mudança de schema.
+
+Lacuna consciente: a suíte não alcança isso — os testes cobrem só os núcleos puros, e `lib/readiness.ts` depende do D1 e do alias `@/`, que o runner não resolve. A verificação foi estrutural mais navegador. Um duplo de D1 nos testes fica como tarefa própria.
 
 ## Identidade visual: verde-floresta dá lugar a branco e lilás (T24/SPEC-24, 2026-09-09)
 

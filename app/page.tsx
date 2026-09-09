@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Activity,
   Bell,
@@ -319,6 +319,10 @@ export default function Home() {
     [glossarySearch, setGlossarySearch] = useState(''),
     [glossarySelected, setGlossarySelected] = useState(''),
     [checkin, setCheckin] = useState<CheckinState>({ ...defaultCheckin });
+  // SPEC-25: os carregadores rodam dentro de efeitos com dependências fixas, então leem o
+  // check-in por referência — pelo closure eles ficariam presos ao valor inicial para sempre.
+  const checkinRef = useRef(checkin);
+  checkinRef.current = checkin;
   useEffect(() => {
     if ('serviceWorker' in navigator)
       navigator.serviceWorker.register('/sw.js');
@@ -385,17 +389,19 @@ export default function Home() {
     if (week?.proposal && window.location.hash === '#future-proposal')
       window.setTimeout(() => document.getElementById('future-proposal')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
   }, [week?.proposal?.eventId]);
-  async function loadReadiness(withCheckin: boolean) {
+  // SPEC-25: toda avaliação leva o check-in. Antes, os refreshes automáticos usavam GET sem
+  // check-in e a tela voltava a uma leitura mais permissiva, ignorando dor e sintomas relatados.
+  async function loadReadiness(alsoReloadWeek: boolean) {
     setLoading(true);
     try {
       const r = await fetch('/api/readiness', {
-        method: withCheckin ? 'POST' : 'GET',
-        headers: withCheckin ? { 'Content-Type': 'application/json' } : undefined,
-        body: withCheckin ? JSON.stringify({ action: 'evaluate', checkin }) : undefined,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'evaluate', checkin: checkinRef.current }),
       });
       if (r.ok) {
         setResult(await r.json());
-        if (withCheckin) loadWeek();
+        if (alsoReloadWeek) loadWeek();
       }
     } finally {
       setLoading(false);
@@ -407,7 +413,7 @@ export default function Home() {
     try {
       const response = await fetch('/api/readiness', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'confirm_today', confirmed: true, proposalId: result.proposal.id, operationId: crypto.randomUUID(), checkin }),
+        body: JSON.stringify({ action: 'confirm_today', confirmed: true, proposalId: result.proposal.id, operationId: crypto.randomUUID(), checkin: checkinRef.current }),
       });
       const body = await response.json();
       if (!response.ok) {
@@ -424,7 +430,7 @@ export default function Home() {
     } finally { setLoading(false); }
   }
   async function loadWeek() {
-    const params = new URLSearchParams(checkin as unknown as Record<string, string>);
+    const params = new URLSearchParams(checkinRef.current as unknown as Record<string, string>);
     const response = await fetch(`/api/week?${params.toString()}`);
     if (response.ok) setWeek(await response.json());
   }
@@ -474,7 +480,7 @@ export default function Home() {
     try {
       const response = await fetch('/api/week', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create_suggestion', confirmed: true, proposalId: week.suggestion.id, operationId: crypto.randomUUID(), checkin }),
+        body: JSON.stringify({ action: 'create_suggestion', confirmed: true, proposalId: week.suggestion.id, operationId: crypto.randomUUID(), checkin: checkinRef.current }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || 'Não foi possível criar.');
@@ -494,7 +500,7 @@ export default function Home() {
     try {
       const response = await fetch('/api/week', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'apply_proposal', confirmed: true, proposalId: week.proposal.id, operationId: crypto.randomUUID(), eventId: week.proposal.eventId, checkin }),
+        body: JSON.stringify({ action: 'apply_proposal', confirmed: true, proposalId: week.proposal.id, operationId: crypto.randomUUID(), eventId: week.proposal.eventId, checkin: checkinRef.current }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || 'Não foi possível aplicar a proposta.');
