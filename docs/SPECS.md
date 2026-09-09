@@ -796,3 +796,35 @@ Aceite:
 - [x] Confiança conta métricas comparáveis, não métricas que variaram.
 - [x] `lib/activity-comparison.ts` extraído; 5 testes novos, os dois vieses mortos por mutação.
 - [x] `npm test` (84) e `npm run build` validados.
+
+## SPEC-38 — Rede de proteção para o arquivo que decide a cor do dia
+
+Status: implementada e validada localmente em 2026-09-09; **não publicada**
+
+Decisão do atleta em 2026-09-09: adicionar o segundo runner, só para esse arquivo.
+
+`lib/readiness.ts` é o arquivo mais crítico do projeto — é ele que decide se o dia é verde, amarelo ou vermelho, e se o treino de hoje ganha uma proposta de ajuste. Até aqui ele estava sem teste nenhum, e não por descuido: ele importa `lib/polar.ts`, que importa `cloudflare:workers`, um módulo que só existe dentro do runtime da Cloudflare. O runner padrão (`node --test`) não consegue carregá-lo.
+
+`@cloudflare/vitest-pool-workers` roda os testes dentro do workerd de verdade, com um D1 real por execução. `vitest.workers.config.ts` monta o binding `DB` e as variáveis do Polar e do Intervals.icu; as chamadas de rede são substituídas por respostas fixas, então cada teste acende um sinal por vez.
+
+Os 84 testes puros continuam onde estavam, no mesmo comando de sempre. São dois runners, não um substituindo o outro:
+
+- `npm test` — 84 testes, código puro, roda em menos de um segundo.
+- `npm run test:workers` — 10 testes, dentro do runtime da Cloudflare.
+
+Os dez testes cobrem as duas mudanças recentes e as garantias que não podem cair:
+
+- **T25** — o check-in muda a cor do dia; a mesma noite sem check-in volta a verde.
+- **T33** — ACWR e rampa contam na classificação, com o ACWR vindo do Intervals.icu e o teto fixo em 6.
+- Releitura do mesmo dia atualiza a linha existente em vez de empilhar uma por consulta.
+- Dia indisponível não vira registro: ausência de dado não é uma decisão.
+- Sem conexão com o Polar a prontidão falha; sem sono recente ela fica indisponível — nos dois casos sem chutar uma cor.
+
+Aceite:
+
+- [x] `vitest.workers.config.ts` e `npm run test:workers` funcionando.
+- [x] `npm test` segue com os mesmos 84 testes, sem mudança.
+- [x] Mutação: ignorar o check-in derruba 2 testes; devolver ACWR e rampa a texto puro derruba 2; empilhar linhas derruba 1.
+- [x] `npm run build` validado.
+
+O que **não** ficou coberto: a proposta de ajuste do treino, a confirmação (`confirmReadinessProposal`) e o caminho de escrita no Intervals.icu. É a próxima camada, e vale como pendência registrada.

@@ -28,6 +28,7 @@ Execute esta lista antes de alterar o produto.
 
 - Implementar uma tarefa por vez.
 - Validar build e fluxos afetados.
+- Rodar os dois runners: `npm test` (código puro) e `npm run test:workers` (o que depende do runtime da Cloudflare, hoje `lib/readiness.ts`).
 - Publicar somente após validação.
 - Atualizar `PROJECT_MEMORY.md`, `docs/TASKS.md` e, se necessário, `docs/DESIGN.md`.
 - Registrar o próximo ponto de retomada em uma frase.

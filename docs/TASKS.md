@@ -464,3 +464,14 @@ Fecha o último item aberto da T22.
 - [x] Mutação: cada viés reintroduzido derruba o teste correspondente.
 - [x] `npm test` (84) e `npm run build` validados.
 - [ ] Não publicar sem nova ordem do atleta.
+
+## Concluída localmente — T38 Rede de proteção para `lib/readiness.ts` — SPEC-38
+
+- [x] Decisão do atleta: adicionar o runner, só para esse arquivo.
+- [x] `@cloudflare/vitest-pool-workers` + `vitest.workers.config.ts`; `npm run test:workers` com 10 testes dentro do workerd.
+- [x] `npm test` intocado: os mesmos 84 testes puros.
+- [x] Cobertos: check-in na cor do dia (T25), ACWR e rampa na classificação (T33), releitura que não empilha, indisponível que não vira registro, falhas de origem que não chutam cor.
+- [x] Mutação: as três mudanças reintroduzidas derrubam os testes correspondentes.
+- [x] `docs/PREFLIGHT.md` agora manda rodar os dois runners.
+- [ ] Pendência: proposta de ajuste, confirmação e escrita no Intervals.icu seguem sem teste.
+- [ ] Não publicar sem nova ordem do atleta.
