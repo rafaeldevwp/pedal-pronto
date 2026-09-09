@@ -370,7 +370,7 @@ Dependências: nenhuma; independente da SPEC-20 e da SPEC-21, pode ser feita em 
 
 ## SPEC-23 — Fase do mesociclo inferida da carga planejada real, sem âncora manual
 
-Status: proposta — direção confirmada pelo atleta em 2026-09-08; detalhes de implementação em aberto (ver abaixo)
+Status: **cancelada** — substituída pela SPEC-28 em 2026-09-09, que resolve o mesmo problema lendo o código do nome do treino em vez de inferir por tendência de carga
 
 Diagnóstico: o atleta monta os ciclos de treino com apoio de IA antes e deixa a progressão pronta no calendário do Intervals.icu — ou seja, a alternância entre semanas de progressão e semanas de recuperação já está implícita na carga/intensidade que ele mesmo planejou semana a semana. `lib/mesocycle.ts` ignora isso completamente: resolve a fase a partir de uma data-âncora cadastrada manualmente pelo atleta dentro do Pedal Pronto (`mesocycle_anchor`) e de uma regra fixa e cega — todo ciclo tem exatamente 4 semanas, a semana 4 é sempre recuperação — sem nunca olhar a carga real planejada no Intervals.icu. O único elo com o Intervals.icu é `parseCyclePointer`, que lê o padrão `C{n}W{n}D{n}` do nome do evento apenas para emitir um aviso de divergência, nunca para corrigir. Isso contraria o princípio já registrado em `PROJECT_MEMORY.md` ("O Intervals.icu continua sendo a fonte oficial do plano") e, desde a T18/SPEC-18, essa fase potencialmente errada decide de verdade o ajuste do treino de hoje (`lib/readiness.ts`) e a proposta futura (`futureProposal`).
 

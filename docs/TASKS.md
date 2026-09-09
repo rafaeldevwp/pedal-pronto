@@ -259,9 +259,11 @@ Os dois itens de código foram feitos em 2026-09-09. O único item restante é u
 - [x] `npm test` e `npm run build` validados.
 - [ ] Não publicar sem nova ordem do atleta.
 
-## Proposta — T23 Fase inferida da carga planejada real — SPEC-23
+## Cancelada — T23 Fase inferida da carga planejada real — SPEC-23
 
-Direção confirmada pelo atleta em 2026-09-08: ele monta os ciclos com apoio de IA e deixa a progressão pronta no calendário do Intervals.icu — a fase já está implícita na carga planejada, não precisa de âncora manual nem de regra fixa de 4 semanas.
+**Substituída pela T28/SPEC-28 em 2026-09-09.** A intenção era a mesma — tirar a fase da âncora manual —, mas o caminho ficou melhor: em vez de inferir por tendência de carga planejada (que exigiria escolher janela de comparação e limiar de queda), a fase passou a ser lida do código `C{n}W{n}D{n}` que o atleta já escreve no nome do treino. Nenhuma das quatro decisões abaixo precisa mais ser tomada.
+
+Direção original, registrada em 2026-09-08: ele monta os ciclos com apoio de IA e deixa a progressão pronta no calendário do Intervals.icu — a fase já está implícita na carga planejada, não precisa de âncora manual nem de regra fixa de 4 semanas.
 
 - [ ] Decisão do atleta: quantas semanas anteriores entram na média de referência da carga planejada (ex.: 3 ou 4)?
 - [ ] Decisão do atleta: qual limiar percentual de queda caracteriza semana de recuperação?
