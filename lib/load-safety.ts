@@ -24,12 +24,21 @@ export function calculateCtlRamp(days: LoadDay[]) {
   return withCtl.at(-1)!.ctl! - withCtl.at(-8)!.ctl!;
 }
 
-export function evaluateLoadSafety(days: LoadDay[], rampLimit: number) {
-  const acwr = calculateAcwr(days);
+// SPEC-29: o ACWR passa a vir do Intervals.icu, fonte oficial da carga, como `atl / ctl`. É uma
+// razão pura, sem ambiguidade de unidade, então os limiares convencionais (0,8–1,3 seguro, acima
+// de 1,5 elevado) continuam valendo. O cálculo próprio de média móvel 7/28 fica só como reserva
+// para quando o Intervals.icu não devolver os dois valores.
+export function acwrFromIntervals(atl?: number, ctl?: number) {
+  if (!Number.isFinite(atl) || !Number.isFinite(ctl) || Number(ctl) <= 0) return undefined;
+  return Number(atl) / Number(ctl);
+}
+
+export function evaluateLoadSafety(days: LoadDay[], rampLimit: number, acwrFromSource?: number) {
+  const acwr = acwrFromSource ?? calculateAcwr(days);
   const rampRate = calculateCtlRamp(days);
   const flags: LoadSafetyFlag[] = [];
   if (acwr !== undefined && acwr > 1.5) flags.push({ id: 'acwr_high', severity: 'severa' });
   else if (acwr !== undefined && acwr > 1.3) flags.push({ id: 'acwr_high', severity: 'moderada' });
   if (rampRate !== undefined && rampRate > rampLimit) flags.push({ id: 'ramp_rate_exceeded', severity: 'moderada' });
-  return { acwr, rampRate, rampLimit, flags };
+  return { acwr, acwrSource: acwrFromSource !== undefined ? 'intervals.icu' : 'cálculo local', rampRate, rampLimit, flags };
 }

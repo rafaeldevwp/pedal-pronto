@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { calculateAcwr, evaluateLoadSafety, isYesterdayLoadHigh } from '../lib/load-safety.ts';
+import { acwrFromIntervals, calculateAcwr, evaluateLoadSafety, isYesterdayLoadHigh } from '../lib/load-safety.ts';
 
 const history = (loads: number[], ctlStart = 40) => loads.map((load, index) => ({ date: `d${index}`, load, ctl: ctlStart + index }));
 
@@ -31,4 +31,30 @@ test('carga de ontem usa um único piso conservador de 70', () => {
   assert.equal(isYesterdayLoadHigh(71, 20), true);
   assert.equal(isYesterdayLoadHigh(91, 60), true);
   assert.equal(isYesterdayLoadHigh(90, 60), false);
+});
+
+// SPEC-29: o ACWR passa a vir do Intervals.icu como atl/ctl; o cálculo local vira reserva.
+
+test('acwrFromIntervals divide atl por ctl e recusa entradas inválidas', () => {
+  assert.equal(acwrFromIntervals(60, 50), 1.2);
+  assert.equal(acwrFromIntervals(undefined, 50), undefined);
+  assert.equal(acwrFromIntervals(60, undefined), undefined);
+  assert.equal(acwrFromIntervals(60, 0), undefined);
+});
+
+test('o valor do Intervals.icu prevalece sobre o cálculo local de média móvel', () => {
+  const days = Array.from({ length: 28 }, (_, index) => ({ date: `d${index}`, load: 50, ctl: 40 + index }));
+  const local = evaluateLoadSafety(days, 6);
+  const fromSource = evaluateLoadSafety(days, 6, 1.62);
+  assert.equal(local.acwrSource, 'cálculo local');
+  assert.equal(fromSource.acwrSource, 'intervals.icu');
+  assert.equal(fromSource.acwr, 1.62);
+  assert.ok(fromSource.flags.some((flag) => flag.id === 'acwr_high' && flag.severity === 'severa'));
+});
+
+test('sem atl/ctl do Intervals.icu o cálculo local ainda responde', () => {
+  const days = Array.from({ length: 28 }, (_, index) => ({ date: `d${index}`, load: index >= 21 ? 120 : 40, ctl: 40 }));
+  const result = evaluateLoadSafety(days, 6, acwrFromIntervals(undefined, undefined));
+  assert.equal(result.acwrSource, 'cálculo local');
+  assert.ok(result.acwr !== undefined);
 });

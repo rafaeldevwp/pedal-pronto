@@ -353,12 +353,22 @@ Substitui a T23/SPEC-23, que ia inferir a fase pela carga planejada.
 
 - [ ] Migrar os três para `intervalsFetch`, sem mudar comportamento.
 
-## Proposta — T29 ACWR e rampa vêm do Intervals.icu — SPEC-29 (a escrever)
+## Concluída localmente — T29 ACWR vem do Intervals.icu — SPEC-29
 
-O Intervals.icu não expõe um campo `acwr`, mas devolve `atl`, `ctl` e `rampRate`. Hoje o app recalcula os dois por fórmulas próprias — ACWR por média móvel de 7/28 dias, rampa por CTL de hoje menos o de 8 dias atrás — e prefere os seus valores aos do Intervals.icu.
+- [x] Decisão do atleta: manter o Intervals.icu como fonte de verdade.
+- [x] Limiares mantidos em 1,3 e 1,5 — são os convencionais para a métrica nas duas formas de cálculo, então a régua não mudou junto com a origem.
+- [x] `acwrFromIntervals(atl, ctl)` em `lib/load-safety.ts`; `evaluateLoadSafety` usa esse valor e informa a fonte em `acwrSource`.
+- [x] Cálculo local de média móvel mantido como reserva explícita para quando faltar `atl` ou `ctl`.
+- [x] Rampa segue local; removido o `?? ramp` que fazia `metrics.ramp` carregar duas definições conforme o dia.
+- [x] Testes cobrindo razão, entradas inválidas, precedência da fonte externa e queda para a reserva.
+- [x] `npm test` (88) e `npm run build` validados.
+- [ ] Não publicar sem nova ordem do atleta.
 
-- [ ] **Decisão do atleta, pendente**: trocar a base de cálculo muda quando os alertas disparam. Os limiares atuais (1,3 moderado, 1,5 severo) foram pensados para a média móvel; a faixa usual para ATL/CTL é 0,8 a 1,3. Quais ficam valendo?
-- [ ] Só implementar depois dessa decisão.
+## Pergunta de produto em aberto — ACWR e rampa deveriam mexer na prontidão?
+
+O texto da SPEC-12 se contradiz: um parágrafo diz que os dois flags participam da composição de severidade do semáforo, o aceite da mesma SPEC diz que nada muda na decisão do dia. O código seguiu o aceite — os flags são sinal, não entram em `flag(...)`.
+
+- [ ] Decisão do atleta: ACWR e rampa elevados deveriam puxar a prontidão do dia para amarela, ou continuam apenas explicando?
 
 ## Investigação — coração × potência aparece vazio
 

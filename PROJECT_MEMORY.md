@@ -47,7 +47,7 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-**Ponto de retomada (2026-09-09): T24, T25, T26, T27 e T28 estão implementadas e validadas localmente, aguardando ordem de publicação. A T25 é a que mais urge. Em aberto: os limiares da T29 (ACWR/rampa vindos do Intervals.icu), a investigação do gráfico coração × potência vazio, e o destino das tabelas sem uso (`mesocycle_phases`, `mesocycle_anchor`).**
+**Ponto de retomada (2026-09-09): T24, T25, T26, T27, T28 e T29 estão implementadas e validadas localmente, aguardando ordem de publicação. A T25 é a que mais urge. Em aberto: se ACWR e rampa deveriam influenciar a prontidão do dia (contradição no texto da SPEC-12), a investigação do gráfico coração × potência vazio, e o destino das tabelas sem uso (`mesocycle_phases`, `mesocycle_anchor`).**
 
 T19 foi concluída e publicada na versão 25 em 2026-09-08. A tela Hoje foi reduzida ao essencial: prontidão e treino permanecem visíveis; conexão saudável deixou de ocupar espaço; recuperação e check-in foram consolidados sob expansão; o gráfico de carga deixou de ser repetido nessa tela e continua em Evolução. Nenhuma regra de decisão ou escrita no Intervals.icu mudou.
 
@@ -143,11 +143,11 @@ Continua em aberto, dependendo do atleta: o destino da tabela `mesocycle_phases`
 
 Ao usar o app, o atleta apontou que a aba Evolução está poluída e que ela pede dados que ele já mantém no Intervals.icu. A auditoria confirmou e rendeu três frentes, com as decisões dele já tomadas em duas:
 
-**Situação: T27 e T28 implementadas e validadas localmente em 2026-09-09. A T29 segue bloqueada.**
+**Situação: T27, T28 e T29 implementadas e validadas localmente em 2026-09-09.**
 
 - **SPEC-27/T27 (concluída)**: sete cards no mesmo nível visual, dois deles formulários, nada sob expansão — contra o próprio `docs/DESIGN.md`. Faz para a Evolução o que a SPEC-19 fez para a tela Hoje. Decisões fechadas: o card "Direção da temporada" sai por completo (o objetivo não decide nada desde a T18) e o teto de rampa do CTL vira a constante 6, deixando de ser campo — era o único limiar do sistema que pedia opinião do atleta, e ninguém tem como saber o próprio teto.
 - **SPEC-28/T28 (concluída)**: a fase do mesociclo passa a vir do padrão `C{n}W{n}D{n}` no nome do treino, que o atleta já usa. Descoberta que fechou o caso: `parseCyclePointer` já existia e sabia ler esse padrão, mas `resolveMesocycle` era chamada com dois argumentos e o nome do evento nunca chegava — o parser estava pronto e ocioso, servindo só para um aviso de divergência que jamais podia disparar. Sem código no nome, herda o último ciclo conhecido avançando a contagem desde o último treino codificado. `mesocycle_anchor` ficou sem uso e a rota perdeu o `PUT`. **Substitui a SPEC-23**.
-- **SPEC-29/T29 (bloqueada)**: o Intervals.icu não expõe `acwr`, mas devolve `atl`, `ctl` e `rampRate`. O app recalcula os dois por fórmulas próprias e prefere as suas — então os números do app e os do Intervals.icu podem divergir hoje. Trocar a base exige revisar os limiares (1,3/1,5 foram pensados para média móvel; ATL/CTL costuma usar 0,8 a 1,3), e isso muda quando um alerta dispara. Decisão pendente.
+- **SPEC-29/T29 (concluída)**: o ACWR passa a vir do Intervals.icu como `atl / ctl`, com o cálculo local de média móvel 7/28 como reserva explícita e a fonte informada em `acwrSource`. Os limiares não mudaram: 1,3 e 1,5 são os convencionais para a métrica nas duas formas de cálculo, então a régua ficou igual e só a origem mudou. A rampa segue local — a janela e a unidade do `rampRate` do Intervals.icu não puderam ser verificadas daqui (domínio bloqueado no proxy), e aplicar o teto de 6 sobre escala desconhecida trocaria uma divergência por um erro. Removido o `?? ramp`, que fazia `metrics.ramp` carregar duas definições conforme o dia. Risco dimensionado no código: esses flags não entram na classificação verde/amarela/vermelha nem em caminho de escrita — alimentam a prévia do motor, as sugestões de dia OFF e os textos.
 
 Aberto também: o gráfico coração × potência aparece vazio. Exige potência e FC na mesma atividade, tipo Ride, nos últimos 42 dias. Falta saber se é dado ausente ou leitura errada de campo antes de virar SPEC.
 

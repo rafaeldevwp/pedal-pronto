@@ -558,3 +558,32 @@ Aceite:
 **Substitui a SPEC-23**, que pretendia inferir a fase pela tendência de carga planejada. O caminho pelo nome do treino é mais direto, não depende de limiar nenhum e reflete o que o atleta de fato planejou.
 
 Pendência registrada: a chamada ao Intervals.icu agora tem uma casa compartilhada em `lib/intervals.ts`, mas `lib/readiness.ts`, `app/api/week/route.ts` e `app/api/performance/route.ts` seguem com cópias próprias, anteriores a este módulo. Unificar as três é limpeza à parte, não feita aqui para não mexer em caminho que já funciona.
+
+## SPEC-29 — ACWR vem do Intervals.icu, fonte oficial da carga
+
+Status: implementada e validada localmente em 2026-09-09; **não publicada**
+
+Diagnóstico: o app recalculava ACWR e rampa por conta própria, embora o Intervals.icu seja a fonte oficial da carga. O ACWR local usava média móvel — soma dos últimos 7 dias sobre a média semanal dos últimos 28 —, enquanto o Intervals.icu expressa a mesma ideia como `atl / ctl`, exponencial e com janelas de 7 e 42 dias. Dois números diferentes para o mesmo conceito: o que o atleta via no app não batia com o gráfico que ele monta lá. Na rampa a divergência já era pior — o campo `rampRate` do Intervals.icu era buscado e descartado, servindo só de reserva para o cálculo próprio, então um único campo carregava duas definições conforme o dia.
+
+Decisão do atleta: manter o Intervals.icu como fonte de verdade.
+
+O que foi separado nessa decisão: **o dado** vem do Intervals.icu; **o limiar** continua sendo do produto, porque o Intervals.icu não publica limiar nenhum. E o limiar não precisou mudar — 0,8 a 1,3 como faixa segura e acima de 1,5 como elevado são os números convencionais do ACWR nas duas variantes de cálculo.
+
+Regra final:
+
+- `acwrFromIntervals(atl, ctl)` devolve a razão do Intervals.icu. É uma razão pura, sem unidade, então adotá-la não mexe na escala dos limiares.
+- `evaluateLoadSafety` aceita esse valor e só cai no cálculo local de média móvel quando o Intervals.icu não devolve os dois campos. O resultado informa qual fonte foi usada (`acwrSource`), para a origem ficar visível em vez de implícita.
+- A **rampa continua sendo calculada localmente** (CTL de hoje menos o de 8 dias atrás), e o `?? ramp` que misturava a definição do Intervals.icu no mesmo campo foi removido. Motivo: a janela e a unidade do `rampRate` do Intervals.icu não puderam ser verificadas — o domínio está bloqueado no proxy de saída deste ambiente — e aplicar um teto numérico de 6 sobre um número de escala desconhecida trocaria uma divergência por um erro de escala. Um campo, uma definição.
+
+Aceite:
+
+- [x] ACWR vem de `atl / ctl` do Intervals.icu quando ambos existem.
+- [x] O cálculo local permanece como reserva explícita, e a fonte usada é informada.
+- [x] Limiares inalterados (1,3 moderado, 1,5 severo), por serem os convencionais para a métrica nas duas formas.
+- [x] Nenhum campo carrega mais duas definições: `metrics.ramp` é sempre o cálculo local.
+- [x] Testes cobrindo razão, entradas inválidas, precedência da fonte externa e queda para a reserva.
+- [x] `npm test` (88) e `npm run build` validados.
+
+Contexto que dimensiona o risco, verificado no código: os flags de ACWR e rampa **não** entram na função `flag(...)` que classifica verde/amarela/vermelha, e não alcançam nenhum caminho de escrita. Eles alimentam a prévia do motor (somente leitura), as sugestões de dia OFF e os textos de justificativa. Um limiar mal calibrado aqui incomoda, não coloca treino em risco.
+
+Ambiguidade registrada, **não resolvida**: o texto da SPEC-12 se contradiz. Um parágrafo diz que os dois flags "participam da composição de severidade do semáforo do mesmo jeito que os flags já existentes"; o aceite da mesma SPEC diz "nenhuma mudança de comportamento na decisão de treino do dia". O código seguiu o aceite — sinal apenas. Decidir se ACWR e rampa **deveriam** influenciar a prontidão do dia é pergunta de produto em aberto, separada desta SPEC.
