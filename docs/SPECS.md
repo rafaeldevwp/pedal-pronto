@@ -750,3 +750,24 @@ Aceite:
 - [x] `npm test` (79) e `npm run build` validados.
 
 Se um dia a prévia fizer falta, ela está no histórico do git — mas voltar deveria vir acompanhado de um propósito claro, que era justamente o que faltava.
+
+## SPEC-36 — Remover as tabelas de mesociclo sem uso
+
+Status: implementada e validada localmente em 2026-09-09; **não publicada**
+
+Decisão do atleta em 2026-09-09: remover por migração, em vez de deixar sem uso. Isso **fecha o último item aberto da SPEC-22**.
+
+`mesocycle_phases` parou de ser lida na SPEC-18, quando o mapa manual de fases por ciclo e semana deu lugar a uma regra automática. `mesocycle_anchor` parou na SPEC-28, quando a fase passou a vir do código `C{n}W{n}D{n}` no nome do treino.
+
+`drizzle/0006_drop_unused_mesocycle_tables.sql` derruba as duas, e `ensurePolarSchema` deixa de recriá-las — sem essa segunda parte a migração seria desfeita na próxima requisição.
+
+Não há dado histórico em risco: o conteúdo das duas era configuração que o atleta digitava à mão e que hoje é derivada do próprio plano no Intervals.icu.
+
+Aceite:
+
+- [x] Migração de remoção criada.
+- [x] `ensurePolarSchema` não cria mais as duas tabelas.
+- [x] Nenhuma referência a elas resta no código.
+- [x] `npm test` (79) e `npm run build` validados.
+
+Ressalva operacional: a migração só tem efeito quando o pacote de publicação for aplicado. Até lá as tabelas continuam no banco de produção, inertes.

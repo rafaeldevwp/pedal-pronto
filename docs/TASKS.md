@@ -442,3 +442,14 @@ Achado na auditoria da lógica de feedback e comparação, pedida pelo atleta em
 - [x] `adjustWorkoutPlan`, `preferVolumeReduction` e o template de recuperação permanecem — são usados pelo treino de hoje e pelo replanejamento.
 - [x] `npm test` (79) e `npm run build` validados.
 - [ ] Não publicar sem nova ordem do atleta.
+
+## Concluída localmente — T36 Remover as tabelas de mesociclo sem uso — SPEC-36
+
+Fecha o último item aberto da T22.
+
+- [x] Decisão do atleta: remover por migração.
+- [x] `drizzle/0006_drop_unused_mesocycle_tables.sql` derruba `mesocycle_phases` e `mesocycle_anchor`.
+- [x] `ensurePolarSchema` deixa de recriá-las — sem isso a migração se desfaria na requisição seguinte.
+- [x] `npm test` (79) e `npm run build` validados.
+- [ ] Efeito só na publicação: até lá as tabelas seguem inertes no banco de produção.
+- [ ] Não publicar sem nova ordem do atleta.
