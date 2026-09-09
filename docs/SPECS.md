@@ -655,3 +655,34 @@ Aceite:
 ## SPEC-29 — nota de continuidade
 
 Ambiguidade registrada, **não resolvida**: o texto da SPEC-12 se contradiz. Um parágrafo diz que os dois flags "participam da composição de severidade do semáforo do mesmo jeito que os flags já existentes"; o aceite da mesma SPEC diz "nenhuma mudança de comportamento na decisão de treino do dia". O código seguiu o aceite — sinal apenas. Decidir se ACWR e rampa **deveriam** influenciar a prontidão do dia é pergunta de produto em aberto, separada desta SPEC.
+
+## SPEC-32 — Parear atividade e treino planejado um para um
+
+Status: implementada e validada localmente em 2026-09-09; **não publicada**
+
+Diagnóstico, encontrado na auditoria da lógica de feedback e comparação. O casamento entre o que foi planejado e o que foi pedalado era feito por data, e isso quebrava de duas formas.
+
+**1. Treino planejado sumia da semana.** Ao montar a lista, `planned.filter((event) => !completedDates.has(event.date))` descartava **todos** os treinos planejados de qualquer dia que tivesse atividade. Dois planejados no mesmo dia e um pedal faziam os dois desaparecerem da tela — o atleta perdia de vista uma sessão que continua no calendário.
+
+**2. Feedback comparado contra o plano errado.** `planned.find((event) => event.date === ...)` devolvia o primeiro planejado da data para **cada** atividade daquele dia. Dois pedais no mesmo dia eram ambos medidos contra o mesmo treino: um deslocamento de 20 minutos aparecia como "carga 21% do previsto" do treino principal, e podia ser rotulado "Menor que o planejado".
+
+O segundo caso é o realista para este atleta — as regras imutáveis preveem uma sessão por dia, mas nada impede dois registros no mesmo dia (deslocamento mais treino).
+
+Correção: `lib/week-plan.ts` ganha `pairActivitiesWithPlanned`, pura e testada. Cada atividade consome no máximo um treino planejado; o que sobra continua visível na semana.
+
+Alcance verificado, para não superestimar: a sessão que sumia alimentava `computeStimulusCoverage`, mas `isWeekKeySourceFor` só distingue `entregue` de qualquer outro estado, então a proteção de intensidade **não** era afetada. O efeito real era a sessão sumir da tela e `describeMissingKeyStimulus` afirmar que a semana "não tem planejado" um estímulo que estava planejado.
+
+Aceite:
+
+- [x] Cada atividade pareia com no máximo um treino planejado.
+- [x] Treino planejado não pareado continua aparecendo na semana.
+- [x] Atividade em dia sem plano não herda plano de ninguém.
+- [x] Testes cobrindo: caso comum, dois pedais num dia, dois planejados num dia, pedal sem plano, dias distintos e semana sem atividade.
+- [x] Testes validados por mutação — reintroduzindo o pareamento por data, dois deles falham.
+- [x] `npm test` (94) e `npm run build` validados.
+
+Observações registradas, **não corrigidas**, por serem estatísticas e mudá-las em silêncio alteraria números que o atleta já vê:
+
+- `median` descarta valores `<= 0`, então um desacoplamento legítimo de 0% fica fora da linha de base e a puxa para cima.
+- `comparableMetrics` exclui variações de exatamente 0, então pedalar precisamente na média reduz a confiança relatada.
+- Dentro do cálculo das linhas de base, `activityMetric` é recomputado uma vez por métrica em vez de uma vez por atividade — oito vezes mais chamadas. Irrelevante no volume atual (no máximo oito candidatos).

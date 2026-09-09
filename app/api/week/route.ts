@@ -6,6 +6,7 @@ import { chooseOffDaySuggestion, type SuggestionCategory } from '@/lib/off-day-s
 import { classifyStimulus, computeStimulusCoverage, describeMissingKeyStimulus, isWeekKeySourceFor, type StimulusCoverage } from '@/lib/stimulus';
 import { assertDayAvailableForCreation, assertEditablePlannedEvent, claimTrainingWrite, completeTrainingWrite, proposalFingerprint } from '@/lib/training-safety';
 import { isYesterdayLoadHigh } from '@/lib/load-safety';
+import { pairActivitiesWithPlanned } from '@/lib/week-plan';
 
 export const dynamic = 'force-dynamic';
 
@@ -301,15 +302,12 @@ async function context(owner: string, checkin?: Checkin, athlete?: AthleteContex
   const history = (Array.isArray(historyBody) ? historyBody : historyBody?.activities || []).filter((activity: Json) =>
     ['Ride', 'VirtualRide', 'EBikeRide', 'MountainBikeRide'].includes(activity.type || activity.icu_type),
   );
-  const completedDates = new Set(activities.map(activityDate));
-  const completed = activities.map((activity: Json) =>
-    completedWorkout(
-      activity,
-      history,
-      planned.find((event: ReturnType<typeof normalize>) => event.date === activityDate(activity)),
-    ),
+  const { pairs, unmatchedPlanned } = pairActivitiesWithPlanned(
+    activities.map((activity: Json) => ({ date: activityDate(activity), activity })),
+    planned as Array<ReturnType<typeof normalize>>,
   );
-  const events = [...planned.filter((event) => !completedDates.has(event.date)), ...completed]
+  const completed = pairs.map((pair) => completedWorkout(pair.activity.activity, history, pair.planned));
+  const events = [...unmatchedPlanned, ...completed]
     .sort((a: Json, b: Json) => a.date.localeCompare(b.date));
   const stimulusCoverage = computeStimulusCoverage(events);
   const restDay = [0, 3, 5].includes(weekday);

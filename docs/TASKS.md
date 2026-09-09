@@ -404,3 +404,14 @@ Auditoria da aba Semana pedida em 2026-09-09, depois da faxina da Evolução. S�
 - [x] `npm test` (88) e `npm run build` validados.
 - [ ] **Pergunta ainda aberta**: a prévia do motor adaptativo deve ser removida de vez? Ela recolheu para a expansão porque a resposta ("sim") não distinguiu entre remover e recolher, e recolher é reversível.
 - [ ] Não publicar sem nova ordem do atleta.
+
+## Concluída localmente — T32 Parear atividade e treino planejado um para um — SPEC-32
+
+Achado na auditoria da lógica de feedback e comparação, pedida pelo atleta em 2026-09-09.
+
+- [x] `lib/week-plan.ts` com `pairActivitiesWithPlanned`, pura e testada.
+- [x] Treino planejado deixa de sumir da semana quando o dia tem atividade.
+- [x] Segunda atividade do dia não é mais comparada contra o plano da primeira.
+- [x] Seis testes novos, validados por mutação.
+- [x] `npm test` (94) e `npm run build` validados.
+- [ ] Não publicar sem nova ordem do atleta.
