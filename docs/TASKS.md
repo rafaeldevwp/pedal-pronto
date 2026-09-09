@@ -309,4 +309,22 @@ Achado em auditoria pedida pelo atleta em 2026-09-09 ("posso confiar no sistema?
 - [ ] Linhas duplicadas de dias anteriores não foram reescritas — não há como saber qual refletia o check-in real.
 - [ ] Não publicar sem nova ordem do atleta.
 
+## Concluída localmente — T26 Uma avaliação por requisição e um teste que pode falhar — SPEC-26
+
+- [x] `context()` em `app/api/week/route.ts` aceita o contexto do atleta já carregado; o `POST` avalia a prontidão uma vez só (era duas), caindo de ~16 para ~11 chamadas externas por confirmação. `GET` inalterado.
+- [x] Teste tautológico substituído pela invariante real: mesmo treino como `description` e como `structure` deve produzir o mesmo ajuste.
+- [x] Teste validado por mutação — quebrando a leitura de `structure` ele falha; restaurando, passa.
+- [x] `npm test` (79) e `npm run build` validados.
+- [ ] **Pergunta em aberto para o atleta**: no piso de `2x` a justificativa diz "Repetições reduzidas de 2 para 2" sem reduzir repetição alguma. `2x` deveria cair para redução de intensidade? Contraria a decisão 2 da SPEC-20, por isso não foi mexido.
+- [ ] Não publicar sem nova ordem do atleta.
+
+## Fora de alcance com a infraestrutura atual — cobertura de `lib/readiness.ts`
+
+Levantado ao tentar fechar a lacuna de teste da SPEC-25. Não é uma melhoria pequena, é decisão de infraestrutura:
+
+- `lib/polar.ts` importa `cloudflare:workers`, módulo que só existe no runtime do Workers. Sob `node --test` o import falha antes de qualquer teste rodar.
+- `runtime = env` é o binding do Workers, não um objeto injetável — não dá para substituir `runtime.DB` por um duplo sem reestruturar `polar.ts`.
+- Um duplo de D1 exigiria adotar `vitest` + `@cloudflare/vitest-pool-workers` (nenhum dos dois está no projeto) e conviver com dois runners, ou migrar os 79 testes.
+- Decisão do atleta necessária antes de qualquer coisa: vale adotar essa infraestrutura?
+
 Regra: trabalhar somente na tarefa marcada como `NEXT`.

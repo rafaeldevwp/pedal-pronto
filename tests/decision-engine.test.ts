@@ -126,14 +126,28 @@ test('sem coverage/todayStimulus informados, comportamento permanece igual ao de
   assert.equal(decision.action, 'reduzir_intensidade');
 });
 
-test('função única reconhece 2x e reduz duração e carga pela mesma regra', () => {
-  const workout = { name: '2x 12min 92%', durationMinutes: 60, load: 50, description: '- 2x 12min 92%' };
-  const today = adjustWorkoutPlan(workout, 'amarela', 'build');
-  const future = adjustWorkoutPlan(workout, 'amarela', 'build');
-  assert.deepEqual(today, future);
-  assert.equal(today?.action, 'reduzir_repeticoes');
-  assert.equal(today?.recommended.durationMinutes, 54);
-  assert.equal(today?.recommended.load, 42);
+// Os três caminhos entregam o treino em formatos diferentes: readiness.ts manda `description`,
+// decideTraining manda `structure`, futureProposal manda os dois. Se essa leitura divergir, hoje
+// e o replanejamento futuro voltam a discordar — que é exatamente o que a SPEC-20 fechou.
+test('descrição e estrutura produzem o mesmo ajuste', () => {
+  const treino = { name: '3x 12min 92%', durationMinutes: 60, load: 50 };
+  const porDescricao = adjustWorkoutPlan({ ...treino, description: '- 3x 12min 92%' }, 'amarela', 'build');
+  const porEstrutura = adjustWorkoutPlan({ ...treino, structure: ['- 3x 12min 92%'] }, 'amarela', 'build');
+  assert.deepEqual(porDescricao, porEstrutura);
+  assert.equal(porDescricao?.action, 'reduzir_repeticoes');
+  assert.equal(porDescricao?.recommended.name, '2x 12min 92%');
+  assert.equal(porDescricao?.recommended.durationMinutes, 54);
+  assert.equal(porDescricao?.recommended.load, 42);
+});
+
+// Comportamento atual no piso decidido na SPEC-20: `2x` é reconhecido como estrutura de
+// intervalos, mas `Math.max(2, from - 1)` não tem para onde descer — só duração e carga cedem.
+test('no piso de 2x as repetições não caem, só duração e carga', () => {
+  const result = adjustWorkoutPlan({ name: '2x 12min 92%', durationMinutes: 60, load: 50, description: '- 2x 12min 92%' }, 'amarela', 'build');
+  assert.equal(result?.action, 'reduzir_repeticoes');
+  assert.equal(result?.recommended.name, '2x 12min 92%');
+  assert.equal(result?.recommended.durationMinutes, 54);
+  assert.equal(result?.recommended.load, 42);
 });
 
 test('template de recuperação é único para qualquer caminho vermelho', () => {

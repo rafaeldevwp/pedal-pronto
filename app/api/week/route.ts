@@ -263,7 +263,12 @@ function futureProposal(event: Json, phase = 'desconhecida', stimulusCoverage?: 
     },
   };
 }
-async function context(owner: string, checkin?: Checkin) {
+type AthleteContext = Awaited<ReturnType<typeof loadAthleteContext>>;
+
+// `athlete` permite reaproveitar a avaliação já feita nesta requisição. Uma escrita altera
+// evento planejado no Intervals.icu — não muda Polar, CTL/ATL nem check-in —, então recalcular
+// a prontidão depois dela custaria 5 chamadas externas para chegar ao mesmo resultado.
+async function context(owner: string, checkin?: Checkin, athlete?: AthleteContext) {
   await ensurePolarSchema();
   const today = todayInZone();
   const weekday = dayNumber(today);
@@ -271,7 +276,7 @@ async function context(owner: string, checkin?: Checkin) {
   const sunday = addDays(monday, 6);
   const historyStart = addDays(today, -120);
   const [{ readiness, snapshot }, body, activityBody, historyBody] = await Promise.all([
-    loadAthleteContext(owner, checkin),
+    athlete ?? loadAthleteContext(owner, checkin),
     intervals(
       `/athlete/${runtime.INTERVALS_ATHLETE_ID}/events?oldest=${monday}&newest=${sunday}&category=WORKOUT&resolve=true`,
     ),
@@ -521,7 +526,8 @@ export async function POST(request: Request) {
   try {
     let body: Json = {};
     try { body = await request.json(); } catch {}
-    const state = await context(owner, body.checkin);
+    const athlete = await loadAthleteContext(owner, body.checkin);
+    const state = await context(owner, body.checkin, athlete);
     if (body.action === 'apply_proposal') {
       if (!body.confirmed || !body.proposalId || !body.operationId)
         return Response.json({ error: 'CONSENT_REQUIRED' }, { status: 400 });
@@ -538,7 +544,7 @@ export async function POST(request: Request) {
       );
       assertEditablePlannedEvent(source, dayActivities, state.today);
       const claim = await claimTrainingWrite(owner, body.operationId, body.proposalId);
-      if (claim.repeated) return Response.json({ ...claim.response, week: await context(owner, body.checkin) });
+      if (claim.repeated) return Response.json({ ...claim.response, week: await context(owner, body.checkin, athlete) });
       await intervals(`/athlete/${runtime.INTERVALS_ATHLETE_ID}/events/${source.id}`, {
         method: 'PUT', body: JSON.stringify(recalculated.updated),
       });
@@ -553,7 +559,7 @@ export async function POST(request: Request) {
         effective: state.proposal.recommended,
         reason: state.proposal.reason,
       });
-      return Response.json({ applied: true, week: await context(owner, body.checkin) });
+      return Response.json({ applied: true, week: await context(owner, body.checkin, athlete) });
     }
     if (!state.suggestion)
       return Response.json(
@@ -572,7 +578,7 @@ export async function POST(request: Request) {
     );
     assertDayAvailableForCreation(existingEvents, existingActivities);
     const claim = await claimTrainingWrite(owner, body.operationId, body.proposalId);
-    if (claim.repeated) return Response.json({ ...claim.response, week: await context(owner, body.checkin) });
+    if (claim.repeated) return Response.json({ ...claim.response, week: await context(owner, body.checkin, athlete) });
     const created = await intervals(
       `/athlete/${runtime.INTERVALS_ATHLETE_ID}/events`,
       {
@@ -597,7 +603,7 @@ export async function POST(request: Request) {
       effective: normalize(created),
       reason: state.suggestion.reason,
     });
-    return Response.json({ created: normalize(created), week: await context(owner, body.checkin) });
+    return Response.json({ created: normalize(created), week: await context(owner, body.checkin, athlete) });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Falha ao criar treino';
     const status = ['WORKOUT_COMPLETED', 'EVENT_NOT_EDITABLE', 'PROPOSAL_CHANGED', 'CONSENT_REQUIRED', 'WRITE_IN_PROGRESS'].includes(message) ? 409 : 502;

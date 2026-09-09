@@ -456,3 +456,26 @@ Aceite:
 Limitação registrada: a suíte não alcança esta correção. Os testes do projeto cobrem só os núcleos puros (`training-safety-core.ts`, `context.ts`, `decision-engine.ts`); `lib/readiness.ts` depende do D1 e do alias `@/`, que o runner (`node --experimental-strip-types`) não resolve. A verificação foi estrutural mais navegador, não automatizada. Fechar essa lacuna pediria um duplo de D1 nos testes — vale como tarefa própria, não foi feito aqui.
 
 Não corrigido de propósito: linhas duplicadas de dias **anteriores** continuam no banco. Não há como saber retroativamente qual delas refletia o check-in real, então nada foi reescrito.
+
+## SPEC-26 — Uma avaliação por requisição e um teste que pode falhar
+
+Status: implementada e validada localmente em 2026-09-09; **não publicada**
+
+Duas melhorias menores levantadas na auditoria, sem efeito em nenhuma decisão de treino.
+
+**1. `POST /api/week` avaliava a prontidão duas vezes.** A rota chamava `context()` uma vez para validar a proposta e de novo para devolver a semana atualizada depois da escrita. Como `context()` chama `loadAthleteContext` (e portanto `runReadiness`), cada requisição de confirmação custava ~16 chamadas externas a Polar/Intervals.icu, sendo 10 só de prontidão.
+
+`context()` ganhou um terceiro parâmetro opcional (`athlete`) e o `POST` carrega o contexto uma vez, repassando-o às duas chamadas. Passou a ~11 chamadas. Isso é correto, não só mais barato: a escrita altera um **evento planejado** no Intervals.icu — não muda Polar, CTL/ATL nem o check-in —, então recalcular a prontidão depois dela chegaria ao mesmo resultado. Eventos e atividades continuam sendo rebuscados, que é o que de fato muda. O `GET` não mudou: segue carregando tudo fresco.
+
+**2. Um teste que não podia falhar.** `tests/decision-engine.test.ts` tinha o caso "função única reconhece 2x…", que chamava `adjustWorkoutPlan` duas vezes com argumentos idênticos e comparava os resultados sob os nomes `today`/`future`. Sendo a mesma chamada, a comparação era tautológica — não verificava a concordância entre caminhos que o nome prometia.
+
+Foi substituído pela invariante real: os três caminhos entregam o treino em formatos diferentes (`readiness.ts` manda `description`, `decideTraining` manda `structure`, `futureProposal` manda os dois) e `reduceIntensity`/`reduceRepetitions` leem `workout.description ?? structure.join('\n')`. O teste novo aplica o mesmo treino nos dois formatos e exige resultado idêntico. Verificado por mutação: quebrando a leitura de `structure`, o teste falha; restaurando, passa.
+
+Aceite:
+
+- [x] Uma única avaliação de prontidão por requisição em `POST /api/week`; `GET` inalterado.
+- [x] Teste de concordância entre `description` e `structure`, comprovadamente capaz de falhar.
+- [x] Comportamento de decisão idêntico; nenhuma regra tocada.
+- [x] `npm test` (79) e `npm run build` validados.
+
+Achado registrado, **não corrigido**: no piso de `2x`, `Math.max(2, from - 1)` devolve `2` e a justificativa mostrada ao atleta vira "Repetições reduzidas de 2 para 2", sem redução real de repetições — só duração e carga cedem. Corrigir pediria decidir se `2x` deve cair para redução de intensidade em vez de ser tratado como estrutura redutível, e isso contraria a decisão 2 da SPEC-20, tomada pelo atleta. Fica como pergunta em aberto, com o comportamento atual documentado em teste.
