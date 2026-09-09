@@ -140,14 +140,18 @@ test('descrição e estrutura produzem o mesmo ajuste', () => {
   assert.equal(porDescricao?.recommended.load, 42);
 });
 
-// Comportamento atual no piso decidido na SPEC-20: `2x` é reconhecido como estrutura de
-// intervalos, mas `Math.max(2, from - 1)` não tem para onde descer — só duração e carga cedem.
-test('no piso de 2x as repetições não caem, só duração e carga', () => {
+// SPEC-34: com 2 séries não há repetição a cortar, então quem cede é a intensidade.
+test('no piso de 2x a redução passa para a intensidade', () => {
   const result = adjustWorkoutPlan({ name: '2x 12min 92%', durationMinutes: 60, load: 50, description: '- 2x 12min 92%' }, 'amarela', 'build');
-  assert.equal(result?.action, 'reduzir_repeticoes');
-  assert.equal(result?.recommended.name, '2x 12min 92%');
-  assert.equal(result?.recommended.durationMinutes, 54);
-  assert.equal(result?.recommended.load, 42);
+  assert.equal(result?.action, 'reduzir_intensidade');
+  assert.equal(result?.recommended.durationMinutes, 60);
+  assert.match(result?.recommended.description || '', /87%/);
+  assert.doesNotMatch(result?.recommended.descriptionChange || '', /de 2 para 2/);
+});
+
+test('2x sem intensidade reconhecível não gera ajuste de uma variável', () => {
+  const result = adjustWorkoutPlan({ name: '2x 12min', durationMinutes: 60, load: 50, description: '- 2x 12min' }, 'amarela', 'build');
+  assert.equal(result, null);
 });
 
 test('template de recuperação é único para qualquer caminho vermelho', () => {

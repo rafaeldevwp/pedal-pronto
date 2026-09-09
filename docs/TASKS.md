@@ -425,3 +425,11 @@ Achado na auditoria da lógica de feedback e comparação, pedida pelo atleta em
 - [ ] Sem cobertura automatizada — mesma lacuna da SPEC-25.
 - [ ] Conferir na prática depois de publicar: a expectativa é ver mais dias amarelos durante blocos pesados.
 - [ ] Não publicar sem nova ordem do atleta.
+
+## Concluída localmente — T34 No piso de 2 séries cede a intensidade — SPEC-34
+
+- [x] Decisão do atleta, substituindo a decisão 2 da SPEC-20.
+- [x] `reduceRepetitions` devolve nulo quando não há série a cortar; `reduceIntensity` assume.
+- [x] Testes: `2x` com e sem intensidade reconhecível; `3x` inalterado.
+- [x] `npm test` (95) e `npm run build` validados.
+- [ ] Não publicar sem nova ordem do atleta.

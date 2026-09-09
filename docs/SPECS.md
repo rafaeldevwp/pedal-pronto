@@ -708,3 +708,21 @@ Aceite:
 - [x] `npm test` (94) e `npm run build` validados.
 
 Ressalva registrada: como a suíte não alcança `lib/readiness.ts` (depende do D1 e do alias `@/`), esta mudança **não tem cobertura automatizada**. É a mesma lacuna da SPEC-25, e o quinto ponto em aberto — adotar vitest com pool de Workers — segue sem decisão.
+
+## SPEC-34 — No piso de 2 séries, quem cede é a intensidade
+
+Status: implementada e validada localmente em 2026-09-09; **não publicada**
+
+Decisão do atleta em 2026-09-09, que **substitui a decisão 2 da SPEC-20**.
+
+A SPEC-20 fixou `2x` como piso de estrutura redutível. Na prática isso produzia um resultado sem sentido: `Math.max(2, from - 1)` devolvia 2 para uma entrada de 2, a justificativa dizia "Repetições reduzidas de 2 para 2" — sem reduzir série alguma — e ainda assim duração e carga eram cortadas. O atleta via uma frase falsa e um corte que não correspondia ao que ela dizia.
+
+Regra nova: com 2 séries não há repetição a cortar, então `reduceRepetitions` devolve nulo e a vez passa para `reduceIntensity`. Se o treino também não tiver intensidade reconhecível, nenhum ajuste de uma variável é possível e o caminho conservador segue como antes.
+
+Aceite:
+
+- [x] `2x` com intensidade reconhecível gera redução de intensidade, com a duração preservada.
+- [x] `2x` sem intensidade reconhecível não gera ajuste, em vez de fingir uma redução.
+- [x] `3x` continua reduzindo para `2x`, como antes.
+- [x] Nenhuma justificativa diz mais "de 2 para 2".
+- [x] `npm test` (95) e `npm run build` validados.

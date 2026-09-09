@@ -56,7 +56,10 @@ function reduceRepetitions(workout: WorkoutAdjustmentInput) {
   const text = workout.description ?? (workout.structure || []).join('\n');
   const reps = text.match(/\b([2-9]|[1-9]\d)x\b/i);
   if (!reps) return null;
-  const from = Number(reps[1]), to = Math.max(2, from - 1);
+  const from = Number(reps[1]), to = from - 1;
+  // SPEC-34: com 2 séries não há para onde descer. Antes o piso devolvia "de 2 para 2" e cortava
+  // duração e carga sem reduzir série alguma; agora cede a vez para a redução de intensidade.
+  if (to < 2) return null;
   return {
     action: 'reduzir_repeticoes' as const,
     stimulusPreserved: 'intensidade',
