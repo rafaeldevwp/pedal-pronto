@@ -842,7 +842,7 @@ Duas suspeitas foram levantadas e **descartadas na verificação**, e ficam regi
 
 ## SPEC-39 — A manchete de eficiência depende de uma ordem que ninguém garante
 
-Status: **proposta**, aguardando decisão
+Status: implementada e validada localmente em 2026-09-09; **não publicada**
 
 Na aba Evolução, o título do card de eficiência ("Mais potência para esforço cardíaco parecido" / "O coração está trabalhando mais para a potência produzida") sai de `app/api/performance/route.ts`: a lista de pedais é cortada em duas metades e a primeira é comparada com a segunda.
 
@@ -852,7 +852,24 @@ Se a ordem for decrescente, como o cuidado das rotas irmãs sugere, duas coisas 
 
 O gráfico em si não é afetado — é um scatter de potência × frequência cardíaca, que não depende de ordem. Só a frase no topo do card.
 
-Proposta: ordenar por data crescente logo depois de filtrar as atividades, com um teste que falhe se a ordenação sair. É uma linha, mas muda o sentido de uma frase que o atleta lê como veredito.
+**Confirmado antes de corrigir.** Rodando o código exatamente como está em produção sobre os mesmos seis pedais — 180 W no início, 220 W no fim, sempre a 140 bpm, ou seja, uma melhora real e inequívoca — as duas ordens produzem as duas frases opostas:
+
+    origem crescente  : Mais potência para esforço cardíaco parecido
+    origem decrescente: O coração está trabalhando mais para a potência produzida
+
+A correção move a série para `lib/cardio-trend.ts`, um módulo puro, onde a ordenação por data crescente acontece antes do corte e da divisão em metades. A rota importa `buildCardioSeries` e `cardioTrend`; nada mais mudou de comportamento.
+
+Ordenar dentro do módulo, e não na rota, é o que torna a correção testável: o teste passa a mesma lista nas duas ordens e exige a mesma manchete. Um `sort` solto na rota não teria como ser verificado, porque a rota importa `cloudflare:workers` e não carrega no runner.
+
+Os demais consumidores da lista de atividades nesta rota não dependem de ordem — `best()` usa `Math.max`, o aprendizado usa medianas e a cobertura usa contagens —, então a ordenação foi colocada onde o problema estava, em vez de espalhada.
+
+Aceite:
+
+- [x] `lib/cardio-trend.ts` ordena por data crescente antes de cortar em 12 e dividir em metades.
+- [x] `slice(-12)` passa a guardar os 12 pedais mais recentes, não os mais antigos.
+- [x] 7 testes novos; a manchete e a série são exigidas iguais nas duas ordens de entrada.
+- [x] Mutação: remover a ordenação derruba 3 testes.
+- [x] `npm test` (91), `npm run test:workers` (10) e `npm run build` validados.
 
 ## SPEC-40 — A conexão com o Polar não conta o que aconteceu, e não há como desconectar
 

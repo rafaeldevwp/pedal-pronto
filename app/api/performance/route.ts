@@ -1,4 +1,5 @@
 import { ownerId, runtime } from '@/lib/polar';
+import { buildCardioSeries, cardioTrend } from '@/lib/cardio-trend';
 
 export const dynamic = 'force-dynamic';
 type Json = Record<string, any>;
@@ -137,19 +138,7 @@ export async function GET(request: Request) {
         profileMessage = 'Potências curtas e sustentadas estão evoluindo em proporções parecidas.';
       }
     }
-    const cardio = recent
-      .map((activity) => {
-        const watts = num(activity.average_watts, activity.weighted_average_watts);
-        const heartRate = num(activity.average_heartrate, activity.average_hr);
-        return watts && heartRate ? {
-          date: dateOf(activity), watts, heartRate,
-          efficiency: watts / heartRate,
-          decoupling: Math.abs(num(activity.decoupling, activity.aerobic_decoupling) || 0) || undefined,
-        } : null;
-      })
-      .filter(Boolean)
-      .slice(-12);
-    const cardioList = cardio as Array<{ date: string; watts: number; heartRate: number; efficiency: number; decoupling?: number }>;
+    const cardio = buildCardioSeries(recent);
     // O gráfico exige potência e FC na mesma atividade. Quando vem vazio, isto diz qual das duas
     // falta, em vez de deixar o atleta adivinhar se o problema é dado ausente ou leitura errada.
     const cardioCoverage = {
@@ -160,15 +149,7 @@ export async function GET(request: Request) {
         num(activity.average_watts, activity.weighted_average_watts) && num(activity.average_heartrate, activity.average_hr),
       ).length,
     };
-    const half = Math.floor(cardioList.length / 2);
-    const early = average(cardioList.slice(0, half).map((point) => point.efficiency));
-    const late = average(cardioList.slice(half).map((point) => point.efficiency));
-    const efficiencyChange = early && late ? ((late - early) / early) * 100 : undefined;
-    const cardioHeadline = efficiencyChange === undefined
-      ? 'Ainda reunindo treinos comparáveis'
-      : efficiencyChange > 3 ? 'Mais potência para esforço cardíaco parecido'
-        : efficiencyChange < -3 ? 'O coração está trabalhando mais para a potência produzida'
-          : 'Eficiência estável';
+    const { efficiencyChange, headline: cardioHeadline } = cardioTrend(cardio);
     const readinessByDate = new Map((readinessHistory.results || []).map((row) => {
       try { return [row.run_date, JSON.parse(row.report_json)]; } catch { return [row.run_date, null]; }
     }));
@@ -243,7 +224,7 @@ export async function GET(request: Request) {
         all: curveSet(allTime),
       },
       powerSource: seasonPower.some((point) => point.current) ? 'Curvas oficiais do Intervals.icu' : 'Atividades disponíveis no Intervals.icu',
-      cardio: cardioList, cardioCoverage, efficiencyChange, cardioHeadline, learning,
+      cardio, cardioCoverage, efficiencyChange, cardioHeadline, learning,
       warning: recent.length < 4 ? 'Poucas atividades recentes: interprete as tendências com cautela.' : undefined,
     });
   } catch (error) {

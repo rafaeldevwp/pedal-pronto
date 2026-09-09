@@ -480,9 +480,19 @@ Fecha o último item aberto da T22.
 
 Nenhuma implementada. Ordem sugerida, da que mais engana para a que menos:
 
-- [ ] **T39 — SPEC-39**: ordenar as atividades antes de dividir em metades. A manchete de eficiência pode estar invertida hoje. Uma linha mais um teste.
+- [x] **T39 — SPEC-39**: feita. Ver abaixo.
 - [ ] **T42 — SPEC-42**: glossário. "Especificidade" descreve regra removida na T18; "ACWR" foi para a tela na T33 sem entrada; o código `C{n}W{n}D{n}` nunca foi documentado.
 - [ ] **T40 — SPEC-40**: mostrar o resultado da conexão com o Polar (`?polar=`, hoje ignorado) e criar como desconectar.
 - [ ] **T41 — SPEC-41**: service worker não deveria guardar respostas de API no cache da casca do app.
 - [ ] **T43 — SPEC-43**: `!base` descarta mediana zero de ANS Charge — o mesmo engano da SPEC-37.
 - [ ] **T44 — SPEC-44**: decidir se um sinal isolado do check-in deveria mudar a cor do dia. Pergunta, não conserto.
+
+## Concluída localmente — T39 A manchete de eficiência para de depender da ordem da origem — SPEC-39
+
+- [x] Inversão confirmada antes de corrigir: os mesmos pedais, com melhora real, produzem as duas frases opostas conforme a ordem de chegada.
+- [x] Série extraída para `lib/cardio-trend.ts`, com ordenação por data crescente antes do corte e da divisão.
+- [x] `slice(-12)` passa a guardar os 12 pedais mais recentes.
+- [x] 7 testes; a manchete é exigida igual nas duas ordens de entrada.
+- [x] Mutação: sem a ordenação, 3 testes caem.
+- [x] `npm test` (91), `npm run test:workers` (10) e `npm run build` validados.
+- [ ] Não publicar sem nova ordem do atleta.
