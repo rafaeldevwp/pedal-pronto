@@ -139,6 +139,16 @@ Fechado nesta sessão, a parte de código da T22: `stressed` passou a ser calcul
 
 Continua em aberto, dependendo do atleta: o destino da tabela `mesocycle_phases` (T22) e as quatro decisões da SPEC-23. Nenhuma migração foi criada e nada do schema foi tocado.
 
+## Revisão da tela Evolução e da origem dos números (SPEC-27 a SPEC-29, 2026-09-09)
+
+Ao usar o app, o atleta apontou que a aba Evolução está poluída e que ela pede dados que ele já mantém no Intervals.icu. A auditoria confirmou e rendeu três frentes, com as decisões dele já tomadas em duas:
+
+- **SPEC-27/T27 (NEXT, pronta)**: sete cards no mesmo nível visual, dois deles formulários, nada sob expansão — contra o próprio `docs/DESIGN.md`. Faz para a Evolução o que a SPEC-19 fez para a tela Hoje. Decisões fechadas: o card "Direção da temporada" sai por completo (o objetivo não decide nada desde a T18) e o teto de rampa do CTL vira a constante 6, deixando de ser campo — era o único limiar do sistema que pedia opinião do atleta, e ninguém tem como saber o próprio teto.
+- **SPEC-28/T28 (a escrever)**: a fase do mesociclo passa a vir do padrão `C{n}W{n}D{n}` no nome do treino, que o atleta já usa. Descoberta relevante: `parseCyclePointer` já existe e sabe ler esse padrão, mas `resolveMesocycle` é chamada com dois argumentos e o nome do evento nunca chega — o parser está pronto e ocioso. Decisão fechada: sem código no nome, herda o último ciclo conhecido. **Substitui a SPEC-23**, que ia inferir a fase pela carga planejada.
+- **SPEC-29/T29 (bloqueada)**: o Intervals.icu não expõe `acwr`, mas devolve `atl`, `ctl` e `rampRate`. O app recalcula os dois por fórmulas próprias e prefere as suas — então os números do app e os do Intervals.icu podem divergir hoje. Trocar a base exige revisar os limiares (1,3/1,5 foram pensados para média móvel; ATL/CTL costuma usar 0,8 a 1,3), e isso muda quando um alerta dispara. Decisão pendente.
+
+Aberto também: o gráfico coração × potência aparece vazio. Exige potência e FC na mesma atividade, tipo Ride, nos últimos 42 dias. Falta saber se é dado ausente ou leitura errada de campo antes de virar SPEC.
+
 ## Correção de segurança: o check-in sumia da avaliação e do histórico (T25/SPEC-25, 2026-09-09)
 
 O achado mais sério de toda a auditoria, encontrado quando o atleta perguntou se podia confiar no sistema. Duas metades somadas:

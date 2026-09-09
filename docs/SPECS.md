@@ -479,3 +479,53 @@ Aceite:
 - [x] `npm test` (79) e `npm run build` validados.
 
 Achado registrado, **não corrigido**: no piso de `2x`, `Math.max(2, from - 1)` devolve `2` e a justificativa mostrada ao atleta vira "Repetições reduzidas de 2 para 2", sem redução real de repetições — só duração e carga cedem. Corrigir pediria decidir se `2x` deve cair para redução de intensidade em vez de ser tratado como estrutura redutível, e isso contraria a decisão 2 da SPEC-20, tomada pelo atleta. Fica como pergunta em aberto, com o comportamento atual documentado em teste.
+
+## SPEC-27 — Evolução essencial e progressiva
+
+Status: proposta — decisões do atleta tomadas em 2026-09-09; pronta para implementação
+
+Diagnóstico: a aba Evolução mostra **sete cards no mesmo nível visual**, dois deles formulários, nenhum sob expansão:
+
+1. Leitura diária da evolução — título, texto, três evidências, um `<details>` de método e uma nota de atualização.
+2. Seu perfil nos últimos 42 dias — uma frase dentro de um card inteiro.
+3. Melhores potências — seletor de três períodos, gráfico de barras e lista de cinco valores com variação.
+4. Coração × potência — parágrafo explicativo, gráfico de dispersão e nota de eficiência.
+5. Seu padrão pessoal — headline, tamanho da amostra, evidências, confiança e ressalva.
+6. Posição no plano — C/W/D, fase, âncora, campo de data e botão de salvar.
+7. Direção da temporada — objetivo, evento, data, prioridade, teto de rampa e botão de salvar.
+
+Mais um parágrafo de ressalva solto entre o quinto e o sexto card.
+
+Isso contraria o `docs/DESIGN.md` ("Detalhes técnicos: métricas, gráficos, método e glossário aparecem por expansão, sem bloquear a leitura simples") e o próprio aceite da SPEC-17 ("Evolução separa estado de hoje, tendência de adaptação e direção do ciclo"). A SPEC-19 já aplicou esse tratamento à tela Hoje; esta faz o equivalente para Evolução.
+
+Decisões do atleta que fecham esta SPEC:
+
+1. **O card "Direção da temporada" sai por completo.** O objetivo não decide nada desde a T18 — o próprio texto do card admite isso — e o atleta já mantém evento e meta no Intervals.icu.
+2. **O teto de rampa do CTL deixa de ser campo e vira a constante 6**, o mesmo valor que o código já usa como padrão, dentro da faixa de 5 a 8 da literatura. Era o único limiar do sistema que pedia opinião do atleta; o ACWR já usa limiares fixos no código. Ninguém tem como saber o próprio teto de rampa, então pedir o número produzia um palpite que virava alerta de segurança.
+
+Primeiro nível, sempre visível:
+
+- Leitura diária da evolução, sem a nota "Atualiza ao sincronizar…".
+- O perfil dos últimos 42 dias vira uma linha de texto sob a leitura diária, não um card próprio.
+- Posição no plano: ciclo, semana, dia e fase como informação, sem formulário.
+
+Sob uma expansão única, "Ver números e gráficos":
+
+- Melhores potências, com o seletor de período.
+- Coração × potência.
+- Seu padrão pessoal.
+- A ressalva "Tendências comparam períodos, não diagnosticam saúde" vira rodapé dessa expansão, em vez de parágrafo solto.
+
+Aceite:
+
+- A aba Evolução abre com no máximo três blocos visíveis.
+- Nenhum gráfico ou análise técnica no primeiro nível.
+- O formulário de objetivo desaparece da interface. O formulário da âncora sai junto com a SPEC-28; até lá continua onde está.
+- `athlete_goals` e `/api/profile` continuam existindo, apenas sem interface. Remover a tabela é decisão à parte, não entra aqui.
+- `ramp_rate_limit` deixa de ser lido de `athlete_safety_settings`; `evaluateLoadSafety` passa a receber 6.
+- Estados vazios e de erro continuam explicados dentro da expansão, nunca escondidos sem explicação — o gráfico de coração × potência vazio é assunto de investigação separada, não se resolve escondendo.
+- Nenhuma decisão de treino muda.
+- Expansão acessível por toque e teclado, com foco visível, mantendo o padrão da SPEC-19.
+- `npm test` e `npm run build` validados.
+
+Dependências: nenhuma. Independente da SPEC-28 (fase pelo nome do treino) e da SPEC-29 (ACWR e rampa vindos do Intervals.icu); pode ser feita antes das duas.

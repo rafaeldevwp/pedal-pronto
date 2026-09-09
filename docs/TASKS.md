@@ -318,6 +318,43 @@ Achado em auditoria pedida pelo atleta em 2026-09-09 ("posso confiar no sistema?
 - [ ] **Pergunta em aberto para o atleta**: no piso de `2x` a justificativa diz "Repetições reduzidas de 2 para 2" sem reduzir repetição alguma. `2x` deveria cair para redução de intensidade? Contraria a decisão 2 da SPEC-20, por isso não foi mexido.
 - [ ] Não publicar sem nova ordem do atleta.
 
+## NEXT — T27 Evolução essencial e progressiva — SPEC-27
+
+Pedida pelo atleta em 2026-09-09: "a tela de evolução está muito poluída". Sete cards no mesmo nível, dois deles formulários, nada sob expansão. Decisões já tomadas; nada bloqueia a implementação.
+
+- [ ] Remover o card "Direção da temporada" da aba Evolução (objetivo não decide nada desde a T18).
+- [ ] Fixar o teto de rampa do CTL em 6 e remover o campo; `evaluateLoadSafety` deixa de depender de `athlete_safety_settings`.
+- [ ] Promover o perfil dos 42 dias a uma linha sob a leitura diária, eliminando o card próprio.
+- [ ] Reduzir "Posição no plano" a informação (C/W/D + fase), sem formulário — a âncora sai na T28.
+- [ ] Agrupar potências, coração × potência e padrão pessoal sob uma expansão única "Ver números e gráficos".
+- [ ] Mover a ressalva sobre tendências para o rodapé dessa expansão.
+- [ ] Preservar estados vazios e de erro explicados dentro da expansão.
+- [ ] Manter acessibilidade da expansão (toque, teclado, foco visível), no padrão da SPEC-19.
+- [ ] `npm test` e `npm run build` validados.
+- [ ] Não publicar sem nova ordem do atleta.
+
+## Proposta — T28 A fase do mesociclo vem do nome do treino — SPEC-28 (a escrever)
+
+Direção confirmada pelo atleta em 2026-09-09. Substitui a T23/SPEC-23, que ia inferir a fase pela carga planejada.
+
+- [x] Decisão do atleta: sem o código `C{n}W{n}D{n}` no nome, herda o último ciclo conhecido.
+- [ ] `resolveMesocycle` passa a receber o nome do evento do dia (hoje é chamada com dois argumentos e o nome fica vazio, então `parseCyclePointer` nunca é alimentado).
+- [ ] A âncora manual sai da interface; `mesocycle_anchor` fica sem uso.
+- [ ] Testes cobrindo leitura do código, herança do último ciclo e ausência total de histórico.
+
+## Proposta — T29 ACWR e rampa vêm do Intervals.icu — SPEC-29 (a escrever)
+
+O Intervals.icu não expõe um campo `acwr`, mas devolve `atl`, `ctl` e `rampRate`. Hoje o app recalcula os dois por fórmulas próprias — ACWR por média móvel de 7/28 dias, rampa por CTL de hoje menos o de 8 dias atrás — e prefere os seus valores aos do Intervals.icu.
+
+- [ ] **Decisão do atleta, pendente**: trocar a base de cálculo muda quando os alertas disparam. Os limiares atuais (1,3 moderado, 1,5 severo) foram pensados para a média móvel; a faixa usual para ATL/CTL é 0,8 a 1,3. Quais ficam valendo?
+- [ ] Só implementar depois dessa decisão.
+
+## Investigação — coração × potência aparece vazio
+
+- [ ] Confirmar com o atleta se os pedais dos últimos 42 dias têm potência e frequência cardíaca na mesma atividade.
+- [ ] O gráfico exige `average_watts` (ou `weighted_average_watts`) **e** `average_heartrate` (ou `average_hr`) no mesmo registro, em atividades do tipo Ride, dentro de 42 dias. Faltando um, não desenha.
+- [ ] Só vira SPEC depois de saber se é dado ausente ou leitura errada de campo.
+
 ## Fora de alcance com a infraestrutura atual — cobertura de `lib/readiness.ts`
 
 Levantado ao tentar fechar a lacuna de teste da SPEC-25. Não é uma melhoria pequena, é decisão de infraestrutura:
