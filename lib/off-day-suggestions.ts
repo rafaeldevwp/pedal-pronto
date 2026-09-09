@@ -1,5 +1,6 @@
+import type { LoadSafetyFlag } from './load-safety.ts';
+
 export type SuggestionCategory = 'descanso' | 'mobilidade' | 'recuperacao_ativa' | 'tecnica_cadencia' | 'endurance_leve';
-export type SafetyFlag = { id: 'acwr_high' | 'ramp_rate_exceeded'; severity: 'moderada' | 'severa' };
 
 export type OffDaySuggestion = {
   category: SuggestionCategory;
@@ -15,7 +16,7 @@ export type OffDaySuggestion = {
 
 export type OffDayInput = {
   classification: 'verde' | 'amarela' | 'vermelha' | 'indisponível';
-  safetyFlags: SafetyFlag[];
+  safetyFlags: LoadSafetyFlag[];
   phase: string;
   recentHardCount: number;
   recentLong: boolean;

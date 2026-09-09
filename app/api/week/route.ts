@@ -405,15 +405,12 @@ async function context(owner: string, checkin?: Checkin) {
     stimulusCoverage,
     todayStimulus: todayStimulusType,
   });
-  const planOutlook = planned.filter((event) => event.date > today).slice(0, 3).map((event) => {
-    const stressed = ['amarela', 'vermelha'].includes(readiness.classification) || isYesterdayLoadHigh(yesterdayLoad, readiness.metrics.ctl);
-    return {
-      id: event.id, date: event.date, name: event.name,
-      status: stressed ? 'observar' : 'protegido',
-      note: stressed ? 'Pode precisar de ajuste se a recuperação não normalizar. Nenhuma mudança aplicada.' : 'Compatível com a carga atual. Nenhuma mudança proposta.',
-    };
-  });
   const stressed = ['amarela', 'vermelha'].includes(readiness.classification) || isYesterdayLoadHigh(yesterdayLoad, readiness.metrics.ctl);
+  const planOutlook = planned.filter((event) => event.date > today).slice(0, 3).map((event) => ({
+    id: event.id, date: event.date, name: event.name,
+    status: stressed ? 'observar' : 'protegido',
+    note: stressed ? 'Pode precisar de ajuste se a recuperação não normalizar. Nenhuma mudança aplicada.' : 'Compatível com a carga atual. Nenhuma mudança proposta.',
+  }));
   const proposalBuilt = stressed && !snapshot.blocked
     ? rawPlanned
         .filter((event: Json) => {

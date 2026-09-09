@@ -222,37 +222,41 @@ A maior parte desta SPEC já existia, entregue como parte da T02 (comparação d
 
 Ordem obrigatória: T13 → T14 → T15 → T16 → T17 → T18 → T19. Trabalhar e validar uma tarefa por vez; publicar apenas mediante ordem explícita.
 
-## Proposta — T20 Unificar o ajuste de uma variável — SPEC-20
+## Concluída no código — T20 Unificar o ajuste de uma variável — SPEC-20
 
-Diagnóstico veio de uma auditoria de ambiguidade/redundância pedida pelo atleta em 2026-09-08 sobre o sistema já publicado/validado (T13–T19).
+Diagnóstico veio de uma auditoria de ambiguidade/redundância pedida pelo atleta em 2026-09-08 sobre o sistema já publicado/validado (T13–T19). A implementação entrou no commit `5755724`, no mesmo commit que gravou o texto declarando a tarefa pendente; esta lista foi corrigida em 2026-09-09 para refletir o código real.
 
-- [ ] Decisão do atleta: ao reduzir repetições, cortar duração (~10%) e carga (~16%) como hoje faz, ou preservar duração e só reduzir carga proporcionalmente como o replanejamento futuro faz?
-- [ ] Decisão do atleta: piso de repetições reconhecido é `2x` ou `3x`?
-- [ ] Criar função única em `lib/decision-engine.ts` que decide reduzir intensidade, reduzir repetições ou substituir por recuperação leve, com um único regex de cada tipo e um único template de recuperação leve.
-- [ ] `lib/readiness.ts` (`adaptWorkout`) passa a chamar essa função em vez de reimplementá-la.
-- [ ] `app/api/week/route.ts` (`futureProposal`) passa a chamar essa função em vez de reimplementá-la.
-- [ ] Teste de regressão: mesma estrutura de treino e mesma fase pelos três caminhos (hoje, prévia do motor, futuro) produzem a mesma ação e o mesmo resultado numérico.
-- [ ] `npm test` e `npm run build` validados.
-- [ ] Não publicar sem nova ordem do atleta.
+- [x] Decisão aplicada: ao reduzir repetições, corta duração (~10%) e carga (~16%) — a regra que era do treino de hoje.
+- [x] Decisão aplicada: piso de repetições reconhecido é `2x` (regex único `/\b([2-9]|[1-9]\d)x\b/i`).
+- [x] Função única `adjustWorkoutPlan` em `lib/decision-engine.ts`, com um único regex de cada tipo e um único template de recuperação leve (`recoveryRecommendation`).
+- [x] `lib/readiness.ts` (`adaptWorkout`) chama essa função em vez de reimplementá-la.
+- [x] `app/api/week/route.ts` (`futureProposal`) chama essa função em vez de reimplementá-la.
+- [x] Teste de regressão sobre a função compartilhada em `tests/decision-engine.test.ts`. Ressalva registrada na SPEC: os três caminhos não são exercitados ponta a ponta, porque dois deles fazem I/O; a concordância é estrutural.
+- [x] `npm test` e `npm run build` validados.
+- [ ] Não publicar sem nova ordem do atleta. Estado de publicação não confirmado a partir deste ambiente — a versão 25 saiu antes deste commit.
 
-## Proposta — T21 Fechar o contexto unificado — SPEC-21
+## Concluída no código — T21 Fechar o contexto unificado — SPEC-21
 
-- [ ] Decisão do atleta: `runReadiness` passa a receber a fase como parâmetro em vez de consultar `mesocycle_anchor` por conta própria?
-- [ ] Decisão do atleta: qual limiar fica valendo para "carga de ontem alta" — `ctl * 1.5` ou `Math.max(70, ctl * 1.5)`?
-- [ ] `lib/context-loader.ts` resolve a fase uma única vez por requisição e repassa a `runReadiness`.
-- [ ] `ReadinessResult` ganha `reasonCode` explícito (`atrasado`/`ausente`/`contraditório`/`sessao_expirada`); `lib/context.ts` para de inspecionar texto de `warning`.
-- [ ] Função única em `lib/load-safety.ts` para "carga de ontem alta", reaproveitada por `readiness.ts` e `week/route.ts`.
-- [ ] Testes: fase resolvida uma única vez por requisição; `reasonCode` correto nos três casos de indisponibilidade; mesmo resultado de "carga alta" nos dois consumidores.
-- [ ] `npm test` e `npm run build` validados.
-- [ ] Não publicar sem nova ordem do atleta.
+Mesmo caso da T20: implementada no commit `5755724`, lista corrigida em 2026-09-09.
 
-## Proposta — T22 Limpeza estrutural menor — SPEC-22
+- [x] Decisão aplicada: `runReadiness(owner, checkin, phase)` recebe a fase pronta; não consulta mais `mesocycle_anchor`.
+- [x] Decisão aplicada: o limiar de "carga de ontem alta" é `Math.max(70, ctl * 1.5)`.
+- [x] `lib/context-loader.ts` resolve a fase uma única vez por requisição e repassa a `runReadiness`.
+- [x] `ReadinessResult` ganhou `reasonCode` (`atrasado`/`ausente`/`contraditorio`/`sessao_expirada`); `lib/context.ts` parou de inspecionar texto de `warning`.
+- [x] `isYesterdayLoadHigh` em `lib/load-safety.ts`, reaproveitada por `readiness.ts` e `week/route.ts`.
+- [x] Testes: `reasonCode` nos três casos de indisponibilidade (`tests/context.test.ts`); limiar único de carga (`tests/load-safety.test.ts`). A resolução única da fase por requisição é garantia estrutural, não coberta por teste.
+- [x] `npm test` e `npm run build` validados.
+- [ ] Não publicar sem nova ordem do atleta. Estado de publicação não confirmado a partir deste ambiente.
 
-- [ ] Decisão do atleta: manter `mesocycle_phases` sem uso ou remover por migração?
-- [ ] `stressed` calculado uma única vez por requisição em `app/api/week/route.ts`, reaproveitado por `planOutlook` e `proposalBuilt`.
-- [ ] `SafetyFlag` definido uma única vez em `lib/load-safety.ts`, importado por `lib/decision-engine.ts` e `lib/off-day-suggestions.ts`.
+## Parcialmente concluída — T22 Limpeza estrutural menor — SPEC-22
+
+Os dois itens de código foram feitos em 2026-09-09. O único item restante é uma decisão do atleta sobre schema em produção.
+
+- [ ] **Decisão do atleta, em aberto**: manter `mesocycle_phases` sem uso ou remover por migração?
+- [x] `stressed` calculado uma única vez por requisição em `app/api/week/route.ts`, reaproveitado por `planOutlook` e `proposalBuilt`.
+- [x] `SafetyFlag` definido uma única vez em `lib/load-safety.ts` (`LoadSafetyFlag`), importado por `lib/decision-engine.ts` e por `lib/off-day-suggestions.ts`, sem redefinição local.
 - [ ] Decisão sobre `mesocycle_phases` registrada e, se for o caso, migração criada.
-- [ ] `npm test` e `npm run build` validados.
+- [x] `npm test` e `npm run build` validados.
 - [ ] Não publicar sem nova ordem do atleta.
 
 ## Proposta — T23 Fase inferida da carga planejada real — SPEC-23
@@ -271,6 +275,6 @@ Direção confirmada pelo atleta em 2026-09-08: ele monta os ciclos com apoio de
 - [ ] `npm test` e `npm run build` validados.
 - [ ] Não publicar sem nova ordem do atleta.
 
-Ordem sugerida entre as propostas: T21 antes de T20 (simplifica, não bloqueia) → T20 → T22 (independente, pode ser a qualquer momento) · T23 depende das decisões acima e é natural fazer depois da T21, já que as duas mexem em como o contexto unificado busca e resolve a fase — T23 substitui a parte de resolução de fase da T11/T18, que continuam válidas em tudo o mais. Nenhuma das quatro está autorizada para implementação ainda — todas têm pelo menos uma decisão pendente do atleta.
+Estado das quatro propostas em 2026-09-09: T20 e T21 estão concluídas no código; T22 só depende da decisão sobre `mesocycle_phases`; **T23 é a única com trabalho de implementação inteiro pela frente**, e continua bloqueada pelas suas quatro decisões em aberto. T23 substitui a parte de resolução de fase da T11/T18, que continuam válidas em tudo o mais.
 
 Regra: trabalhar somente na tarefa marcada como `NEXT`.

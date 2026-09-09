@@ -1,6 +1,6 @@
 # Memória do sistema — Pedal Pronto
 
-Atualizado em: 2026-09-08
+Atualizado em: 2026-09-09
 
 ## Produto
 
@@ -46,6 +46,8 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 - Alertas de risco futuro no PWA e no celular, sem mudanças automáticas.
 
 ## Estado exato de retomada
+
+**Ponto de retomada (2026-09-09): a próxima tarefa real é a T23, e ela está bloqueada pelas quatro decisões do atleta listadas em `docs/TASKS.md`.** T20 e T21 já estão no código (commit `5755724`); a parte de código da T22 foi fechada em 2026-09-09; da T22 resta só decidir o destino de `mesocycle_phases`. Nada disso foi publicado — a versão 25 é anterior a esse commit, e este ambiente não tem acesso ao mecanismo de publicação do Sites.
 
 T19 foi concluída e publicada na versão 25 em 2026-09-08. A tela Hoje foi reduzida ao essencial: prontidão e treino permanecem visíveis; conexão saudável deixou de ocupar espaço; recuperação e check-in foram consolidados sob expansão; o gráfico de carga deixou de ser repetido nessa tela e continua em Evolução. Nenhuma regra de decisão ou escrita no Intervals.icu mudou.
 
@@ -108,6 +110,8 @@ O lote T08–T12 foi publicado com sucesso em 2026-09-08.
 
 ## Diagnóstico de ambiguidade/redundância e SPECs propostas (2026-09-08)
 
+**Situação em 2026-09-09: SPEC-20 e SPEC-21 já estão resolvidas no código; SPEC-22 só depende de uma decisão de schema.** Ver a seção "Correção de rumo: documentação desalinhada do código", abaixo. Os três diagnósticos ficam registrados aqui como histórico, porque explicam o porquê das decisões que hoje estão no código.
+
 A pedido do atleta, foi feita uma auditoria de ambiguidade e redundância sobre o sistema já publicado/validado (T13–T19), sem alterar código. Achados viraram três SPECs propostas, cada uma com pelo menos uma decisão pendente do atleta antes de qualquer implementação — ver `docs/SPECS.md` (SPEC-20 a SPEC-22) e `docs/TASKS.md` (T20 a T22) para o detalhe completo:
 
 - **SPEC-20/T20**: a regra "reduzir uma variável do treino" está implementada três vezes (`lib/readiness.ts` hoje, `lib/decision-engine.ts` prévia, `app/api/week/route.ts` futuro) e uma das cópias diverge de verdade das outras — regex de repetições diferente (`2x` vs `3x` mínimo) e tratamento de duração diferente ao reduzir repetições (corta ~10% em duas cópias, preserva 100% na terceira). Decisão pendente: qual das duas regras de duração fica valendo.
@@ -121,6 +125,19 @@ Nenhuma das três toca as regras imutáveis nem a trava de consentimento/idempot
 Ao revisar wireframes das telas com o atleta, surgiu um ponto mais sério que os achados de redundância acima: o atleta monta os ciclos de treino com apoio de IA e já deixa a progressão pronta no calendário do Intervals.icu — a alternância entre semanas de progressão e recuperação já está implícita na carga que ele mesmo planejou. `lib/mesocycle.ts`, porém, ignora isso e resolve a fase a partir de uma data-âncora cadastrada manualmente no Pedal Pronto (`mesocycle_anchor`) mais uma regra fixa e cega (todo ciclo tem 4 semanas, a 4ª é sempre recuperação) — sem nunca olhar a carga real planejada no Intervals.icu. Isso contraria o princípio de que "o Intervals.icu é a fonte oficial do plano", e desde a T18 essa fase potencialmente errada decide de verdade o ajuste do treino de hoje.
 
 **Direção confirmada pelo atleta**: substituir a fonte da fase por uma inferência a partir da carga planejada real das últimas semanas no Intervals.icu (queda clara frente à média recente = recuperação; estável ou crescente = build), sem exigir cadastro manual. Virou a **SPEC-23/T23** em `docs/SPECS.md`/`docs/TASKS.md`, com decisões em aberto sobre janela de comparação, limiar de queda, comportamento sem histórico suficiente, e o que fazer com a âncora/ponteiro C/W/D (virar referência opcional ou sair da interface). Substitui a parte de resolução de fase da SPEC-11/SPEC-18 — o resto de ambas (função única `preferVolumeReduction`, regras imutáveis) continua válido.
+
+## Correção de rumo: documentação desalinhada do código (2026-09-09)
+
+Uma auditoria de fluxo feita nesta sessão (Claude Code), comparando `docs/SPECS.md`/`docs/TASKS.md` com o código real, encontrou uma contradição dentro do próprio repositório: o commit `5755724` ("Adicionando feature", 2026-09-08 19:41) implementou a SPEC-20 e a SPEC-21 **no mesmo commit** em que gravou o texto que as declarava "proposta — aguardando decisão do atleta". Quem lesse os documentos primeiro — inclusive uma sessão futura seguindo o `AGENTS.md`, que manda ler `PROJECT_MEMORY.md` e `docs/TASKS.md` antes de implementar — concluiria que as decisões seguiam em aberto, e gastaria tempo re-decidindo ou reimplementando o que já existe.
+
+O que o código já tinha decidido, e que agora está registrado nas SPECs:
+
+- **SPEC-20**: função única `adjustWorkoutPlan` em `lib/decision-engine.ts`, chamada pelos três caminhos (hoje, prévia do motor, replanejamento futuro). Piso de repetições `2x`; ao reduzir repetições corta duração ~10% e carga ~16% — venceu a regra que era do treino de hoje, e a do replanejamento futuro (duração intacta, carga proporcional) deixou de existir.
+- **SPEC-21**: `runReadiness` recebe a fase por parâmetro e não lê mais `mesocycle_anchor`; `ReadinessResult.reasonCode` substituiu o teste de substring em `lib/context.ts`; `isYesterdayLoadHigh` (`lib/load-safety.ts`), com o limiar `Math.max(70, ctl * 1.5)`, é a única fonte de "carga de ontem alta".
+
+Fechado nesta sessão, a parte de código da T22: `stressed` passou a ser calculado uma única vez em `app/api/week/route.ts` (as duas cópias eram idênticas e nenhuma dependia do item do laço), e `lib/off-day-suggestions.ts` passou a importar `LoadSafetyFlag` de `lib/load-safety.ts` em vez de redefinir o tipo. Nenhuma decisão de treino muda por causa disso; 78 testes e o build seguem verdes.
+
+Continua em aberto, dependendo do atleta: o destino da tabela `mesocycle_phases` (T22) e as quatro decisões da SPEC-23. Nenhuma migração foi criada e nada do schema foi tocado.
 
 ## Aviso operacional: edição concorrente do repositório
 

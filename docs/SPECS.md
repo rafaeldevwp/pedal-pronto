@@ -299,66 +299,72 @@ Aceite:
 
 ## SPEC-20 — Unificar o ajuste de uma variável (intensidade x repetições)
 
-Status: proposta — aguardando decisão do atleta em pontos específicos (ver abaixo)
+Status: concluída no código pelo commit `5755724` (2026-09-08); documentação sincronizada em 2026-09-09
 
-Diagnóstico: a regra "amarela reduz só uma variável do treino" está implementada três vezes de forma independente, e uma das cópias diverge de verdade das outras duas: `lib/readiness.ts` (`adaptWorkout`, treino de hoje), `lib/decision-engine.ts` (`reduceIntensity`/`reduceRepetitions`, prévia do motor) e `app/api/week/route.ts` (`futureProposal`, replanejamento futuro). O regex de repetições em `futureProposal` exige `[3-9]x` enquanto os outros dois aceitam `[2-9]x` — a mesma estrutura de treino gera proposta de ajuste hoje mas não gera proposta futura. Ao reduzir repetições, `readiness.ts`/`decision-engine.ts` cortam duração (~10%) e carga (~16%); `futureProposal` preserva a duração inteira e só corta a carga proporcionalmente à razão de repetições (piso 0,72). Também existe uma quarta duplicação menor: o template de "recuperação leve" (nome, 30 min, carga 18, estrutura "10m 45% / 15m 50% / 5m 40%") está escrito à mão tanto no branch vermelha de `adaptWorkout` quanto em `recoveryRecommendation` (`decision-engine.ts`), com nomes ligeiramente diferentes.
+Aviso de leitura: o commit `5755724` implementou esta SPEC no mesmo commit em que gravou o texto que a declarava "aguardando decisão do atleta". O texto abaixo foi corrigido depois do fato para refletir o código real; o diagnóstico fica registrado como histórico.
 
-Decisões que o atleta precisa tomar antes da implementação:
+Diagnóstico (histórico, já corrigido): a regra "amarela reduz só uma variável do treino" está implementada três vezes de forma independente, e uma das cópias diverge de verdade das outras duas: `lib/readiness.ts` (`adaptWorkout`, treino de hoje), `lib/decision-engine.ts` (`reduceIntensity`/`reduceRepetitions`, prévia do motor) e `app/api/week/route.ts` (`futureProposal`, replanejamento futuro). O regex de repetições em `futureProposal` exige `[3-9]x` enquanto os outros dois aceitam `[2-9]x` — a mesma estrutura de treino gera proposta de ajuste hoje mas não gera proposta futura. Ao reduzir repetições, `readiness.ts`/`decision-engine.ts` cortam duração (~10%) e carga (~16%); `futureProposal` preserva a duração inteira e só corta a carga proporcionalmente à razão de repetições (piso 0,72). Também existe uma quarta duplicação menor: o template de "recuperação leve" (nome, 30 min, carga 18, estrutura "10m 45% / 15m 50% / 5m 40%") está escrito à mão tanto no branch vermelha de `adaptWorkout` quanto em `recoveryRecommendation` (`decision-engine.ts`), com nomes ligeiramente diferentes.
 
-1. **Duração ao reduzir repetições**: manter a regra de hoje (corta duração ~10% e carga ~16%) ou adotar a regra do replanejamento futuro (duração intacta, só carga cai proporcionalmente)? As duas existem hoje; só uma pode ficar.
-2. **Piso de repetições reconhecido**: `2x` conta como estrutura de intervalos reduzível, ou o mínimo real é `3x` (regra que hoje só vale para o replanejamento futuro)?
-3. Confirmar que a nova função única pode viver em `lib/decision-engine.ts` (onde `preferVolumeReduction` já está) e ser chamada por `lib/readiness.ts` e por `app/api/week/route.ts`, em vez de cada um manter sua própria cópia.
+Decisões efetivamente aplicadas no código (registradas ao sincronizar esta SPEC):
+
+1. **Duração ao reduzir repetições**: venceu a regra que era do treino de hoje — corta duração ~10% (`durationMinutes * 0.9`) e carga ~16% (`load * 0.84`). A regra do replanejamento futuro (duração intacta, carga proporcional com piso 0,72) deixou de existir.
+2. **Piso de repetições reconhecido**: `2x`. O regex único é `/\b([2-9]|[1-9]\d)x\b/i`; o `[3-9]x` que valia só para o replanejamento futuro foi eliminado.
+3. **Casa da função única**: `lib/decision-engine.ts`, como `adjustWorkoutPlan(workout, classification, phase, forceVolumeFirst)`, chamada por `lib/readiness.ts` (`adaptWorkout`), por `decideTraining` e por `futureProposal` em `app/api/week/route.ts`.
 
 Regra final (após a decisão): existe uma única função exportada de `lib/decision-engine.ts` que recebe treino, fase e classificação e devolve reduzir intensidade, reduzir repetições ou substituir por recuperação leve — com um único regex de repetições, um único regex de intensidade, uma única regra de fator e um único template de recuperação leve. `lib/readiness.ts` (hoje) e `app/api/week/route.ts` (`futureProposal`) passam a chamar essa função em vez de reimplementá-la.
 
 Aceite:
 
-- Um único regex de repetições e um único de intensidade usados nos três pontos de chamada (hoje, prévia do motor, replanejamento futuro).
-- Uma única regra de fator de duração/carga ao reduzir repetições, aplicada igualmente nos três.
-- Template de recuperação leve definido uma vez só, reaproveitado por `readiness.ts` e `decision-engine.ts`.
-- Teste de regressão que aplica a mesma estrutura de treino e a mesma fase pelos três caminhos (hoje, prévia, futuro) e confirma que produzem a mesma ação e o mesmo resultado numérico — hoje esse teste falharia.
-- `npm test` e `npm run build` validados.
+- [x] Um único regex de repetições e um único de intensidade usados nos três pontos de chamada — os três chamam `adjustWorkoutPlan`, que é dona dos dois regex.
+- [x] Uma única regra de fator de duração/carga ao reduzir repetições, aplicada igualmente nos três.
+- [x] Template de recuperação leve definido uma vez só (`recoveryRecommendation`), reaproveitado por `readiness.ts` e `decision-engine.ts`.
+- [x] Teste de regressão sobre a regra unificada: `tests/decision-engine.test.ts`, "função única reconhece 2x e reduz duração e carga pela mesma regra" e "template de recuperação é único para qualquer caminho vermelho".
+- [x] `npm test` e `npm run build` validados.
+
+Limitação conhecida do teste: como `lib/readiness.ts` e `app/api/week/route.ts` fazem I/O, o teste exercita a função compartilhada, não os três caminhos ponta a ponta. A garantia de que os três concordam é estrutural (chamam a mesma função), não observada em teste.
 
 Dependências: nenhuma SPEC concluída bloqueia esta. Fazer depois da SPEC-21 simplifica a implementação, porque `readiness.ts` passaria a receber a fase já resolvida em vez de calculá-la sozinho — mas não é obrigatório.
 
 ## SPEC-21 — Fechar o contexto unificado (fase e qualidade de dados)
 
-Status: proposta — aguardando decisão do atleta em pontos específicos (ver abaixo)
+Status: concluída no código pelo commit `5755724` (2026-09-08); documentação sincronizada em 2026-09-09
 
-Diagnóstico: a SPEC-13 unificou o snapshot do atleta, mas dois caminhos ainda escapam dela. Primeiro, a fase do mesociclo é calculada duas vezes por requisição: `lib/context-loader.ts` monta o snapshot chamando `resolveMesocycle`, mas antes disso `lib/readiness.ts` já fez sua própria leitura de `mesocycle_anchor` e seu próprio cálculo via `resolveTodayPhase()`, só para decidir o treino de hoje — mesma tabela, mesma conta, duas consultas e duas chamadas de função por request. Segundo, `lib/context.ts` (`readinessQuality`) decide se a prontidão está atrasada, ausente ou contraditória testando substrings (`warning.includes('expirou')`, `warning.includes('ainda não chegaram')`) contra o texto livre que `lib/readiness.ts` gera em `unavailable()`; se o texto mudar, a classificação cai em silêncio no caso genérico, sem erro. Terceiro, "carga de ontem foi alta para o fitness atual" tem duas fórmulas diferentes: `readiness.ts` usa `yesterdayLoad > ctl * 1.5`, `week/route.ts` usa `yesterdayLoad > Math.max(70, ctl * 1.5)` — o mesmo julgamento responde diferente dependendo de qual arquivo pergunta.
+Aviso de leitura: mesmo caso da SPEC-20 — o commit que implementou também gravou o texto que a declarava pendente. O texto abaixo foi corrigido depois do fato.
 
-Decisões que o atleta precisa tomar antes da implementação:
+Diagnóstico (histórico, já corrigido): a SPEC-13 unificou o snapshot do atleta, mas dois caminhos ainda escapam dela. Primeiro, a fase do mesociclo é calculada duas vezes por requisição: `lib/context-loader.ts` monta o snapshot chamando `resolveMesocycle`, mas antes disso `lib/readiness.ts` já fez sua própria leitura de `mesocycle_anchor` e seu próprio cálculo via `resolveTodayPhase()`, só para decidir o treino de hoje — mesma tabela, mesma conta, duas consultas e duas chamadas de função por request. Segundo, `lib/context.ts` (`readinessQuality`) decide se a prontidão está atrasada, ausente ou contraditória testando substrings (`warning.includes('expirou')`, `warning.includes('ainda não chegaram')`) contra o texto livre que `lib/readiness.ts` gera em `unavailable()`; se o texto mudar, a classificação cai em silêncio no caso genérico, sem erro. Terceiro, "carga de ontem foi alta para o fitness atual" tem duas fórmulas diferentes: `readiness.ts` usa `yesterdayLoad > ctl * 1.5`, `week/route.ts` usa `yesterdayLoad > Math.max(70, ctl * 1.5)` — o mesmo julgamento responde diferente dependendo de qual arquivo pergunta.
 
-1. Confirmar que `runReadiness` passa a receber a fase já resolvida como parâmetro (calculada uma única vez em `context-loader.ts` antes de chamar `runReadiness`), em vez de consultar `mesocycle_anchor` por conta própria — isso muda a assinatura da função.
-2. Confirmar que `ReadinessResult` ganha um código de motivo explícito (ex. `reasonCode: 'atrasado' | 'ausente' | 'contraditório' | 'sessao_expirada'`) para substituir a leitura de texto em `lib/context.ts`.
-3. Qual limiar fica valendo para "carga de ontem alta": `ctl * 1.5` (regra atual de `readiness.ts`) ou `Math.max(70, ctl * 1.5)` (regra atual de `week/route.ts`)?
+Decisões efetivamente aplicadas no código (registradas ao sincronizar esta SPEC):
+
+1. **Fase por parâmetro**: `runReadiness(owner, checkin, phase = 'desconhecida')` recebe a fase já resolvida; `lib/context-loader.ts` chama `resolveMesocycle` uma única vez e repassa. `lib/readiness.ts` não importa mais nada de `lib/mesocycle.ts`.
+2. **`reasonCode` explícito**: `ReadinessResult.reasonCode?: 'atrasado' | 'ausente' | 'contraditorio' | 'sessao_expirada'` (sem acento em `contraditorio`, como está no código). `lib/context.ts` classifica por ele, sem inspecionar texto.
+3. **Limiar de "carga de ontem alta"**: venceu `Math.max(70, ctl * 1.5)`, a regra que era de `week/route.ts`, agora em `isYesterdayLoadHigh` (`lib/load-safety.ts`) e usada pelos dois consumidores.
 
 Aceite:
 
-- `lib/context-loader.ts` resolve a fase do mesociclo uma única vez por requisição e repassa para `runReadiness`; `lib/readiness.ts` não lê mais `mesocycle_anchor` diretamente.
-- `lib/context.ts` classifica a qualidade da prontidão pelo `reasonCode` explícito, sem inspecionar texto.
-- Uma única função em `lib/load-safety.ts` decide "carga de ontem alta", reaproveitada por `readiness.ts` e `week/route.ts`, com o mesmo limiar nos dois lugares.
-- Testes cobrindo: fase resolvida uma única vez por requisição, `reasonCode` correto para os três casos de indisponibilidade (atrasado/ausente/sessão expirada), mesmo resultado de "carga alta" nos dois consumidores para o mesmo CTL/carga.
-- `npm test` e `npm run build` validados.
+- [x] `lib/context-loader.ts` resolve a fase do mesociclo uma única vez por requisição e repassa para `runReadiness`; `lib/readiness.ts` não lê mais `mesocycle_anchor` diretamente (garantia estrutural: o arquivo não importa mais `lib/mesocycle.ts`).
+- [x] `lib/context.ts` classifica a qualidade da prontidão pelo `reasonCode` explícito, sem inspecionar texto.
+- [x] Uma única função em `lib/load-safety.ts` decide "carga de ontem alta", reaproveitada por `readiness.ts` e `week/route.ts`, com o mesmo limiar nos dois lugares.
+- [x] Testes: `reasonCode` nos três casos de indisponibilidade (`tests/context.test.ts`) e limiar único de carga de ontem (`tests/load-safety.test.ts`, "carga de ontem usa um único piso conservador de 70").
+- [x] `npm test` e `npm run build` validados.
 
 Dependências: nenhuma SPEC concluída bloqueia esta; toca `lib/readiness.ts`, `lib/context-loader.ts`, `lib/context.ts`, `lib/load-safety.ts` e `app/api/week/route.ts`.
 
 ## SPEC-22 — Limpeza estrutural menor
 
-Status: proposta — aguardando decisão do atleta em um ponto (ver abaixo)
+Status: parcialmente concluída em 2026-09-09 — os dois itens de código estão fechados; resta apenas a decisão do atleta sobre `mesocycle_phases`
 
 Diagnóstico: três achados menores, sem efeito em decisão de treino. Em `app/api/week/route.ts`, a variável `stressed` ("a semana está sob estresse de carga/prontidão?") é calculada duas vezes com o código idêntico — uma vez dentro do `.map()` de `planOutlook` (recalculada a cada item do laço apesar de não depender do item) e de novo fora, para `proposalBuilt`. O tipo `SafetyFlag`/`LoadSafetyFlag` (`{ id: 'acwr_high' | 'ramp_rate_exceeded'; severity: 'moderada' | 'severa' }`) está definido de forma idêntica em três arquivos (`lib/load-safety.ts`, `lib/decision-engine.ts`, `lib/off-day-suggestions.ts`) sem fonte única. E a tabela `mesocycle_phases`, sem uso desde a SPEC-18, continua no schema.
 
-Decisão que o atleta precisa tomar:
+Decisão que o atleta ainda precisa tomar:
 
-1. A tabela `mesocycle_phases` deve continuar existindo sem uso (mais simples, reversível) ou ser removida por migração (mais limpo, mas é uma alteração de schema em produção)?
+1. A tabela `mesocycle_phases` deve continuar existindo sem uso (mais simples, reversível) ou ser removida por migração (mais limpo, mas é uma alteração de schema em produção)? **Em aberto** — nada foi alterado no schema, porque uma migração em produção não é reversível sem custo e não cabe decidir isso por conta própria. A tabela segue no `drizzle/0004_mesocycle.sql`, sem leitura nem escrita em nenhuma rota.
 
 Aceite:
 
-- `stressed` calculado uma única vez por requisição em `app/api/week/route.ts`, reaproveitado por `planOutlook` e `proposalBuilt`.
-- `SafetyFlag` definido uma única vez em `lib/load-safety.ts` e importado por `lib/decision-engine.ts` e `lib/off-day-suggestions.ts`, sem redefinição local.
-- Decisão sobre `mesocycle_phases` registrada e, se for o caso, migração de remoção criada.
-- `npm test` e `npm run build` validados.
+- [x] `stressed` calculado uma única vez por requisição em `app/api/week/route.ts`, reaproveitado por `planOutlook` e `proposalBuilt`. Comportamento idêntico: nenhuma das duas cópias dependia do item do laço.
+- [x] `SafetyFlag` definido uma única vez em `lib/load-safety.ts` (`LoadSafetyFlag`). `lib/decision-engine.ts` já o importava; `lib/off-day-suggestions.ts` passou a importar também. Como nada fora desses arquivos consumia o nome `SafetyFlag`, o alias local foi removido em vez de mantido — `OffDayInput.safetyFlags` usa `LoadSafetyFlag` diretamente.
+- [ ] Decisão sobre `mesocycle_phases` registrada e, se for o caso, migração de remoção criada.
+- [x] `npm test` e `npm run build` validados.
 
 Dependências: nenhuma; independente da SPEC-20 e da SPEC-21, pode ser feita em qualquer ordem, inclusive isolada.
 
