@@ -475,3 +475,14 @@ Fecha o último item aberto da T22.
 - [x] `docs/PREFLIGHT.md` agora manda rodar os dois runners.
 - [ ] Pendência: proposta de ajuste, confirmação e escrita no Intervals.icu seguem sem teste.
 - [ ] Não publicar sem nova ordem do atleta.
+
+## Propostas — auditoria do território nunca examinado (2026-09-09)
+
+Nenhuma implementada. Ordem sugerida, da que mais engana para a que menos:
+
+- [ ] **T39 — SPEC-39**: ordenar as atividades antes de dividir em metades. A manchete de eficiência pode estar invertida hoje. Uma linha mais um teste.
+- [ ] **T42 — SPEC-42**: glossário. "Especificidade" descreve regra removida na T18; "ACWR" foi para a tela na T33 sem entrada; o código `C{n}W{n}D{n}` nunca foi documentado.
+- [ ] **T40 — SPEC-40**: mostrar o resultado da conexão com o Polar (`?polar=`, hoje ignorado) e criar como desconectar.
+- [ ] **T41 — SPEC-41**: service worker não deveria guardar respostas de API no cache da casca do app.
+- [ ] **T43 — SPEC-43**: `!base` descarta mediana zero de ANS Charge — o mesmo engano da SPEC-37.
+- [ ] **T44 — SPEC-44**: decidir se um sinal isolado do check-in deveria mudar a cor do dia. Pergunta, não conserto.

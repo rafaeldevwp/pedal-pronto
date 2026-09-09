@@ -828,3 +828,94 @@ Aceite:
 - [x] `npm run build` validado.
 
 O que **não** ficou coberto: a proposta de ajuste do treino, a confirmação (`confirmReadinessProposal`) e o caminho de escrita no Intervals.icu. É a próxima camada, e vale como pendência registrada.
+
+---
+
+# Auditoria do território nunca examinado (2026-09-09)
+
+A pedido do atleta, uma revisão das quatro áreas que nenhuma SPEC anterior tocou: o fluxo OAuth do Polar, o service worker, o glossário e a matemática da aba Evolução. Seis achados, todos propostos abaixo — **nenhum implementado**, todos aguardando decisão.
+
+Duas suspeitas foram levantadas e **descartadas na verificação**, e ficam registradas para ninguém refazer o caminho:
+
+- A janela de comparação de potência não é enviesada: `recent` e `previous` são duas janelas de 42 dias dentro de uma busca de 84. Estava correto.
+- `/manifest.webmanifest` é servido normalmente (confirmado com o servidor rodando, HTTP 200), embora não apareça na tabela de rotas do build. O PWA é instalável e o `addAll` do service worker não falha.
+
+## SPEC-39 — A manchete de eficiência depende de uma ordem que ninguém garante
+
+Status: **proposta**, aguardando decisão
+
+Na aba Evolução, o título do card de eficiência ("Mais potência para esforço cardíaco parecido" / "O coração está trabalhando mais para a potência produzida") sai de `app/api/performance/route.ts`: a lista de pedais é cortada em duas metades e a primeira é comparada com a segunda.
+
+O problema é que **a lista nunca é ordenada**. `cardioList.slice(0, half)` é chamada de `early` e `cardioList.slice(half)` de `late` — nomes que só fazem sentido se o Intervals.icu devolver as atividades em ordem cronológica crescente. Nada no código garante isso. E há evidência interna de que a ordem não é crescente: `app/api/week/route.ts` ordena explicitamente a resposta do **mesmo endpoint** antes de usar ordem, e `lib/readiness.ts` ordena as listas do Polar pelo mesmo motivo. A rota de performance é a única que não ordena.
+
+Se a ordem for decrescente, como o cuidado das rotas irmãs sugere, duas coisas estão erradas ao mesmo tempo: a manchete fica **invertida** (melhora é lida como piora e vice-versa), e o `slice(-12)`, que deveria pegar os 12 pedais mais recentes, pega os 12 mais antigos da janela.
+
+O gráfico em si não é afetado — é um scatter de potência × frequência cardíaca, que não depende de ordem. Só a frase no topo do card.
+
+Proposta: ordenar por data crescente logo depois de filtrar as atividades, com um teste que falhe se a ordenação sair. É uma linha, mas muda o sentido de uma frase que o atleta lê como veredito.
+
+## SPEC-40 — A conexão com o Polar não conta o que aconteceu, e não há como desconectar
+
+Status: **proposta**, aguardando decisão
+
+`app/api/polar/callback/route.ts` distingue com cuidado quatro desfechos e redireciona para `/?polar=denied`, `/?polar=expired`, `/?polar=failed` ou `/?polar=connected`. **`app/page.tsx` nunca lê esse parâmetro.** O atleta que autoriza no Polar volta para o app e, se algo falhou, vê a mesma tela de sempre — "não conectado", botão "Conectar" — sem saber se recusou, se o link expirou (10 minutos) ou se o Polar recusou. É o mesmo padrão já corrigido uma vez na T17, quando `result.warning` era calculado no servidor e nunca exibido.
+
+O fluxo em si está sólido: `state` aleatório, guardado no servidor com o dono, uso único, validade de 10 minutos, limpeza dos expirados, `redirect_uri` vindo do ambiente e nenhum segredo na URL. Uma observação sem risco prático no app de um atleta só: o callback confia no dono gravado no `state` e não confere contra o usuário autenticado da sessão — o que, aliás, é o que impede a conta de um terceiro de ser vinculada à do atleta.
+
+O que falta de verdade é o outro lado: **não existe rota nem botão para desconectar**. O `access_token` do Polar fica em `polar_connections` indefinidamente, e o único jeito de revogar é pelo site do Polar. Um app que lê sono, HRV e carga autonômica deveria conseguir esquecer esse acesso a pedido.
+
+Proposta, em duas partes separáveis: (a) ler o `?polar=` e dizer o que aconteceu, com a ação certa em cada caso; (b) uma rota de desconexão que apaga a linha de `polar_connections`, com confirmação explícita.
+
+## SPEC-41 — O service worker guarda respostas de API no cache do app
+
+Status: **proposta**, aguardando decisão
+
+`public/sw.js` intercepta **todo GET** e guarda a resposta no mesmo cache do app (`pedal-pronto-v2`), sem distinguir a casca do aplicativo dos dados do atleta. Verificado no navegador: depois da segunda visita, `/api/polar/status` está no cache — e com status 401, porque respostas de erro também são guardadas.
+
+A prontidão escapa por acidente: desde a T25 ela é `POST`, e o handler ignora tudo que não é GET. Então o risco mais grave — mostrar uma cor do dia velha — não existe hoje. Mas ele depende de um detalhe que ninguém escreveu como decisão, e voltar a prontidão para GET reintroduziria o problema da T25 pela porta do cache.
+
+O que já acontece: sem rede, `/api/week`, `/api/performance` e `/api/mesocycle` respondem com dados de outro dia, sem nenhum sinal de que estão velhos. E quando não há entrada no cache, o fallback é `caches.match('/')` — a resposta é o HTML do app para uma requisição que esperava JSON, então o cliente quebra num erro de parse em vez de falhar de forma limpa.
+
+Dois problemas menores no mesmo arquivo: o cache só é limpo quando o nome muda (`v2` → `v3`), então os arquivos de builds antigas se acumulam no aparelho para sempre; e não há `skipWaiting`/`clients.claim`, então uma versão nova do service worker só assume depois que todas as abas do PWA forem fechadas.
+
+Proposta: separar o cache da casca do cache de dados; não guardar respostas de API — ou guardá-las com carimbo de validade e mostrar na tela quando o dado é de uma leitura anterior; e devolver um erro JSON honesto em vez do HTML da home quando uma requisição de API falha sem cache.
+
+## SPEC-42 — O glossário ensina uma regra que o sistema não usa mais
+
+Status: **proposta**, aguardando decisão
+
+O glossário tem 29 termos e é a página onde o atleta vai quando não entende uma palavra da tela. Três desencontros com o sistema de hoje:
+
+**A entrada "Especificidade" descreve um comportamento removido.** Ela diz que o treino "ganha proteção especial perto de uma meta principal" e que isso "depende de objetivo, data e prioridade corretamente informados". A especificidade protegida foi removida por completo na T18, sem substituto, e o objetivo de temporada saiu da tela na T31. Outras duas entradas ("FTP" e "Treino-chave") apontam para ela como termo relacionado, então o atleta é conduzido até a explicação errada. "Treino-chave" também ainda diz que "calendário e objetivo precisam estar atualizados".
+
+**"ACWR" não tem entrada, e agora aparece na tela.** Depois da T33, a evidência do dia pode dizer "ACWR 1.80 — carga dos últimos 7 dias muito acima da média recente". É uma sigla técnica, escrita no lugar mais importante do app, sem nenhum lugar onde consultá-la.
+
+**O código `C{n}W{n}D{n}` não tem entrada.** Desde a T28 ele é a única fonte da fase do mesociclo, e é o próprio atleta quem o escreve no nome do treino no Intervals.icu. Todo o comportamento de fase depende dessa convenção, e ela não está documentada em lugar nenhum que o atleta veja.
+
+Detalhe menor: a entrada "Rampa" declara origem "Intervals.icu", mas a rampa é calculada pelo app a partir do CTL — quem vem do Intervals.icu é o ACWR, desde a T29.
+
+Proposta: remover ou reescrever "Especificidade", acertar os termos relacionados, e acrescentar "ACWR" e o código de ciclo.
+
+## SPEC-43 — Uma linha de base legítima de ANS Charge é descartada como se fosse ausente
+
+Status: **proposta**, aguardando decisão
+
+Em `app/api/performance/route.ts`, o aprendizado individual compara dias favoráveis com desfavoráveis para cada sinal e usa `if (!base || valid.length < 8) continue;` para exigir uma linha de base.
+
+Para sono, HRV e FC de repouso isso funciona: nenhum deles vale zero num dia real. Mas o **ANS Charge do Polar é uma escala centrada em zero**, indo de negativo a positivo. Quando a mediana das últimas semanas cai exatamente em 0 — o valor mais comum de um atleta equilibrado —, `!base` é verdadeiro e a regra do ANS Charge é descartada em silêncio. O sinal simplesmente não participa do aprendizado naquele dia, sem nada explicando por quê.
+
+É o mesmo engano da SPEC-37, no mesmo tipo de expressão: tratar zero como ausência de dado quando zero é um valor legítimo.
+
+Proposta: trocar `!base` por uma verificação de que a mediana existe, mantendo a exigência de 8 dias. Sem novo módulo — mas vale extrair a matemática do aprendizado para um arquivo puro, como foi feito na SPEC-37, para que ganhe teste.
+
+## SPEC-44 — Um sinal isolado do check-in nunca muda a cor do dia
+
+Status: **observação**, aguardando decisão do atleta — pode ser o desenho certo
+
+Descoberto ao escrever os testes da T38, não é bug: é uma consequência da regra de classificação que nunca foi discutida.
+
+A cor do dia exige **dois** sinais para virar amarela, ou dois sinais severos para virar vermelha. Dor e sintomas escapam disso porque têm regra própria (`cautionOverride`/`conservativeOverride`). Todos os outros não. Na prática: fadiga 9/10 relatada no check-in, com o corpo dentro da base em tudo mais, dá **dia verde** — o relato aparece na lista de evidências, mas não muda a cor nem gera proposta.
+
+Há um argumento forte a favor disso: um sinal isolado é ruído, e a regra dos dois sinais é o que impede a tela de oscilar. Há um argumento contra: fadiga 9/10 e motivação 1/10 são coisas que o atleta digitou deliberadamente sobre si mesmo, e ver "verde" depois disso corrói a confiança na leitura.
+
+Três caminhos possíveis: deixar como está; dar override próprio a algum sinal extremo, como dor e sintomas já têm; ou manter a cor e mudar só o texto, reconhecendo o relato sem alterar a decisão.
