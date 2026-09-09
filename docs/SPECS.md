@@ -606,6 +606,55 @@ Aceite:
 
 Vale para a mesma família de problemas: um estado vazio que só repete o requisito não ajuda ninguém a sair dele.
 
+## SPEC-31 — Semana: o que pede ação fica; o que explica recolhe
+
+Status: proposta — uma decisão do atleta em aberto (ver abaixo)
+
+Diagnóstico: a aba Semana empilha **até onze cards** no mesmo nível visual — mais que os sete da Evolução antes da SPEC-27:
+
+1. Resumo da semana (carga realizada × planejada)
+2. Lista das sessões, cada uma expansível
+3. Card de estrutura do treino
+4. Sugestão de dia OFF
+5. Alerta de risco futuro
+6. Previsão do próximo treino-chave — cabeçalho, rota, lista de evidências, orientação e ressalva
+7. Aviso de dados contraditórios
+8. Prévia do motor adaptativo
+9. Proposta de replanejamento, com comparação, motivo e impacto semanal
+10. Panorama das próximas três sessões
+11. Histórico de decisões
+
+A régua da SPEC-27 não serve aqui. Naquela tela tudo era leitura; nesta, vários cards **pedem ação** — a proposta exige confirmação para escrever no Intervals.icu (SPEC-08), o alerta aponta risco, a sugestão cria treino. Esconder qualquer um deles sob expansão seria esconder decisão, o que o `docs/DESIGN.md` proíbe e o aceite da SPEC-19 reforça: "alertas, propostas e confirmação explícita não são removidos nem escondidos".
+
+A régua desta SPEC é outra: **o que pede ação fica no primeiro nível; o que apenas explica recolhe.**
+
+Primeiro nível, sempre visível:
+
+- Resumo e lista da semana — é o motivo de abrir a aba.
+- Proposta de replanejamento, alerta de risco futuro, sugestão de dia OFF e aviso de dados contraditórios — os quatro pedem ou bloqueiam ação.
+
+Sob uma expansão única, "Ver leitura da semana":
+
+- Previsão do próximo treino-chave.
+- Panorama das próximas sessões.
+- Histórico de decisões.
+
+Redundância encontrada, a corrigir junto: **o panorama repete a lista da semana**. `planOutlook` mostra as próximas três sessões planejadas com selo "observar"/"protegido", e essas mesmas sessões já aparecem na lista logo acima. É o mesmo caso do gráfico de carga que a SPEC-19 removeu da tela Hoje por estar duplicado. O estado de estresse deve aparecer como marca **na própria linha da sessão**, não como um segundo card listando os mesmos dias.
+
+Decisão do atleta em aberto:
+
+1. **A prévia do motor adaptativo deve continuar existindo?** O próprio card admite que "não escreve no Intervals.icu — é só uma prévia do motor adaptativo em desenvolvimento". É informação sobre o software, não sobre o treino. Some de vez, ou recolhe para a expansão junto com o resto da leitura?
+
+Aceite:
+
+- [ ] A aba abre mostrando a semana e, quando existirem, apenas os blocos que pedem ação.
+- [ ] Nenhuma proposta, alerta, sugestão ou aviso de bloqueio fica sob expansão.
+- [ ] Previsão, panorama e histórico agrupados em uma expansão única.
+- [ ] O panorama deixa de repetir as sessões; o estado passa a marcar a própria linha da semana.
+- [ ] Destino da prévia do motor registrado conforme a decisão acima.
+- [ ] Nenhuma regra de decisão ou fluxo de consentimento muda.
+- [ ] `npm test` e `npm run build` validados; verificado no navegador.
+
 ## SPEC-29 — nota de continuidade
 
 Ambiguidade registrada, **não resolvida**: o texto da SPEC-12 se contradiz. Um parágrafo diz que os dois flags "participam da composição de severidade do semáforo do mesmo jeito que os flags já existentes"; o aceite da mesma SPEC diz "nenhuma mudança de comportamento na decisão de treino do dia". O código seguiu o aceite — sinal apenas. Decidir se ACWR e rampa **deveriam** influenciar a prontidão do dia é pergunta de produto em aberto, separada desta SPEC.

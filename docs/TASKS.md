@@ -392,3 +392,15 @@ Levantado ao tentar fechar a lacuna de teste da SPEC-25. Não é uma melhoria pe
 - Decisão do atleta necessária antes de qualquer coisa: vale adotar essa infraestrutura?
 
 Regra: trabalhar somente na tarefa marcada como `NEXT`.
+
+## Proposta — T31 Semana: o que pede ação fica; o que explica recolhe — SPEC-31
+
+Auditoria da aba Semana pedida em 2026-09-09, depois da faxina da Evolução. São até onze cards no mesmo nível — mais que os sete da Evolução antes da T27.
+
+- [ ] **Decisão do atleta**: a prévia do motor adaptativo (que o próprio card admite não escrever nada e ser "em desenvolvimento") sai de vez ou recolhe para a expansão?
+- [ ] Primeiro nível: resumo e lista da semana, mais os blocos que pedem ação — proposta, alerta de risco, sugestão de dia OFF e aviso de dados contraditórios.
+- [ ] Expansão única "Ver leitura da semana": previsão do próximo treino-chave, panorama e histórico de decisões.
+- [ ] Corrigir a redundância: `planOutlook` repete as sessões que já estão na lista da semana. O estado "observar"/"protegido" passa a marcar a própria linha, e o card duplicado sai.
+- [ ] Nenhuma proposta, alerta ou confirmação pode acabar sob expansão — regra da SPEC-08 e do aceite da SPEC-19.
+- [ ] `npm test` e `npm run build` validados; verificar no navegador.
+- [ ] Não publicar sem nova ordem do atleta.
