@@ -482,7 +482,7 @@ Achado registrado, **não corrigido**: no piso de `2x`, `Math.max(2, from - 1)` 
 
 ## SPEC-27 — Evolução essencial e progressiva
 
-Status: proposta — decisões do atleta tomadas em 2026-09-09; pronta para implementação
+Status: implementada e validada localmente em 2026-09-09; **não publicada**
 
 Diagnóstico: a aba Evolução mostra **sete cards no mesmo nível visual**, dois deles formulários, nenhum sob expansão:
 

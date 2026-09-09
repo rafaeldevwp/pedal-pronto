@@ -183,7 +183,6 @@ type Week = {
     weeklyEffect: string;
   };
 };
-type AthleteGoal = { objective: string; eventName: string; eventDate: string; priority: string; rampRateLimit: number };
 type Mesocycle = { anchor: string | null; calculated: null | { cycle: number; week: number; day: number }; event: null | { cycle: number; week: number; day: number }; phase: string; warning: string | null };
 type Performance = {
   updatedAt: string;
@@ -304,8 +303,6 @@ export default function Home() {
     [result, setResult] = useState<Result | null>(null),
     [week, setWeek] = useState<Week | null>(null),
     [performance, setPerformance] = useState<Performance | null>(null),
-    [goal, setGoal] = useState<AthleteGoal>({ objective: 'performance', eventName: '', eventDate: '', priority: 'principal', rampRateLimit: 6 }),
-    [goalSaved, setGoalSaved] = useState(false),
     [mesocycle, setMesocycle] = useState<Mesocycle | null>(null),
     [mesocycleAnchor, setMesocycleAnchor] = useState(''),
     [mesocycleSaved, setMesocycleSaved] = useState(false),
@@ -347,7 +344,6 @@ export default function Home() {
           loadReadiness(false);
           loadWeek();
           loadPerformance();
-          loadGoal();
           loadMesocycle();
         }
       })
@@ -438,10 +434,6 @@ export default function Home() {
     const response = await fetch('/api/performance');
     if (response.ok) setPerformance(await response.json());
   }
-  async function loadGoal() {
-    const response = await fetch('/api/profile');
-    if (response.ok) setGoal(await response.json());
-  }
   async function loadMesocycle() {
     const response = await fetch('/api/mesocycle');
     if (!response.ok) return;
@@ -456,16 +448,6 @@ export default function Home() {
     setMesocycle(value);
     setMesocycleSaved(true);
     setTimeout(() => setMesocycleSaved(false), 2200);
-  }
-  async function saveGoal() {
-    const response = await fetch('/api/profile', {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(goal),
-    });
-    if (response.ok) {
-      setGoal(await response.json());
-      setGoalSaved(true);
-      setTimeout(() => setGoalSaved(false), 2200);
-    }
   }
   async function createSuggestion() {
     if (
@@ -1215,18 +1197,34 @@ export default function Home() {
               <p>Comparamos sua linha de base, prontidão do dia, potência da temporada, eficiência cardíaca e sessões semelhantes. Um treino isolado não determina regressão.</p>
               <span>Referências: estudos de treinamento orientado por HRV e variação diária do desempenho.</span>
             </details>
-            <small className="insight-updated">Atualiza ao sincronizar o Polar ou concluir um treino no Intervals.icu.</small>
+            <p className="profile-line">
+              <strong>Últimos 42 dias:</strong> {performance?.profile || 'analisando seu histórico'} — {performance?.profileMessage || 'comparando com os 42 dias anteriores.'}
+            </p>
+            {performance?.warning && <small className="data-warning">{performance.warning}</small>}
           </Card>
-          <Card className="profile-card">
-            <div className="profile-icon"><TrendingUp /></div>
-            <div>
-              <p className="eyebrow">SEU PERFIL NOS ÚLTIMOS 42 DIAS</p>
-              <h2>{performance?.profile || 'Analisando seu histórico'}</h2>
-              <p className="muted-copy">{performance?.profileMessage || 'Comparando com os 42 dias anteriores.'}</p>
-              <span className="data-source"><Link2 size={12} /> Dados do Intervals.icu</span>
-              {performance?.warning && <small className="data-warning">{performance.warning}</small>}
+          <Card className="mesocycle-card">
+            <div className="goal-heading">
+              <div><p className="eyebrow">POSIÇÃO NO PLANO</p><h2>{mesocycle?.calculated ? `C${mesocycle.calculated.cycle} · W${mesocycle.calculated.week} · D${mesocycle.calculated.day}` : 'Mesociclo ainda não configurado'}</h2></div>
+              <Badge variant="outline">Fase: {mesocycle?.phase || 'desconhecida'}</Badge>
             </div>
+            <p className="anchor-highlight"><strong>Âncora atual:</strong> {mesocycle?.anchor ? new Date(`${mesocycle.anchor}T12:00:00`).toLocaleDateString('pt-BR') : 'não definida'}</p>
+            {mesocycle?.warning && <small className="data-warning">{mesocycle.warning}</small>}
+            <div className="mesocycle-form">
+              <label>Início de C1W1D1<input type="date" value={mesocycleAnchor} onChange={(event) => setMesocycleAnchor(event.target.value)} /></label>
+            </div>
+            <Button className="primary-action" disabled={!mesocycleAnchor} onClick={saveMesocycle}>{mesocycleSaved ? <><Check /> Mesociclo salvo</> : 'Salvar posição do plano'}</Button>
+            <small className="analysis-note">A fase (semanas 1-3 build, semana 4 recovery) é calculada automaticamente a partir da âncora e decide qual variável do treino cede primeiro quando a prontidão pede cautela.</small>
           </Card>
+          <details className="today-support">
+            <summary>
+              <span className="support-icon"><TrendingUp /></span>
+              <span>
+                <strong>Ver números e gráficos</strong>
+                <small>Potências, coração × potência e seu padrão pessoal</small>
+              </span>
+              <ChevronDown />
+            </summary>
+            <div className="support-content">
           <Card className="performance-card">
             <p className="eyebrow">MELHORES POTÊNCIAS</p>
             <h2>{powerRange === 'season' ? 'Temporada atual × anterior' : powerRange === 'recent' ? 'Últimos 42 dias' : 'Melhores do histórico'}</h2>
@@ -1306,59 +1304,9 @@ export default function Home() {
               <small>Confiança {performance.learning.confidence} · {performance.learning.caveat}</small>
             )}
           </Card>
-          <p className="analysis-note">Tendências comparam períodos, não diagnosticam saúde e não substituem sua percepção durante o treino.</p>
-          <Card className="mesocycle-card">
-            <div className="goal-heading">
-              <div><p className="eyebrow">POSIÇÃO NO PLANO</p><h2>{mesocycle?.calculated ? `C${mesocycle.calculated.cycle} · W${mesocycle.calculated.week} · D${mesocycle.calculated.day}` : 'Mesociclo ainda não configurado'}</h2></div>
-              <Badge variant="outline">Fase: {mesocycle?.phase || 'desconhecida'}</Badge>
+              <p className="analysis-note">Tendências comparam períodos, não diagnosticam saúde e não substituem sua percepção durante o treino.</p>
             </div>
-            <p className="anchor-highlight"><strong>Âncora atual:</strong> {mesocycle?.anchor ? new Date(`${mesocycle.anchor}T12:00:00`).toLocaleDateString('pt-BR') : 'não definida'}</p>
-            {mesocycle?.warning && <small className="data-warning">{mesocycle.warning}</small>}
-            <div className="mesocycle-form">
-              <label>Início de C1W1D1<input type="date" value={mesocycleAnchor} onChange={(event) => setMesocycleAnchor(event.target.value)} /></label>
-            </div>
-            <Button className="primary-action" disabled={!mesocycleAnchor} onClick={saveMesocycle}>{mesocycleSaved ? <><Check /> Mesociclo salvo</> : 'Salvar posição do plano'}</Button>
-            <small className="analysis-note">A fase (semanas 1-3 build, semana 4 recovery) é calculada automaticamente a partir da âncora e decide qual variável do treino cede primeiro quando a prontidão pede cautela.</small>
-          </Card>
-          <Card className="goal-card">
-            <div className="goal-heading">
-              <div>
-                <p className="eyebrow">DIREÇÃO DA TEMPORADA</p>
-                <h2>Onde você quer chegar?</h2>
-              </div>
-              <Badge variant="outline">Guia do plano</Badge>
-            </div>
-            <p className="muted-copy">Contexto da sua temporada. A prontidão e a fase do mesociclo decidem o treino do dia — este objetivo não altera nenhuma decisão.</p>
-            <div className="goal-form">
-              <label>Objetivo
-                <select value={goal.objective} onChange={(event) => setGoal({ ...goal, objective: event.target.value })}>
-                  <option value="performance">Melhorar performance geral</option>
-                  <option value="resistencia">Ganhar resistência</option>
-                  <option value="ftp">Evoluir potência/FTP</option>
-                  <option value="saude">Saúde e consistência</option>
-                </select>
-              </label>
-              <label>Evento ou marco
-                <input value={goal.eventName} placeholder="Ex.: Gran Fondo" onChange={(event) => setGoal({ ...goal, eventName: event.target.value })} />
-              </label>
-              <div className="goal-row">
-                <label>Data
-                  <input type="date" value={goal.eventDate} onChange={(event) => setGoal({ ...goal, eventDate: event.target.value })} />
-                </label>
-                <label>Prioridade
-                  <select value={goal.priority} onChange={(event) => setGoal({ ...goal, priority: event.target.value })}>
-                    <option value="principal">Principal</option>
-                    <option value="secundario">Secundário</option>
-                    <option value="base">Construção de base</option>
-                  </select>
-                </label>
-              </div>
-              <label>Teto semanal de rampa do CTL
-                <input type="number" min="1" max="15" step="0.5" value={goal.rampRateLimit} onChange={(event) => setGoal({ ...goal, rampRateLimit: Number(event.target.value) })} />
-              </label>
-            </div>
-            <Button className="primary-action" onClick={saveGoal}>{goalSaved ? <><Check /> Objetivo salvo</> : 'Salvar direção da temporada'}</Button>
-          </Card>
+          </details>
         </section>
       )}
       {tab === 'glossario' && (

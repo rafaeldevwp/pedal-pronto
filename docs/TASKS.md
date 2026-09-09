@@ -318,19 +318,19 @@ Achado em auditoria pedida pelo atleta em 2026-09-09 ("posso confiar no sistema?
 - [ ] **Pergunta em aberto para o atleta**: no piso de `2x` a justificativa diz "Repetições reduzidas de 2 para 2" sem reduzir repetição alguma. `2x` deveria cair para redução de intensidade? Contraria a decisão 2 da SPEC-20, por isso não foi mexido.
 - [ ] Não publicar sem nova ordem do atleta.
 
-## NEXT — T27 Evolução essencial e progressiva — SPEC-27
+## Concluída localmente — T27 Evolução essencial e progressiva — SPEC-27
 
-Pedida pelo atleta em 2026-09-09: "a tela de evolução está muito poluída". Sete cards no mesmo nível, dois deles formulários, nada sob expansão. Decisões já tomadas; nada bloqueia a implementação.
+Pedida pelo atleta em 2026-09-09: "a tela de evolução está muito poluída". Eram sete cards no mesmo nível, dois deles formulários, nada sob expansão.
 
-- [ ] Remover o card "Direção da temporada" da aba Evolução (objetivo não decide nada desde a T18).
-- [ ] Fixar o teto de rampa do CTL em 6 e remover o campo; `evaluateLoadSafety` deixa de depender de `athlete_safety_settings`.
-- [ ] Promover o perfil dos 42 dias a uma linha sob a leitura diária, eliminando o card próprio.
-- [ ] Reduzir "Posição no plano" a informação (C/W/D + fase), sem formulário — a âncora sai na T28.
-- [ ] Agrupar potências, coração × potência e padrão pessoal sob uma expansão única "Ver números e gráficos".
-- [ ] Mover a ressalva sobre tendências para o rodapé dessa expansão.
-- [ ] Preservar estados vazios e de erro explicados dentro da expansão.
-- [ ] Manter acessibilidade da expansão (toque, teclado, foco visível), no padrão da SPEC-19.
-- [ ] `npm test` e `npm run build` validados.
+- [x] Card "Direção da temporada" removido da aba Evolução, junto com o estado, `loadGoal`, `saveGoal` e o tipo `AthleteGoal`.
+- [x] Teto de rampa fixado em `CTL_RAMP_LIMIT = 6` (`lib/load-safety.ts`); `lib/readiness.ts` parou de consultar `athlete_safety_settings` — uma consulta a menos por avaliação.
+- [x] Perfil dos 42 dias virou uma linha dentro da leitura diária; o card próprio saiu.
+- [x] "Posição no plano" subiu para o primeiro nível. O formulário da âncora continua ali até a T28.
+- [x] Potências, coração × potência e padrão pessoal agrupados sob a expansão "Ver números e gráficos", reaproveitando o padrão visual da SPEC-19.
+- [x] Ressalva sobre tendências movida para o rodapé da expansão.
+- [x] Verificado no navegador: 3 blocos no primeiro nível (eram 7), 1 expansão, formulário de objetivo ausente, nenhum erro de página.
+- [x] `npm test` (79) e `npm run build` validados.
+- [ ] `/api/profile` e `athlete_goals` continuam existindo sem interface. Remover a rota e a tabela é decisão à parte, não feita aqui.
 - [ ] Não publicar sem nova ordem do atleta.
 
 ## Proposta — T28 A fase do mesociclo vem do nome do treino — SPEC-28 (a escrever)

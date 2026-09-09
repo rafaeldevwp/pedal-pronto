@@ -1,6 +1,6 @@
 import { ensurePolarSchema, recordTrainingDecision, runtime } from '@/lib/polar';
 import { assertEditablePlannedEvent, claimTrainingWrite, completeTrainingWrite, proposalFingerprint } from '@/lib/training-safety';
-import { evaluateLoadSafety, isYesterdayLoadHigh, type LoadSafetyFlag } from '@/lib/load-safety';
+import { CTL_RAMP_LIMIT, evaluateLoadSafety, isYesterdayLoadHigh, type LoadSafetyFlag } from '@/lib/load-safety';
 import { adjustWorkoutPlan } from '@/lib/decision-engine';
 
 type Json = Record<string, any>;
@@ -164,8 +164,6 @@ export async function runReadiness(
     .bind(owner)
     .first<{ access_token: string }>();
   if (!connection) throw new Error('POLAR_NOT_CONNECTED');
-  const safetySettings = await runtime.DB.prepare('SELECT ramp_rate_limit FROM athlete_safety_settings WHERE owner_id=?').bind(owner).first<{ ramp_rate_limit: number }>();
-  const rampLimit = safetySettings?.ramp_rate_limit ?? 6;
   const now = new Date(),
     today = isoDate(now),
     yesterday = isoDate(new Date(now.getTime() - 86400000));
@@ -269,7 +267,7 @@ export async function runReadiness(
       const wellnessDay = wList.find((day) => String(day.id || day.date || '') === date);
       return { date, load: activityLoads.get(date) || 0, ctl: wellnessDay ? num(wellnessDay.ctl, wellnessDay.icu_ctl) : undefined };
     });
-    const loadSafety = evaluateLoadSafety(loadDays, rampLimit);
+    const loadSafety = evaluateLoadSafety(loadDays, CTL_RAMP_LIMIT);
     const yesterdayLoad = acts.filter((activity) => String(activity.start_date_local || activity.start_date || '').slice(0, 10) === yesterday).reduce(
       (s, a) => s + (num(a.icu_training_load, a.training_load) || 0),
       0,
