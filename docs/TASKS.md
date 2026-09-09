@@ -277,4 +277,21 @@ Direção confirmada pelo atleta em 2026-09-08: ele monta os ciclos com apoio de
 
 Estado das quatro propostas em 2026-09-09: T20 e T21 estão concluídas no código; T22 só depende da decisão sobre `mesocycle_phases`; **T23 é a única com trabalho de implementação inteiro pela frente**, e continua bloqueada pelas suas quatro decisões em aberto. T23 substitui a parte de resolução de fase da T11/T18, que continuam válidas em tudo o mais.
 
+## Concluída localmente — T24 Identidade visual em branco e lilás — SPEC-24
+
+Pedida pelo atleta em 2026-09-09 a partir de uma referência visual, aprovada depois de ver uma proposta com as telas reais do app.
+
+- [x] Paleta nova em `app/globals.css`: lilás como cor de interface, quase-preto para texto, fundo `#f1f1f5`.
+- [x] Verde/amarela/vermelha restritas à prontidão, ao estado do dia e a avisos de risco — nunca decorativas.
+- [x] Todos os gradientes removidos; preenchimento chapado em todo card.
+- [x] Raio de canto padronizado: 24px card grande, 18px linha, 14px caixa interna.
+- [x] `Programado → Recomendado` com o único preenchimento lilás forte da tela.
+- [x] Duas cores de série do Recharts em `app/page.tsx` atualizadas (únicas cores fixas fora do CSS).
+- [x] `themeColor` (`app/layout.tsx`), `theme_color`/`background_color` (`app/manifest.ts`) e `public/icon.svg` na paleta nova.
+- [x] **Bug pré-existente corrigido**: `font-family` estava no `html`, mas `--font-manrope` é definida no `body` — o app renderizava em Times New Roman desde sempre. Movida para `body`; Manrope confirmada no navegador.
+- [x] `npm test` (78) e `npm run build` validados.
+- [x] Verificado visualmente no navegador local nas quatro abas (Hoje, Semana, Evolução, Glossário).
+- [ ] Estados com dados reais (proposta pendente, sessões da semana, gráficos, histórico) não verificados — sem credenciais neste ambiente.
+- [ ] Não publicar sem nova ordem do atleta.
+
 Regra: trabalhar somente na tarefa marcada como `NEXT`.

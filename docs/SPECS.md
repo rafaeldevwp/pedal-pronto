@@ -396,3 +396,32 @@ Aceite:
 - `npm test` e `npm run build` validados.
 
 Dependências: substitui a parte de resolução de fase da SPEC-11 e da SPEC-18 (que continuam válidas em tudo o mais — regras imutáveis, consentimento, `preferVolumeReduction` como função única). Fazer depois da SPEC-21 é natural, já que as duas mexem em como o contexto unificado busca e resolve a fase.
+
+## SPEC-24 — Identidade visual clara, em branco e lilás
+
+Status: implementada e validada localmente em 2026-09-09; **não publicada**
+
+O atleta pediu uma interface moderna a partir de uma referência visual concreta (app de reserva de espaços: cards brancos arredondados, acento lilás, quase-preto para texto, preenchimentos chapados). O visual anterior era verde-floresta (`#165c45`) com acento amarelo (`#edc961`), cards em gradiente e raios de canto variando de 8 a 25px sem regra.
+
+Decisões de design que fecham esta SPEC:
+
+1. **O lilás é a interface; verde, amarela e vermelha são exclusivos da prontidão.** O `docs/DESIGN.md` exige que as três cores do semáforo mantenham significado consistente. Se o lilás fosse só mais uma cor entre elas, o semáforo perderia força — então nenhum botão, ícone ou card decorativo usa verde/amarela/vermelha. O lilás (`#8b5cf0` forte, `#b388f5` claro, `#f2e9fe` suave) assume ações, estados ativos, destaques e ênfase; o semáforo aparece só no selo de prontidão, no anel do score, no estado de cada dia da semana e nos avisos de risco.
+2. **Nada de gradiente.** Todos os `linear-gradient`/`radial-gradient` saíram em favor de preenchimento chapado, como na referência. O card de prontidão deixou de ser verde-escuro com texto branco e passou a ser lilás claro com texto escuro — o que também melhora contraste em tela pequena.
+3. **Raio de canto vira regra**: 24px em card grande, 18px em linha/painel, 14px em caixa interna, 12px ou menos em chip.
+4. **O `Programado → Recomendado` é o único preenchimento lilás forte da tela**, porque é a única coisa que pede uma decisão do atleta (`.recommended-workout` e `.proposal-comparison>div:last-child`).
+
+Bug pré-existente corrigido junto: `app/globals.css` declarava `html { font-family:var(--font-manrope),... }`, mas `--font-manrope` é definida por `next/font` na classe do `<body>`. Variáveis CSS não sobem na árvore, então a declaração era inválida e **o app inteiro renderizava em Times New Roman** — nunca em Manrope, desde sempre. A declaração foi movida para `body`. Confirmado no navegador antes e depois.
+
+Aceite:
+
+- [x] Nenhum valor da paleta antiga (`#165c45`, `#edc961`, tintas verdes) e nenhum gradiente restam em `app/globals.css`.
+- [x] Todos os seletores existentes foram preservados; nenhuma mudança de marcação em `app/page.tsx` além das duas cores de série do Recharts.
+- [x] Verde, amarela e vermelha aparecem apenas em estado de prontidão, estado do dia e risco — nunca como enfeite.
+- [x] `themeColor`, `background_color`/`theme_color` do manifesto e `public/icon.svg` acompanham a paleta nova.
+- [x] Manrope realmente aplicada, verificada por `getComputedStyle` no navegador.
+- [x] `npm test` (78) e `npm run build` validados.
+- [x] Verificado visualmente no navegador local (Chromium) nas quatro abas.
+
+Limitação da verificação: este ambiente não tem credenciais do Polar nem do Intervals.icu, então só os **estados desconectados** foram vistos. Telas com dados reais — proposta pendente, lista de sessões da semana, gráficos de potência e carga, histórico de decisões — não foram verificadas visualmente e continuam para conferência pós-publicação.
+
+Fora de escopo: nenhuma regra de decisão, texto de justificativa, hierarquia de tela ou fluxo de consentimento mudou. A SPEC-19 (Hoje essencial) e a SPEC-08 (consentimento) seguem valendo sem alteração.

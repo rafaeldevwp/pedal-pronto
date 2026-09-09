@@ -1232,7 +1232,7 @@ export default function Home() {
             <span className="data-source"><Link2 size={12} /> {performance?.powerSource || 'Dados do Intervals.icu'}</span>
             {activePower.some((point) => point.current) ? (
               <>
-                <ChartContainer className="power-chart" config={{ current: { label: powerRange === 'season' ? 'Temporada atual' : powerRange === 'recent' ? 'Últimos 42 dias' : 'Melhor histórico', color: '#165c45' }, previous: { label: 'Temporada anterior', color: '#b9c6bd' } }}>
+                <ChartContainer className="power-chart" config={{ current: { label: powerRange === 'season' ? 'Temporada atual' : powerRange === 'recent' ? 'Últimos 42 dias' : 'Melhor histórico', color: '#8b5cf0' }, previous: { label: 'Temporada anterior', color: '#c9c9d6' } }}>
                   <BarChart data={activePower} margin={{ left: -20, right: 4, top: 8 }}>
                     <CartesianGrid vertical={false} />
                     <XAxis dataKey="label" tickLine={false} axisLine={false} />
@@ -1265,7 +1265,7 @@ export default function Home() {
               Cada ponto é um treino: mais alto e mais à esquerda significa mais potência com menor esforço cardíaco.
             </p>
             {performance && performance.cardio.length >= 2 ? (
-              <ChartContainer className="cardio-chart" config={{ watts: { label: 'Potência', color: '#165c45' } }}>
+              <ChartContainer className="cardio-chart" config={{ watts: { label: 'Potência', color: '#8b5cf0' } }}>
                 <ScatterChart margin={{ left: -12, right: 8, top: 12, bottom: 4 }}>
                   <CartesianGrid />
                   <XAxis type="number" dataKey="heartRate" name="Frequência cardíaca" unit=" bpm" tickLine={false} />

@@ -47,7 +47,7 @@ GitHub privado: https://github.com/rafaeldevwp/pedal-pronto
 
 ## Estado exato de retomada
 
-**Ponto de retomada (2026-09-09): a próxima tarefa real é a T23, e ela está bloqueada pelas quatro decisões do atleta listadas em `docs/TASKS.md`.** T20 e T21 já estão no código (commit `5755724`); a parte de código da T22 foi fechada em 2026-09-09; da T22 resta só decidir o destino de `mesocycle_phases`. Nada disso foi publicado — a versão 25 é anterior a esse commit, e este ambiente não tem acesso ao mecanismo de publicação do Sites.
+**Ponto de retomada (2026-09-09): a T24 (identidade visual em branco e lilás) foi implementada e validada localmente, aguardando ordem de publicação. Depois dela, a próxima tarefa real é a T23, bloqueada pelas quatro decisões do atleta listadas em `docs/TASKS.md`.** T20 e T21 já estão no código (commit `5755724`); a parte de código da T22 foi fechada em 2026-09-09; da T22 resta só decidir o destino de `mesocycle_phases`. Nada disso foi publicado — a versão 25 é anterior a esse commit, e este ambiente não tem acesso ao mecanismo de publicação do Sites.
 
 T19 foi concluída e publicada na versão 25 em 2026-09-08. A tela Hoje foi reduzida ao essencial: prontidão e treino permanecem visíveis; conexão saudável deixou de ocupar espaço; recuperação e check-in foram consolidados sob expansão; o gráfico de carga deixou de ser repetido nessa tela e continua em Evolução. Nenhuma regra de decisão ou escrita no Intervals.icu mudou.
 
@@ -138,6 +138,18 @@ O que o código já tinha decidido, e que agora está registrado nas SPECs:
 Fechado nesta sessão, a parte de código da T22: `stressed` passou a ser calculado uma única vez em `app/api/week/route.ts` (as duas cópias eram idênticas e nenhuma dependia do item do laço), e `lib/off-day-suggestions.ts` passou a importar `LoadSafetyFlag` de `lib/load-safety.ts` em vez de redefinir o tipo. Nenhuma decisão de treino muda por causa disso; 78 testes e o build seguem verdes.
 
 Continua em aberto, dependendo do atleta: o destino da tabela `mesocycle_phases` (T22) e as quatro decisões da SPEC-23. Nenhuma migração foi criada e nada do schema foi tocado.
+
+## Identidade visual: verde-floresta dá lugar a branco e lilás (T24/SPEC-24, 2026-09-09)
+
+O atleta pediu uma interface moderna a partir de uma referência visual concreta e aprovou a direção depois de ver uma proposta com as telas reais do app. O tema verde-floresta (`#165c45`) com acento amarelo (`#edc961`) e cards em gradiente saiu inteiro; entrou uma paleta clara com lilás como cor de interface.
+
+A decisão que estrutura o resto: **o lilás é a interface, e verde/amarela/vermelha ficam exclusivos da prontidão**. O `docs/DESIGN.md` exige que o semáforo mantenha significado consistente — se essas cores também enfeitassem botões e ícones, perderiam força. Hoje elas aparecem só no selo de prontidão, no anel do score, no estado de cada dia e em avisos de risco. Junto vieram: fim de todo gradiente, raio de canto padronizado (24/18/14px) e o `Programado → Recomendado` como o único preenchimento lilás forte da tela, por ser a única coisa que pede decisão.
+
+Nenhuma regra de decisão, texto ou fluxo de consentimento mudou — só a camada visual. `app/page.tsx` só teve duas cores de série do Recharts trocadas; todo o resto foi CSS.
+
+**Bug pré-existente encontrado e corrigido no caminho**: `app/globals.css` declarava `font-family:var(--font-manrope)` no `html`, mas `next/font` define essa variável na classe do `<body>`. Como variável CSS não sobe na árvore, a declaração era inválida e o app renderizava em **Times New Roman desde sempre** — nunca em Manrope. Conferido no navegador antes e depois da correção.
+
+Verificado visualmente no Chromium local nas quatro abas. Ressalva: sem credenciais de Polar/Intervals.icu neste ambiente, só os estados desconectados foram vistos; telas com dados reais seguem para conferência pós-publicação.
 
 ## Aviso operacional: edição concorrente do repositório
 
