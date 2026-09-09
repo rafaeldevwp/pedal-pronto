@@ -608,7 +608,7 @@ Vale para a mesma família de problemas: um estado vazio que só repete o requis
 
 ## SPEC-31 — Semana: o que pede ação fica; o que explica recolhe
 
-Status: proposta — uma decisão do atleta em aberto (ver abaixo)
+Status: implementada e validada localmente em 2026-09-09; **não publicada**
 
 Diagnóstico: a aba Semana empilha **até onze cards** no mesmo nível visual — mais que os sete da Evolução antes da SPEC-27:
 
@@ -641,19 +641,16 @@ Sob uma expansão única, "Ver leitura da semana":
 
 Redundância encontrada, a corrigir junto: **o panorama repete a lista da semana**. `planOutlook` mostra as próximas três sessões planejadas com selo "observar"/"protegido", e essas mesmas sessões já aparecem na lista logo acima. É o mesmo caso do gráfico de carga que a SPEC-19 removeu da tela Hoje por estar duplicado. O estado de estresse deve aparecer como marca **na própria linha da sessão**, não como um segundo card listando os mesmos dias.
 
-Decisão do atleta em aberto:
-
-1. **A prévia do motor adaptativo deve continuar existindo?** O próprio card admite que "não escreve no Intervals.icu — é só uma prévia do motor adaptativo em desenvolvimento". É informação sobre o software, não sobre o treino. Some de vez, ou recolhe para a expansão junto com o resto da leitura?
+Decisão sobre a prévia do motor adaptativo: **recolheu para a expansão, não foi removida.** A pergunta foi feita ao atleta como "sai de vez ou recolhe?" e a resposta ("sim") não distinguiu as duas. Diante da ambiguidade, ficou a opção reversível — apagar depois é uma linha; restaurar o que foi apagado custa mais. A pergunta segue aberta em `docs/TASKS.md`.
 
 Aceite:
 
-- [ ] A aba abre mostrando a semana e, quando existirem, apenas os blocos que pedem ação.
-- [ ] Nenhuma proposta, alerta, sugestão ou aviso de bloqueio fica sob expansão.
-- [ ] Previsão, panorama e histórico agrupados em uma expansão única.
-- [ ] O panorama deixa de repetir as sessões; o estado passa a marcar a própria linha da semana.
-- [ ] Destino da prévia do motor registrado conforme a decisão acima.
-- [ ] Nenhuma regra de decisão ou fluxo de consentimento muda.
-- [ ] `npm test` e `npm run build` validados; verificado no navegador.
+- [x] A aba abre mostrando a semana e, quando existirem, apenas os blocos que pedem ação. Seis blocos no cenário mais cheio (proposta pendente + alerta de risco), contra até onze antes.
+- [x] Nenhuma proposta, alerta, sugestão ou aviso de bloqueio fica sob expansão — verificado no navegador com proposta e alerta ativos ao mesmo tempo: ambos visíveis sem abrir nada.
+- [x] Previsão, prévia do motor e histórico agrupados na expansão "Ver leitura da semana".
+- [x] O card de panorama foi removido. Descoberta durante a implementação: `stressed` é um booleano **da semana inteira**, não por sessão — o card mostrava a mesma condição repetida em três linhas. Virou uma frase só.
+- [x] Nenhuma regra de decisão ou fluxo de consentimento muda.
+- [x] `npm test` (88) e `npm run build` validados; verificado no navegador.
 
 ## SPEC-29 — nota de continuidade
 

@@ -1024,28 +1024,6 @@ export default function Home() {
               </div>
             </Card>
           )}
-          {week?.forecast && (
-            <Card className={`forecast-card risk-${week.forecast.risk}`}>
-              <div className="forecast-heading">
-                <div>
-                  <p className="eyebrow">IMPACTO NOS PRÓXIMOS DIAS</p>
-                  <h2>{week.forecast.headline}</h2>
-                </div>
-                <Badge variant="outline">Risco {week.forecast.risk}</Badge>
-              </div>
-              <p className="muted-copy">{week.forecast.message}</p>
-              {week.forecast.nextKey && (
-                <div className="forecast-route">
-                  <span><small>HOJE</small><strong>{week.forecast.today?.name || 'Recuperação'}</strong><em>{week.forecast.today?.load ? `Carga ${week.forecast.today.load}` : 'Sem carga planejada'}</em></span>
-                  <ChevronRight />
-                  <span><small>PRÓXIMO TREINO-CHAVE</small><strong>{week.forecast.nextKey.name}</strong><em>{formatDay(week.forecast.nextKey.date)} · {week.forecast.nextKey.load ? `carga ${week.forecast.nextKey.load}` : 'carga não informada'}</em></span>
-                </div>
-              )}
-              <ul className="forecast-evidence">{week.forecast.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
-              <div className="forecast-guidance"><ShieldCheck /><span><strong>Orientação</strong>{week.forecast.guidance}</span></div>
-              <small className="forecast-caveat">Confiança {week.forecast.confidence} · {week.forecast.caveat}</small>
-            </Card>
-          )}
           {!week?.proposal && week?.contextWarning && (
             <Card className="context-warning-card">
               <div className="proposal-heading">
@@ -1056,22 +1034,6 @@ export default function Home() {
               </div>
               <p className="muted-copy">{week.contextWarning}</p>
               <small className="proposal-footnote">Nada foi alterado. Assim que a divergência for resolvida, novas propostas voltam a ser avaliadas.</small>
-            </Card>
-          )}
-          {week?.engineDecision && week.engineDecision.action !== 'manter' && week.engineDecision.action !== 'suspender' && (
-            <Card className="engine-preview-card">
-              <div className="proposal-heading">
-                <div>
-                  <p className="eyebrow">LEITURA DO MOTOR ADAPTATIVO · PRÉVIA</p>
-                  <h2>{week.engineDecision.recommended?.name || 'Ajuste sugerido'}</h2>
-                </div>
-                <Badge variant="outline"><Sparkles /> Só leitura</Badge>
-              </div>
-              <ul className="forecast-evidence">{week.engineDecision.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
-              {week.engineDecision.recommended?.descriptionChange && (
-                <div className="proposal-reason"><ShieldCheck /><span><strong>Estímulo preservado: {week.engineDecision.stimulusPreserved}</strong>{week.engineDecision.recommended.descriptionChange}</span></div>
-              )}
-              <small className="proposal-footnote">{week.engineDecision.weeklyEffect} Esta leitura ainda não escreve no Intervals.icu — é só uma prévia do motor adaptativo em desenvolvimento.</small>
             </Card>
           )}
           {week?.proposal && (
@@ -1108,23 +1070,59 @@ export default function Home() {
               <small className="proposal-footnote">Somente este treino será alterado. Atividades realizadas e os demais dias permanecem intactos.</small>
             </Card>
           )}
+          <details className="today-support">
+            <summary>
+              <span className="support-icon"><Activity /></span>
+              <span>
+                <strong>Ver leitura da semana</strong>
+                <small>Impacto nos próximos dias, prévia do motor e histórico</small>
+              </span>
+              <ChevronDown />
+            </summary>
+            <div className="support-content">
           {week?.planOutlook?.length > 0 && (
-            <Card className="outlook-card">
-              <p className="eyebrow">PRÓXIMOS DIAS</p>
-              <h2>Plano vivo, sem mudanças silenciosas</h2>
-              <p className="muted-copy">A carga atual já é considerada, mas qualquer alteração futura continuará apenas como proposta.</p>
-              <div className="outlook-list">
-                {week.planOutlook.map((item) => (
-                  <div key={item.id}>
-                    <span className={`outlook-state ${item.status}`} />
-                    <span>
-                      <small>{formatDay(item.date)} · {item.status === 'protegido' ? 'Plano protegido' : 'Em observação'}</small>
-                      <strong>{item.name}</strong>
-                      <em>{item.note}</em>
-                    </span>
-                  </div>
-                ))}
+            <p className="analysis-note">
+              {week.planOutlook[0].status === 'protegido'
+                ? 'Próximos dias compatíveis com a carga atual. Nenhuma mudança proposta.'
+                : 'Próximos dias em observação: podem precisar de ajuste se a recuperação não normalizar. Nenhuma mudança aplicada.'}
+            </p>
+          )}
+          {week?.forecast && (
+            <Card className={`forecast-card risk-${week.forecast.risk}`}>
+              <div className="forecast-heading">
+                <div>
+                  <p className="eyebrow">IMPACTO NOS PRÓXIMOS DIAS</p>
+                  <h2>{week.forecast.headline}</h2>
+                </div>
+                <Badge variant="outline">Risco {week.forecast.risk}</Badge>
               </div>
+              <p className="muted-copy">{week.forecast.message}</p>
+              {week.forecast.nextKey && (
+                <div className="forecast-route">
+                  <span><small>HOJE</small><strong>{week.forecast.today?.name || 'Recuperação'}</strong><em>{week.forecast.today?.load ? `Carga ${week.forecast.today.load}` : 'Sem carga planejada'}</em></span>
+                  <ChevronRight />
+                  <span><small>PRÓXIMO TREINO-CHAVE</small><strong>{week.forecast.nextKey.name}</strong><em>{formatDay(week.forecast.nextKey.date)} · {week.forecast.nextKey.load ? `carga ${week.forecast.nextKey.load}` : 'carga não informada'}</em></span>
+                </div>
+              )}
+              <ul className="forecast-evidence">{week.forecast.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
+              <div className="forecast-guidance"><ShieldCheck /><span><strong>Orientação</strong>{week.forecast.guidance}</span></div>
+              <small className="forecast-caveat">Confiança {week.forecast.confidence} · {week.forecast.caveat}</small>
+            </Card>
+          )}
+          {week?.engineDecision && week.engineDecision.action !== 'manter' && week.engineDecision.action !== 'suspender' && (
+            <Card className="engine-preview-card">
+              <div className="proposal-heading">
+                <div>
+                  <p className="eyebrow">LEITURA DO MOTOR ADAPTATIVO · PRÉVIA</p>
+                  <h2>{week.engineDecision.recommended?.name || 'Ajuste sugerido'}</h2>
+                </div>
+                <Badge variant="outline"><Sparkles /> Só leitura</Badge>
+              </div>
+              <ul className="forecast-evidence">{week.engineDecision.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
+              {week.engineDecision.recommended?.descriptionChange && (
+                <div className="proposal-reason"><ShieldCheck /><span><strong>Estímulo preservado: {week.engineDecision.stimulusPreserved}</strong>{week.engineDecision.recommended.descriptionChange}</span></div>
+              )}
+              <small className="proposal-footnote">{week.engineDecision.weeklyEffect} Esta leitura ainda não escreve no Intervals.icu — é só uma prévia do motor adaptativo em desenvolvimento.</small>
             </Card>
           )}
           <Card className="decision-history-card">
@@ -1162,6 +1160,8 @@ export default function Home() {
               <p className="muted-copy">As próximas decisões manuais aparecerão aqui sem alterar registros anteriores.</p>
             )}
           </Card>
+            </div>
+          </details>
           {weekMessage && <p className="week-message">{weekMessage}</p>}
         </section>
       )}
